@@ -30,7 +30,7 @@ def main():
     unique_dbs_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/unique_dbs.txt'
     
     results = []
-    unique_dbs = set()
+    unique_dbs = {}
 
     # Walk through all directories and files under base_dir
     for root, dirs, files in os.walk(base_dir):
@@ -47,7 +47,11 @@ def main():
                         match = re.match(r'\((\w+)', dblinks)
                         if match:
                             db_name = match.group(1)
-                            unique_dbs.add(db_name)
+                            if db_name in unique_dbs:
+                                unique_dbs[db_name] += 1
+                            else:
+                                unique_dbs[db_name] = 1
+
 
     # Write the results to the output file
     with open(output_file_path, 'w') as output_file:
@@ -56,8 +60,8 @@ def main():
 
     # Write the unique database names to the unique_dbs file
     with open(unique_dbs_file_path, 'w') as unique_dbs_file:
-        for db_name in sorted(unique_dbs):
-            unique_dbs_file.write(f'{db_name}\n')
+        for db_name, count in sorted(unique_dbs.items(), key=lambda item: item[1], reverse=True):
+            unique_dbs_file.write(f'{db_name}: {count}\n')
 
 if __name__ == '__main__':
     main()
