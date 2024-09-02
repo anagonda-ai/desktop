@@ -8,13 +8,21 @@ def extract_dblinks(file_path):
 
         matches = []
         unique_id = None
+        dblinks_list = []
         for line in lines:
             if line.startswith('UNIQUE-ID - '):
+                if unique_id and dblinks_list:
+                    # Append all collected DBLINKS for the previous UNIQUE-ID
+                    matches.append((unique_id, ' '.join(dblinks_list)))
                 unique_id = line.split(' - ')[1].strip()
+                dblinks_list = []  # Reset the DBLINKS list for the new UNIQUE-ID
             elif line.startswith('DBLINKS - ') and unique_id:
                 dblinks = line.split(' - ')[1].strip()
-                matches.append((unique_id, dblinks))
-                unique_id = None  # Reset unique_id after finding the first DBLINKS
+                dblinks_list.append(dblinks)
+
+        # Append the last collected DBLINKS if any
+        if unique_id and dblinks_list:
+            matches.append((unique_id, ' '.join(dblinks_list)))
 
         if not matches:
             print(f"No matches found in file: {file_path}")
@@ -44,9 +52,8 @@ def main():
                     for unique_id, dblinks in matches:
                         results.append((organism, unique_id, dblinks))
                         # Extract the database name and add to the set of unique DBs
-                        match = re.match(r'\((\w+)', dblinks)
-                        if match:
-                            db_name = match.group(1)
+                        db_names = re.findall(r'\((\w+)', dblinks)
+                        for db_name in db_names:
                             if db_name in unique_dbs:
                                 unique_dbs[db_name] += 1
                             else:
