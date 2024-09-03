@@ -59,6 +59,27 @@ def main():
                             else:
                                 unique_dbs[db_name] = 1
 
+    # Sort unique_dbs by count in descending order
+    sorted_unique_dbs = sorted(unique_dbs.items(), key=lambda item: item[1], reverse=True)
+
+    # Iterate through each unique_db in sorted order
+    index = 0
+    while index < len(sorted_unique_dbs):
+        unique_db, _ = sorted_unique_dbs[index]
+        new_results = []
+        for organism, unique_id, dblinks in results:
+            db_names = re.findall(r'\((\w+)', dblinks)
+            if unique_db in db_names:
+                for db_name in db_names:
+                    if db_name != unique_db:
+                        unique_dbs[db_name] -= 1
+            else:
+                new_results.append((organism, unique_id, dblinks))
+        results = new_results
+
+        # Re-sort unique_dbs after processing each unique_db
+        sorted_unique_dbs = sorted(unique_dbs.items(), key=lambda item: item[1], reverse=True)
+        index += 1
 
     # Write the results to the output file
     with open(output_file_path, 'w') as output_file:
