@@ -61,13 +61,16 @@ def main():
 
     # Sort unique_dbs by count in descending order
     sorted_unique_dbs = sorted(unique_dbs.items(), key=lambda item: item[1], reverse=True)
-
+    
+    # Create copy of results to iterate over and remove DBLINKS that are not unique
+    results_copy = results.copy()
+    
     # Iterate through each unique_db in sorted order
     index = 0
     while index < len(sorted_unique_dbs):
         unique_db, _ = sorted_unique_dbs[index]
         new_results = []
-        for organism, unique_id, dblinks in results:
+        for organism, unique_id, dblinks in results_copy:
             db_names = re.findall(r'\((\w+)', dblinks)
             if unique_db in db_names:
                 for db_name in db_names:
@@ -75,7 +78,7 @@ def main():
                         unique_dbs[db_name] -= 1
             else:
                 new_results.append((organism, unique_id, dblinks))
-        results = new_results
+        results_copy = new_results
 
         # Re-sort unique_dbs after processing each unique_db
         sorted_unique_dbs = sorted(unique_dbs.items(), key=lambda item: item[1], reverse=True)
