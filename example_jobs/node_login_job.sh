@@ -10,5 +10,5 @@
 #PBS -S /bin/bash
 #PBS -q itaym
 #PBS -N clustInteractive
-#PBS -l select=ncpus=4:mem=16gb
+#PBS -l select=ncpus=16:mem=16gb
 #PBS -I
