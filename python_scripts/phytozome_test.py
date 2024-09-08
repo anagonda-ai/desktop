@@ -37,11 +37,7 @@ def search_in_phytozome_and_write_to_file(unique_ids, gene_to_id, unique_ids_seq
     service = Service("https://phytozome-next.jgi.doe.gov/phytomine/service")
     
     with open(unique_ids_seq, 'w') as unique_ids_seq_file:
-<<<<<<< HEAD
         with ThreadPoolExecutor(max_workers=16) as executor:
-=======
-        with ThreadPoolExecutor(max_workers=10) as executor:
->>>>>>> b005c96e73be2d1e0ab8c460911e3fed6098b744
             futures = {executor.submit(process_unique_id, service, unique_id, gene_to_id): unique_id for unique_id in unique_ids}
             for future in as_completed(futures):
                 result = future.result()
