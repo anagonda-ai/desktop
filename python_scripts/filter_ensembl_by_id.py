@@ -17,7 +17,6 @@ def extract_unique_ids(file_path):
                     gene_to_id[value] = gene.group(1).replace(',', '')
     except Exception as e:
         print(f"Error processing file {file_path}: {e}")
-    
     return unique_ids, gene_to_id
 
 def search_in_fasta_files(unique_ids, base_dir):
@@ -40,20 +39,18 @@ def search_in_fasta_files(unique_ids, base_dir):
                         unique_ids -= found_ids  # Remove all found unique_ids at once
                 except Exception as e:
                     print(f"Error processing file {file_path}: {e}")
-    
     return results, unique_ids
 
 def main():
-    unique_ids_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/unique_dbs_for_unique_id.txt'
+    unique_ids_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/gene_by_db_seq/unique_dbs_for_unique_id.txt'
     fasta_base_dir = '/groups/itay_mayrose/galtoledano/gene_families/data/snakemake_download/per_species'
-    unique_ids_seq = '/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/unique_ids_seq.txt'
+    unique_ids_seq = '/groups/itay_mayrose/alongonda/desktop/plantcyc/gene_by_db_seq/ENSEMBL/unique_ids_seq.txt'
     
     # Extract UNIQUE-IDs with ENSEMBL UNIQUE-DBLINK
     unique_ids, gene_to_id = extract_unique_ids(unique_ids_file_path)
     
     # Search for UNIQUE-IDs in .canon.fa files
     results, unfounds = search_in_fasta_files(unique_ids, fasta_base_dir)
-    
     # Write the results to the output file
     with open(unique_ids_seq, 'w') as unique_ids_seq_file:
         for unique_id, value in results.items():
