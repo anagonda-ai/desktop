@@ -28,7 +28,7 @@ def process_unique_id(service, unique_id, gene_to_id):
         query.add_view("sequence.residues")
         query.add_constraint("primaryIdentifier", "=", unique_id, code="A")
         for row in query.rows():
-            return f'{unique_id} (gene {gene_to_id[unique_id]}): {row["sequence.residues"]}\n'
+            return gene_to_id[unique_id], row["sequence.residues"]
     except Exception as e:
         print(f"Error processing unique_id {unique_id}: {e}")
         return None
@@ -36,13 +36,18 @@ def process_unique_id(service, unique_id, gene_to_id):
 def search_in_phytozome_and_write_to_file(unique_ids, gene_to_id, unique_ids_seq):
     service = Service("https://phytozome-next.jgi.doe.gov/phytomine/service")
     
+    genes_and_sequences = {}
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        futures = {executor.submit(process_unique_id, service, unique_id, gene_to_id): unique_id for unique_id in unique_ids}
+        for future in as_completed(futures):
+            gene, sequence = future.result()
+            if gene:
+                if (gene in genes_and_sequences and len(genes_and_sequences[gene]) < len(sequence)) or gene not in genes_and_sequences:
+                    genes_and_sequences[gene] = sequence
+                        
     with open(unique_ids_seq, 'w') as unique_ids_seq_file:
-        with ThreadPoolExecutor(max_workers=16) as executor:
-            futures = {executor.submit(process_unique_id, service, unique_id, gene_to_id): unique_id for unique_id in unique_ids}
-            for future in as_completed(futures):
-                result = future.result()
-                if result:
-                    unique_ids_seq_file.write(result)
+        for gene, sequence in genes_and_sequences.items():
+            unique_ids_seq_file.write(f">{gene}\n{sequence}\n")
 
 def main():
     unique_ids_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/gene_by_db_seq/unique_dbs_for_unique_id.txt'
