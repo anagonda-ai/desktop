@@ -21,3 +21,6 @@ gmdata-2021-04-19/
 
 # Ignore plantcyc directory
 plantcyc/
+
+# Ignore arabidopsis directory
+arabidopsis/
