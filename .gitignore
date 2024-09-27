@@ -7,6 +7,12 @@ GeneMANIA.jar
 # Ignore all_mibig directory
 all_mibig/
 
+# Ignore alphafold directory
+alphafold/
+
+# Ignore alphafold_database directory
+alphafold_database/
+
 # Ignore coexpress directory
 coexpress/
 
