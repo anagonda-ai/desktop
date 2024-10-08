@@ -10,8 +10,8 @@ all_mibig/
 # Ignore alphafold directory
 alphafold/
 
-# Ignore alphafold_database directory
-alphafold_database/
+# Ignore Alphapulldown_TestRun/ directory
+Alphapulldown_TestRun/
 
 # Ignore full genomes directory
 full_genomes/
@@ -33,3 +33,6 @@ plantcyc/
 
 # Ignore arabidopsis directory
 arabidopsis/
+
+# Ignore example_jobs directory
+example_jobs/
