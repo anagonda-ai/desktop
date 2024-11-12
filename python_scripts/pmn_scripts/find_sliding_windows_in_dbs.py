@@ -1,5 +1,6 @@
 import os
 import csv
+import re
 import pandas as pd
 from concurrent.futures import ProcessPoolExecutor, as_completed
 
@@ -14,47 +15,49 @@ def create_pathways_dict(pathways_file):
     return pathways_dict
 
 def read_csv_files(input_csv_dir):
-    print(f"Reading CSV files from: {input_csv_dir}")
     file_paths = []
     for file_name in os.listdir(input_csv_dir):
         file_path = os.path.join(input_csv_dir, file_name)
         if os.path.isfile(file_path) and file_name.endswith('.csv'):
             file_paths.append(file_path)
+            print(f"Found CSV file: {file_path}")
     return file_paths
 
-def process_file(file_path, pathway_dict, max_distance=10, min_genes=3):
+def process_file(file_path, pathway_dict, window_size=10, min_genes=3):
+    print(f"Processing file: {file_path}")
     potential_groups = set()
     df = pd.read_csv(file_path)
     
     # Sort the DataFrame by 'start' and 'end' columns
     df_sorted = df.sort_values(by=['start', 'end'])
     
-    # Use a more efficient approach to find potential groups
-    for pathway, genes in pathway_dict.items():
-        gene_set = set(genes)
-        indices = df_sorted.index[df_sorted['id'].isin(gene_set)].tolist()
+    # Use a sliding window approach to find potential groups
+    for i in range(len(df_sorted) - window_size + 1):
+        window = df_sorted.iloc[i:i + window_size]
+        gene_ids = window['id'].tolist()
         
-        for i in range(len(indices)):
-            for j in range(i + min_genes - 1, min(i + max_distance + min_genes, len(indices))):
-                window_indices = indices[i:j + 1]
-                window = df_sorted.loc[window_indices]
-                gene_ids = window['id'].tolist()
-                
-                if len(gene_ids) >= min_genes:
-                    group = {
-                        'pathway': pathway,
-                        'genes': tuple(sorted(gene_ids)),
-                        'start': window['start'].min(),
-                        'end': window['end'].max()
-                    }
-                    potential_groups.add(tuple(sorted(group.items())))
-                    print(f"Found potential group: {group}")
+        # Remove the suffix only if it is one or two digits
+        gene_ids = [re.sub(r'\.\d{1,2}$', '', gene) for gene in gene_ids]
+        
+        # Check if at least 3 genes in the window belong to the same pathway
+        for pathway, genes in pathway_dict.items():
+            cluster_genes = [gene for gene in gene_ids if gene in genes]
+            if len(cluster_genes) >= min_genes:
+                group = {
+                    'pathway': pathway,
+                    'genes': tuple(sorted(gene_ids)),
+                    'cluster_genes': tuple(sorted(cluster_genes)),
+                    'start': window['start'].min(),
+                    'end': window['end'].max()
+                }
+                potential_groups.add(tuple(sorted(group.items())))
+                print(f"Found potential group: {group}")
 
     return potential_groups
 
 def save_potential_groups_to_file(potential_groups, output_file):
     with open(output_file, 'w', newline='') as csvfile:
-        fieldnames = ['pathway', 'genes', 'start', 'end']
+        fieldnames = ['pathway', 'genes', 'cluster_genes', 'start', 'end']
         writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
         
         writer.writeheader()
@@ -63,6 +66,7 @@ def save_potential_groups_to_file(potential_groups, output_file):
             writer.writerow({
                 'pathway': group_dict['pathway'],
                 'genes': ','.join(group_dict['genes']),
+                'cluster_genes': ','.join(group_dict['cluster_genes']),
                 'start': group_dict['start'],
                 'end': group_dict['end']
             })
@@ -80,7 +84,9 @@ def main():
     
     all_potential_groups = set()
     
-    with ProcessPoolExecutor() as executor:
+    max_workers = 32  # Set the maximum number of concurrent processes to avoid exceeding the CPU limit
+    
+    with ProcessPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for genome_dir in genome_dirs:
             file_paths = read_csv_files(genome_dir)
