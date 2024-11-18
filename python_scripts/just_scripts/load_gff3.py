@@ -16,10 +16,13 @@ def process_file(file_path, output_directory):
     
     # Create a new DataFrame with the specified columns
     df_transformed = pd.DataFrame({
-        'id': df_filtered.iloc[:, 8].str.split(";").str[1].str.replace(".2.0.227", "").str.replace("Name=", ""),
-        'start': df_filtered.iloc[:, 3],
-        'end': df_filtered.iloc[:, 4]
+        'id': df_filtered.iloc[:, 8],
+        'start': df_filtered.iloc[:, 3].astype(int),
+        'end': df_filtered.iloc[:, 4].astype(int)
     })
+    
+    # Sort the DataFrame by 'start' and 'end' columns
+    df_transformed = df_transformed.sort_values(by=['start', 'end'])
     
     # Save the transformed DataFrame as a new CSV file
     transformed_output_file_path = os.path.join(output_directory, f"{os.path.splitext(os.path.basename(file_path))[0]}_transformed.csv")
@@ -51,8 +54,8 @@ def process_directory(directory, output_directory):
     return dataframes
 
 def main():
-    directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome_test/Phytozome"
-    output_directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome_test/processed_annotations"
+    directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/Phytozome/genes_gff3_files"
+    output_directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
     dataframes = process_directory(directory, output_directory)
     for df in dataframes:
         print("DataFrame:")

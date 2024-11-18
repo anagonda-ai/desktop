@@ -1,8 +1,7 @@
 import os
 import csv
-import re
 import pandas as pd
-from concurrent.futures import ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 
 def create_pathways_dict(pathways_file):
     pathways_dict = {}
@@ -36,12 +35,9 @@ def process_file(file_path, pathway_dict, window_size=10, min_genes=3):
         window = df_sorted.iloc[i:i + window_size]
         gene_ids = window['id'].tolist()
         
-        # Remove the suffix only if it is one or two digits
-        gene_ids = [re.sub(r'\.\d{1,2}$', '', gene) for gene in gene_ids]
-        
         # Check if at least 3 genes in the window belong to the same pathway
         for pathway, genes in pathway_dict.items():
-            cluster_genes = [gene for gene in gene_ids if gene in genes]
+            cluster_genes = [gene for gene in genes if any(gene in g for g in gene_ids)]
             if len(cluster_genes) >= min_genes:
                 group = {
                     'pathway': pathway,
@@ -51,7 +47,6 @@ def process_file(file_path, pathway_dict, window_size=10, min_genes=3):
                     'end': window['end'].max()
                 }
                 potential_groups.add(tuple(sorted(group.items())))
-                print(f"Found potential group: {group}")
 
     return potential_groups
 
@@ -71,22 +66,10 @@ def save_potential_groups_to_file(potential_groups, output_file):
                 'end': group_dict['end']
             })
 
-def main():
-    genome_dirs = [
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_sorted",
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/processed_annotations_sorted",
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations_sorted"
-    ]
-    pathways_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/merged_pathways.csv"
-    output_file = "/groups/itay_mayrose/alongonda/desktop/potential_groups.csv"
-
-    pathway_dict = create_pathways_dict(pathways_file)
-    
+def process_csv_files_concurrently(genome_dirs, pathway_dict, max_workers=4):
     all_potential_groups = set()
     
-    max_workers = 32  # Set the maximum number of concurrent processes to avoid exceeding the CPU limit
-    
-    with ProcessPoolExecutor(max_workers=max_workers) as executor:
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
         futures = []
         for genome_dir in genome_dirs:
             file_paths = read_csv_files(genome_dir)
@@ -94,7 +77,26 @@ def main():
                 futures.append(executor.submit(process_file, file_path, pathway_dict))
         
         for future in as_completed(futures):
-            all_potential_groups.update(future.result())
+            try:
+                potential_groups = future.result()
+                all_potential_groups.update(potential_groups)
+            except Exception as exc:
+                print(f"Error processing file: {exc}")
+    
+    return all_potential_groups
+
+def main():
+    genome_dirs = [
+        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_sorted",
+        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/processed_annotations_sorted",
+        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
+    ]
+    pathways_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/merged_pathways.csv"
+    output_file = "/groups/itay_mayrose/alongonda/desktop/potential_groups.csv"
+
+    pathway_dict = create_pathways_dict(pathways_file)
+    
+    all_potential_groups = process_csv_files_concurrently(genome_dirs, pathway_dict, max_workers=32)
     
     # Save the potential groups to a file
     save_potential_groups_to_file(all_potential_groups, output_file)
