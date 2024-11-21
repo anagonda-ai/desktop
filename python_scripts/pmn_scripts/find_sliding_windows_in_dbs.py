@@ -4,28 +4,23 @@ import pandas as pd
 import numpy as np
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from collections import defaultdict
-from itertools import islice
+from threading import Lock, Event
+import hashlib
 
 def create_pathways_dict(pathways_file):
     """Read pathway file using chunks to avoid memory issues"""
     pathways_dict = defaultdict(set)
     
-    # Read CSV in chunks with low_memory=False
     chunk_size = 1000
     
-    for chunk in pd.read_csv(pathways_file, 
-                             chunksize=chunk_size, 
-                             low_memory=False):
-        # Dynamically select columns with prefix "GENE-ID."
+    for chunk in pd.read_csv(pathways_file, chunksize=chunk_size, low_memory=False):
         gene_id_cols = [col for col in chunk.columns if col.startswith('GENE-ID.')]
         required_cols = ['UNIQUE-ID'] + gene_id_cols
         
-        # Filter the chunk to include only the required columns
         chunk = chunk[required_cols]
         
         for _, row in chunk.iterrows():
             unique_id = row['UNIQUE-ID']
-            # Get all gene IDs, filtering out NaN and empty values
             gene_ids = {str(val).lower() for col in gene_id_cols 
                         if pd.notna(val := row[col]) and val}
             if gene_ids:
@@ -37,92 +32,138 @@ def read_csv_files(input_csv_dir):
     return [os.path.join(input_csv_dir, f) for f in os.listdir(input_csv_dir)
             if f.endswith('.csv') and os.path.isfile(os.path.join(input_csv_dir, f))]
 
-def process_window(window_data, pathway_dict, min_genes=3):
-    print(f"Processing window: {window_data['start'].min()} - {window_data['end'].max()}")
-    potential_groups = set()
+def generate_group_hash(group):
+    """
+    Generate a unique hash for a group to identify duplicates
+    Sorts genes to ensure consistent hashing
+    """
+    # Sort genes to make hash consistent regardless of order
+    sorted_genes = sorted(group['cluster_genes'].split(','))
+    
+    # Create a hash string that captures key identifying information
+    hash_string = f"{group['pathway']}|{'|'.join(sorted_genes)}"
+    
+    # Use MD5 to create a fixed-length unique identifier
+    return hashlib.md5(hash_string.encode()).hexdigest()
+
+class UniqueMatchTracker:
+    def __init__(self):
+        self._seen_matches = set()
+        self._lock = Lock()
+    
+    def is_unique_match(self, pathway_cluster):
+        """
+        Check if the match is unique and add it to seen matches if so
+        
+        Args:
+        - group: Dictionary representing a pathway and a cluster of genes
+        
+        Returns:
+        - Boolean indicating if this is a new, unique match
+        """
+        group_hash = generate_group_hash(pathway_cluster)
+        
+        with self._lock:
+            if group_hash in self._seen_matches:
+                return False
+            self._seen_matches.add(group_hash)
+            return True
+
+def process_window(window_data, pathway_dict, output_file, file_lock, 
+                   file_path, unique_tracker, min_genes=3):
+    """
+    Process a window of genes and write unique matches
+    """
     gene_ids = window_data['id'].tolist()
+    matches_found = 0
     
-    # Pre-compute gene matches for all pathways
-    gene_matches = defaultdict(set)
-    for gene_id in gene_ids:
-        gene_id_lower = gene_id.lower()
-        for pathway, pathway_genes in pathway_dict.items():
-            matches = {g for g in pathway_genes if g.lower() in gene_id_lower}
-            if matches:
-                gene_matches[pathway].update(matches)
-    
-    # Only process pathways with sufficient matches
-    for pathway, matches in gene_matches.items():
-        if len(matches) >= min_genes:
+    for pathway, pathway_genes in pathway_dict.items():
+        # Find matches between window genes and pathway genes
+        matches = [g for g in pathway_genes if any(g.lower() in gene_id.lower() for gene_id in gene_ids)]
+        
+        # Check if we have enough matches
+        if matches and len(matches) >= min_genes:
+            # Prepare group information
             group = {
                 'pathway': pathway,
-                'genes': tuple(sorted(gene_ids)),
-                'cluster_genes': tuple(sorted(matches)),
+                'genes': ','.join(gene_ids),
+                'cluster_genes': ','.join(sorted(matches)),
                 'start': window_data['start'].min(),
-                'end': window_data['end'].max()
+                'end': window_data['end'].max(),
+                'source_file': os.path.basename(file_path)
             }
-            potential_groups.add(tuple(sorted(group.items())))
+            
+            pathway_cluster = {
+                'pathway': pathway,
+                'cluster_genes': ','.join(sorted(matches))}
+            
+            # Check if this is a unique match
+            if unique_tracker.is_unique_match(pathway_cluster):
+                matches_found += 1
+                
+                # Thread-safe file writing
+                with file_lock:
+                    mode = 'a' if os.path.exists(output_file) else 'w'
+                    header = not os.path.exists(output_file)
+                    
+                    df_group = pd.DataFrame([group])
+                    df_group.to_csv(output_file, mode=mode, header=header, index=False)
+                
+                # Print match details
+                print(f"Unique Match Found: Pathway={pathway}, " + 
+                      f"Genes={','.join(gene_ids)}, " + 
+                      f"Matching Genes={','.join(matches)}, " + 
+                      f"File={os.path.basename(file_path)}")
     
-    return potential_groups
+    return matches_found
 
-def process_file(file_path, pathway_dict, window_size=10, min_genes=3):
+def process_file(file_path, pathway_dict, output_file, file_lock, 
+                 unique_tracker, window_size=10, min_genes=3, chunk_size=1000):
     print(f"Processing file: {file_path}")
-    potential_groups = set()
+    total_matches = 0
     
     try:
-        # Read only necessary columns
-        df = pd.read_csv(file_path, usecols=['id', 'start', 'end'])
+        # Use chunksize to read file incrementally
+        csv_reader = pd.read_csv(file_path, chunksize=chunk_size, usecols=['id', 'start', 'end'])
         
-        # Process in smaller chunks to manage memory
-        chunk_size = window_size * 100
-        for i in range(0, len(df), chunk_size):
-            chunk = df.iloc[i:i + chunk_size].sort_values(by=['start', 'end'])
+        for chunk_idx, chunk in enumerate(csv_reader):
+            # Sort chunk by start and end
+            chunk = chunk.sort_values(by=['start', 'end'])
             
             # Process windows within the chunk
             for j in range(len(chunk) - window_size + 1):
                 window = chunk.iloc[j:j + window_size]
-                window_groups = process_window(window, pathway_dict, min_genes)
-                potential_groups.update(window_groups)
-                
-            if i % 1000 == 0:
-                print(f"Processed {i}/{len(df)} rows in {file_path}")
+                chunk_matches = process_window(
+                    window_data=window, 
+                    pathway_dict=pathway_dict, 
+                    output_file=output_file, 
+                    file_lock=file_lock, 
+                    file_path=file_path,
+                    unique_tracker=unique_tracker,
+                    min_genes=min_genes
+                )
+                total_matches += chunk_matches
+            
+            # Print progress for every 10 chunks
+            if chunk_idx % 10 == 0:
+                print(f"Processed chunk {chunk_idx} in {os.path.basename(file_path)}")
+        
+        print(f"File {os.path.basename(file_path)} - Total Unique Matches: {total_matches}")
                 
     except Exception as e:
         print(f"Error processing {file_path}: {str(e)}")
-        return set()
+        return 0
     
-    return potential_groups
+    return total_matches
 
-def save_potential_groups_to_file(potential_groups, output_file):
-    # Save in chunks to handle large datasets
-    chunk_size = 1000
-    rows = []
-    
-    for group in potential_groups:
-        group_dict = dict(group)
-        rows.append({
-            'pathway': group_dict['pathway'],
-            'genes': ','.join(group_dict['genes']),
-            'cluster_genes': ','.join(group_dict['cluster_genes']),
-            'start': group_dict['start'],
-            'end': group_dict['end']
-        })
-        
-        if len(rows) >= chunk_size:
-            mode = 'w' if not os.path.exists(output_file) else 'a'
-            header = not os.path.exists(output_file)
-            pd.DataFrame(rows).to_csv(output_file, mode=mode, header=header, index=False)
-            rows = []
-    
-    # Save any remaining rows
-    if rows:
-        mode = 'w' if not os.path.exists(output_file) else 'a'
-        header = not os.path.exists(output_file)
-        pd.DataFrame(rows).to_csv(output_file, mode=mode, header=header, index=False)
-
-def process_genome_dir(genome_dir, pathway_dict, max_workers):
+def process_genome_dir(genome_dir, pathway_dict, output_file, max_workers):
     file_paths = read_csv_files(genome_dir)
-    all_potential_groups = set()
+    
+    # Use locks to prevent race conditions
+    file_lock = Lock()
+    unique_tracker = UniqueMatchTracker()
+    
+    total_dir_matches = 0
     
     # Process files in smaller batches to manage memory
     batch_size = 4
@@ -130,20 +171,31 @@ def process_genome_dir(genome_dir, pathway_dict, max_workers):
         batch_paths = file_paths[i:i + batch_size]
         
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
-            future_to_file = {executor.submit(process_file, fp, pathway_dict): fp 
-                            for fp in batch_paths}
+            # Create futures for batch processing
+            futures = [
+                executor.submit(
+                    process_file, 
+                    fp, 
+                    pathway_dict, 
+                    output_file, 
+                    file_lock,
+                    unique_tracker
+                ) 
+                for fp in batch_paths
+            ]
             
-            for future in as_completed(future_to_file):
+            # Wait for all futures to complete and collect matches
+            for future in as_completed(futures):
                 try:
-                    potential_groups = future.result()
-                    all_potential_groups.update(potential_groups)
+                    batch_matches = future.result()
+                    total_dir_matches += batch_matches
                 except Exception as exc:
-                    file_path = future_to_file[future]
-                    print(f"Error processing {file_path}: {exc}")
+                    print(f"Unexpected error in processing: {exc}")
         
         print(f"Completed batch {i//batch_size + 1}/{(len(file_paths) + batch_size - 1)//batch_size}")
     
-    return all_potential_groups
+    print(f"Directory {os.path.basename(genome_dir)} - Total Unique Matches: {total_dir_matches}")
+    return total_dir_matches
 
 def main():
     genome_dirs = [
@@ -152,25 +204,27 @@ def main():
         "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
     ]
     pathways_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/merged_pathways.csv"
-    output_file = "/groups/itay_mayrose/alongonda/desktop/potential_groups.csv"
+    output_file = "/groups/itay_mayrose/alongonda/desktop/potential_groups_immediate.csv"
 
     # Calculate optimal number of workers
-    max_workers = min(32, os.cpu_count())  # Reduced from 32 to prevent memory issues
+    max_workers = min(32, os.cpu_count())
     print(f"Using {max_workers} workers")
     
     print("Loading pathway dictionary...")
     pathway_dict = create_pathways_dict(pathways_file)
     print(f"Loaded {len(pathway_dict)} pathways")
     
-    all_potential_groups = set()
+    # Remove output file if it exists to start fresh
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    
+    total_global_matches = 0
     for genome_dir in genome_dirs:
         print(f"Processing directory: {genome_dir}")
-        dir_groups = process_genome_dir(genome_dir, pathway_dict, max_workers)
-        all_potential_groups.update(dir_groups)
-        print(f"Found {len(dir_groups)} groups in {genome_dir}")
+        dir_matches = process_genome_dir(genome_dir, pathway_dict, output_file, max_workers)
+        total_global_matches += dir_matches
     
-    print(f"Saving {len(all_potential_groups)} potential groups...")
-    save_potential_groups_to_file(all_potential_groups, output_file)
+    print(f"TOTAL UNIQUE MATCHES FOUND: {total_global_matches}")
     print(f"Results saved to: {output_file}")
 
 if __name__ == "__main__":
