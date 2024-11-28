@@ -1,4 +1,4 @@
-from concurrent.futures import ThreadPoolExecutor, as_completed
+import concurrent.futures
 import csv
 import os
 
@@ -14,11 +14,35 @@ def extract_info_from_header(header):
 def process_file(file_path):
     data = []
     with open(file_path, 'r') as f:
+        # Variables to store current entry information
+        current_header = None
+        current_sequence = []
+
         for line in f:
+            line = line.strip()
             if line.startswith('>'):
-                gene_name, transcript_name, start_position, end_position = extract_info_from_header(line)
-                if gene_name and transcript_name and start_position and end_position:
-                    data.append((gene_name, transcript_name, start_position, end_position))
+                # If we already have a previous entry, save it
+                if current_header and current_sequence:
+                    gene_name, transcript_name, start_position, end_position = extract_info_from_header(current_header)
+                    protein_sequence = ''.join(current_sequence)
+                    
+                    if gene_name and transcript_name and start_position and end_position:
+                        data.append((gene_name, transcript_name, start_position, end_position, protein_sequence))
+                
+                # Reset for new entry
+                current_header = line
+                current_sequence = []
+            else:
+                # Collect sequence lines
+                current_sequence.append(line)
+        
+        # Process the last entry
+        if current_header and current_sequence:
+            gene_name, transcript_name, start_position, end_position = extract_info_from_header(current_header)
+            protein_sequence = ''.join(current_sequence)
+            
+            if gene_name and transcript_name and start_position and end_position:
+                data.append((gene_name, transcript_name, start_position, end_position, protein_sequence))
     
     # Sort the data by start and end values
     data.sort(key=lambda x: (x[2], x[3]))
@@ -27,7 +51,7 @@ def process_file(file_path):
     output_file = os.path.join(os.path.dirname(file_path), 'extracted_data.csv')
     with open(output_file, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['gene_name', 'transcript', 'start', 'end'])
+        writer.writerow(['gene_name', 'transcript', 'start', 'end', 'protein_sequence'])
         writer.writerows(data)
     
     print(f"Data saved to {output_file}")
@@ -40,9 +64,9 @@ def process_fa_files(root_dir):
                 file_path = os.path.join(subdir, file)
                 file_paths.append(file_path)
     
-    with ThreadPoolExecutor() as executor:
+    with concurrent.futures.ThreadPoolExecutor() as executor:
         futures = {executor.submit(process_file, file_path): file_path for file_path in file_paths}
-        for future in as_completed(futures):
+        for future in concurrent.futures.as_completed(futures):
             file_path = futures[future]
             try:
                 future.result()

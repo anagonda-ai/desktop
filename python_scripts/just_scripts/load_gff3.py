@@ -54,7 +54,7 @@ def process_directory(directory, output_directory):
     return dataframes
 
 def main():
-    directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/Phytozome/genes_gff3_files"
+    directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/Phytozome/"
     output_directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
     dataframes = process_directory(directory, output_directory)
     for df in dataframes:
