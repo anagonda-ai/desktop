@@ -35,4 +35,4 @@ plantcyc/
 arabidopsis/
 
 # Ignore example_jobs directory
-example_jobs/
+sh_scripts/
