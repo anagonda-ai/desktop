@@ -33,6 +33,3 @@ plantcyc/
 
 # Ignore arabidopsis directory
 arabidopsis/
-
-# Ignore example_jobs directory
-example_jobs/
