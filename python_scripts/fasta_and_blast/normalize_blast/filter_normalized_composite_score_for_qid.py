@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import os
 
@@ -7,7 +8,11 @@ def filter_best_scores(df):
     return df.loc[idx]
 
 # Main script
-normalized_file_path = '/groups/itay_mayrose/alongonda/desktop/arabidopsis/normalized_blast_scores.csv'
+if len(sys.argv) != 2:
+    print("Usage: python filter_normalized_composite_score_for_qid.py <normalized_blast_csv_file>")
+    sys.exit(1)
+
+normalized_file_path = sys.argv[1]  # Get file path from the command line argument
 
 # Load the normalized BLAST results
 normalized_blast_df = pd.read_csv(normalized_file_path, sep='\t')

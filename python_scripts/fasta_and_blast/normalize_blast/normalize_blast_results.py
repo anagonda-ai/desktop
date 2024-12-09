@@ -1,3 +1,4 @@
+import sys
 import pandas as pd
 import os
 import math
@@ -64,7 +65,11 @@ def normalize_scores(file_path, chunksize=10000):
     return pd.concat(normalized_chunks)
 
 # Main script
-blast_output_file = input("Enter path to BLAST CSV file: ")
+if len(sys.argv) != 2:
+    print("Usage: python normalize_blast_results.py <blast_csv_file>")
+    sys.exit(1)
+
+blast_output_file = sys.argv[1]  # Get file path from the command line argument
 normalized_blast_df = normalize_scores(blast_output_file)
 
 # Save the normalized results to a CSV file in the same directory as the input file
