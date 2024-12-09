@@ -13,7 +13,6 @@ def parse_blast_results(file_path, chunksize=10000):
 
 def calculate_composite_score(args):
     row, max_bit_score = args
-    print(row)
     e_value = row['evalue']
     bit_score = row['bitscore']
     alignment_length = row['length']
