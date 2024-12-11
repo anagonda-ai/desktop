@@ -53,6 +53,9 @@ if [ $? -eq 0 ]; then
         
         # Run the filter_normalized_composite_score_for_qid.py script with the normalized results
         python3 /groups/itay_mayrose/alongonda/desktop/python_scripts/fasta_and_blast/normalize_blast/filter_normalized_composite_score_for_qid.py "$NORMALIZED_FILE"
+
+        # Remove the intermediate files
+        rm "$$OUT" "$$CSV_OUT" "$$NORMALIZED_FILE"
         
         # Check if the filtering script ran successfully
         if [ $? -eq 0 ]; then

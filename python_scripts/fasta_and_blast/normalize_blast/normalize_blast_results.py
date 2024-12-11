@@ -59,6 +59,7 @@ def normalize_scores(file_path, chunksize=10000):
             (chunk['composite_score'] - min_score) / (max_score - min_score)
         ).fillna(0)  # Handle division by zero if all scores are the same
         
+        chunk = chunk[['qseqid', 'sseqid', 'normalized_composite_score']]
         normalized_chunks.append(chunk)
     
     return pd.concat(normalized_chunks)
