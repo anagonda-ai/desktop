@@ -48,6 +48,7 @@ def process_window_with_aho_corasick(window_data, automaton, unique_tracker, out
     gene_ids = [gene.lower() for gene in window_data['id']]
     matches_found = 0
     matched_pathways = defaultdict(lambda: defaultdict(set))  # Nested dict to track matches per occurrence
+    gene_positions = defaultdict(dict)  # Store start and end positions for matched genes
 
     # Use Aho-Corasick to find all matching genes in the window
     for end_pos, (unique_occurrence_id, gene) in automaton.iter(" ".join(gene_ids)):
@@ -59,16 +60,23 @@ def process_window_with_aho_corasick(window_data, automaton, unique_tracker, out
         for occurrence_idx, genes in occurrences.items():
             # Find window genes that match the pathway (in their original case from window_data['id'])
             if len(genes) >= min_genes:
-                matched_window_genes = [
-                    window_gene for window_gene in window_data['id']
-                    if any(gene in window_gene.lower() for gene in genes)
-                ]
+                matched_window_genes = []
+                for window_gene, start, end in zip(window_data['id'], window_data['start'], window_data['end']):
+                    if any(gene in window_gene.lower() for gene in genes):
+                        matched_window_genes.append(window_gene)
+                        gene_positions[window_gene] = {'start': start, 'end': end}
+
                 unique_genes = set(genes)
+                matched_positions = [
+                    f"{gene}({gene_positions[gene]['start']}-{gene_positions[gene]['end']})"
+                    for gene in matched_window_genes if gene in gene_positions
+                ]
                 group = {
                     'pathway': f"{pathway} (Occurrence {occurrence_idx})",  # Include occurrence info
                     'genes': ','.join(window_data['id']),
                     'pathway_cluster_genes': ','.join(sorted(unique_genes)),
-                    'window_cluster_genes': ','.join(sorted(matched_window_genes)),  # Only matched genes from the window,
+                    'window_cluster_genes': ','.join(sorted(matched_window_genes)),  # Only matched genes from the window
+                    'gene_positions': ','.join(matched_positions),  # Include gene positions
                     'start': window_data['start'].min(),
                     'end': window_data['end'].max(),
                     'source_file': file_path
@@ -150,8 +158,8 @@ def main():
         "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/processed_annotations_sorted",
         "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
     ]
-    pathways_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/merged_pathways.csv"
-    output_file = "/groups/itay_mayrose/alongonda/desktop/potential_groups_with_window.csv"
+    pathways_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/merged_pathways.csv"
+    output_file = "/groups/itay_mayrose/alongonda/desktop/potential_groups_with_window_start_end.csv"
     max_workers = min(32, os.cpu_count())
     print(f"Using {max_workers} workers")
     print("Loading pathways...")
