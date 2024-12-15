@@ -3,10 +3,12 @@ from Bio import SeqIO
 import os
 
 def extract_genes_and_transcription(gbk_file, output_csv):
-    # Open the output file for writing
-    with open(output_csv, "w") as output:
+    # Open the output file for writing using the csv module
+    with open(output_csv, mode='w', newline='') as output:
+        writer = csv.writer(output)
+        
         # Write the header row
-        output.write("Feature_Type,Gene,Locus_Tag,Product,Note,Gene_Functions,Translation\n")
+        writer.writerow(["Feature_Type", "Gene", "Locus_Tag", "Product", "Note", "Gene_Functions", "Translation"])
         
         # Parse the GenBank file
         for record in SeqIO.parse(gbk_file, "genbank"):
@@ -23,7 +25,7 @@ def extract_genes_and_transcription(gbk_file, output_csv):
                     translation = feature.qualifiers.get("translation", [""])[0] if feature.type == "CDS" else ""
                     
                     # Write the extracted information to the CSV file
-                    output.write(f"{feature_type},{gene},{locus_tag},{product},{note},{gene_functions},{translation}\n")
+                    writer.writerow([feature_type, gene, locus_tag, product, note, gene_functions, translation])
 
 # Process all GenBank files in a directory
 def process_directory(gbk_directory):
