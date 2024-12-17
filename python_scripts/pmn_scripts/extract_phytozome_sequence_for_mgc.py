@@ -211,8 +211,8 @@ def process_csv_and_extract_sequences(input_csv_path, output_fasta_path, mode="p
 
 # Example usage
 if __name__ == "__main__":
-    input_csv_path = "/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv"  # Replace with your input CSV path
-    output_fasta_path = "/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes_with_sequence.fasta"  # Replace with desired output path
+    input_csv_path = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv"  # Replace with your input CSV path
+    output_fasta_path = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes_with_sequence.fasta"  # Replace with desired output path
     mode = "phytozome"  # 'phytozome' or 'ensembl' or 'plaza'
     process_csv_and_extract_sequences(input_csv_path, output_fasta_path, mode=mode)
     print("Sequence extraction completed.")

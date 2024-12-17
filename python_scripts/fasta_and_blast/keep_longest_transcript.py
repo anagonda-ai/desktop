@@ -27,8 +27,8 @@ def load_file_into_df(file_path):
     return df
 
 def main():
-    duplicates = '/groups/itay_mayrose/alongonda/desktop/plantcyc/gene_by_db_seq/PHYTOZOME/unique_ids_seq_test.txt'
-    unique_ids_seq = '/groups/itay_mayrose/alongonda/desktop/plantcyc/gene_by_db_seq/PHYTOZOME/no_duplicates.fasta'
+    duplicates = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/PHYTOZOME/unique_ids_seq_test.txt'
+    unique_ids_seq = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/PHYTOZOME/no_duplicates.fasta'
     
     # Load file into DataFrame
     df = load_file_into_df(duplicates)

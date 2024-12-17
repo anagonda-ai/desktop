@@ -33,12 +33,12 @@ def print_clusters(clusters):
             print(cluster)
 
 # Example usage
-file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/mgc_candidates_process/potential_groups_with_window_start_end.csv'
+file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/potential_groups_with_window_start_end.csv'
 clusters, clusters_with_file_and_pathway = load_csv(file_path)
 
-ensembl_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
-plaza_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'
-phytozome_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
+ensembl_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
+plaza_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'
+phytozome_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
 
 ensembl_genes = []
 plaza_genes = []
@@ -66,7 +66,7 @@ with open(ensembl_file_path, mode='w', newline='') as ensembl_file, open(plaza_f
 
 unique_clusters = remove_subclusters(clusters)
 
-output_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/unique_clusters_start_end.csv'
+output_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/unique_clusters_start_end.csv'
 with open(file_path, mode='r') as infile, open(output_file_path, mode='w', newline='') as outfile:
     csv_reader = csv.reader(infile)
     csv_writer = csv.writer(outfile)

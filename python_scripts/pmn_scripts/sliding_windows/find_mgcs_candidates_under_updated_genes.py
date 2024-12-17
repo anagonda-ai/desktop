@@ -2,8 +2,8 @@ import csv
 from collections import defaultdict
 
 # Read the CSV file
-input_file = '/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/combined_updated_genes.csv'
-output_file = '/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/candidates.csv'
+input_file = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/combined_updated_genes.csv'
+output_file = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/candidates.csv'
 
 # Data structure to hold the pathways and their EC numbers
 pathways = defaultdict(lambda: defaultdict(set))

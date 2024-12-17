@@ -26,6 +26,6 @@ def merge_files_unique_ids(base_dir, output_file):
   print(f"{count_genes} unique genes with sequence in plantcyc directory")
 
 if __name__ == "__main__":
-  base_dir = "/groups/itay_mayrose/alongonda/desktop/plantcyc"
+  base_dir = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/"
   output_file = "merged_sequences.txt"
   merge_files_unique_ids(base_dir, output_file)

@@ -25,8 +25,8 @@ def count_genes_in_unique_ids(csv_file):
     return unique_id_gene_count
 
 def main():
-    csv_file = '/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/merged_pathways.csv'
-    output_file = '/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/pathway_gene_count.csv'
+    csv_file = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/merged_pathways.csv'
+    output_file = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/pathway_gene_count.csv'
     
     unique_id_gene_count = count_genes_in_unique_ids(csv_file)
 

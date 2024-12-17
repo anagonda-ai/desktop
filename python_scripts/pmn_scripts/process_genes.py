@@ -108,7 +108,7 @@ def find_gene_positions(pathways_dict, gene_dict):
 
 def main():
     gene_files = ["/groups/itay_mayrose_nosnap/alongonda/full_genomes/annotations/test_dir/merged_annotations.csv"]
-    pathways_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/merged_pathways.csv"
+    pathways_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/merged_pathways.csv"
     
     gene_dict = load_csv_to_dict(gene_files)
     pathways_dict = create_pathways_dict(pathways_file)

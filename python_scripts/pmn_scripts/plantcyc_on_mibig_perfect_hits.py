@@ -25,7 +25,7 @@ def filter_blast_results(input_file, output_file):
                 writer.writerow(row)
 
 # Replace with your input and output file paths
-input_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_on_mibig.fasta"
-output_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_on_mibig_perfect_hits.fasta"
+input_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_on_mibig.fasta"
+output_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_on_mibig_perfect_hits.fasta"
 
 filter_blast_results(input_file, output_file)

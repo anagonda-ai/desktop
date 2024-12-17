@@ -38,7 +38,7 @@ def process_swissprotids_file(swissprotids_file):
     print(f"Sequences saved in: {output_file}")
 
 def find_swissprotids_files(base_dir):
-    ignore_path = "/groups/itay_mayrose/alongonda/desktop/plantcyc/plantcyc"
+    ignore_path = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/plantcyc"
     
     for dirpath, _, filenames in os.walk(base_dir):
         if ignore_path not in dirpath:  # Exclude directories containing the ignore path
@@ -50,5 +50,5 @@ def find_swissprotids_files(base_dir):
                     process_swissprotids_file(swissprotids_file)
 
 if __name__ == "__main__":
-    base_dir = "/groups/itay_mayrose/alongonda/desktop/plantcyc"  # Replace with your base directory
+    base_dir = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/"  # Replace with your base directory
     find_swissprotids_files(base_dir)

@@ -1,8 +1,8 @@
 import pandas as pd
 
 # Load the CSV files
-pathway_gene_count = pd.read_csv("/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/pathway_gene_count.csv")
-candidate_gene_count = pd.read_csv("/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/mgc_candidates_process/candidate_gene_counts.csv")
+pathway_gene_count = pd.read_csv("/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/pathway_gene_count.csv")
+candidate_gene_count = pd.read_csv("/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/candidate_gene_counts.csv")
 
 # Merge the DataFrames on the 'Pathway' column
 merged_df = candidate_gene_count.merge(
@@ -26,5 +26,5 @@ def calculate_percentage(row):
 merged_df["Percentage"] = merged_df.apply(calculate_percentage, axis=1)
 
 # Save the result to a new CSV or inspect
-merged_df.to_csv("/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/mgc_candidates_process/candidate_gene_counts_with_pathway.csv", index=False)
+merged_df.to_csv("/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/candidate_gene_counts_with_pathway.csv", index=False)
 print(merged_df)

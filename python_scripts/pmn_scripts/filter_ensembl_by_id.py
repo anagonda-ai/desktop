@@ -64,9 +64,9 @@ def search_in_fasta_files(unique_ids, base_dir, gene_to_id):
     return genes_and_sequences, unique_ids
 
 def main():
-    unique_ids_file_path = '/groups/itay_mayrose/alongonda/desktop/plantcyc/gene_by_db_seq/unique_dbs_for_unique_id.txt'
+    unique_ids_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/unique_dbs_for_unique_id.txt'
     fasta_base_dir = '/groups/itay_mayrose/galtoledano/gene_families/data/snakemake_download/per_species'
-    unique_ids_seq = '/groups/itay_mayrose/alongonda/desktop/plantcyc/gene_by_db_seq/ENSEMBL/unique_ids_seq.txt'
+    unique_ids_seq = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/ENSEMBL/unique_ids_seq.txt'
     
     # Extract UNIQUE-IDs with ENSEMBL UNIQUE-DBLINK
     unique_ids, gene_to_id = extract_unique_ids(unique_ids_file_path)
