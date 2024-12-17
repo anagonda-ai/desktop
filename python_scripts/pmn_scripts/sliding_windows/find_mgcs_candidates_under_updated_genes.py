@@ -57,9 +57,10 @@ with open(candidates_file, mode='r') as infile:
 # Step 4: Write the filtered candidates to a new CSV file
 with open(output_file, mode='w', newline='') as outfile:
     writer = csv.writer(outfile)
-    writer.writerow(['Pathway (Occurrence)', 'Gene IDs and Predicted EC numbers'])
+    writer.writerow(['Pathway (Occurrence)', 'Gene IDs and Predicted EC numbers', 'Gene IDs'])
     for pathway, genes_with_ec in filtered_candidates:
         gene_ec_list = [f"{gene_id}:{ec_number}" for gene_id, ec_number in genes_with_ec]
-        writer.writerow([pathway, '; '.join(gene_ec_list)])
+        gene_list = [f"{gene_id}" for gene_id, _ in genes_with_ec]
+        writer.writerow([pathway, '; '.join(gene_ec_list), '; '.join(gene_list)])
 
 print(f"Filtered pathways have been written to {output_file}")
