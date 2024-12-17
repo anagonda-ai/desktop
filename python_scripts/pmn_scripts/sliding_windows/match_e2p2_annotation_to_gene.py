@@ -34,5 +34,5 @@ updated_df = updated_df.dropna(subset=['Predicted EC number'])
 updated_df = updated_df[updated_df['Predicted EC number'] != 'EC number not predicted']
 
 # Save the combined and updated DataFrame to a new CSV file
-new_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/combined_updated_genes.csv'
+new_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/combined_updated_genes.csv'
 updated_df.to_csv(new_file_path, index=False)
