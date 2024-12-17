@@ -10,13 +10,13 @@ def count_genes_in_pathways(csv_file):
     # Count the number of genes for each pathway
     df['Gene Count'] = df['Gene IDs List'].apply(len)
 
-    # Group by pathway and sum the gene counts
-    pathway_gene_count = df.groupby('Pathway')['Gene Count'].sum().reset_index()
+    # Extract relevant columns to maintain independent rows
+    result = df[['Pathway (Occurrence)', 'Gene Count']]
 
-    return pathway_gene_count
+    return result
 
 def main():
-    csv_file = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates.csv'
+    csv_file = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/candidates.csv'
     output_file = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/candidate_gene_counts.csv'
     
     pathway_gene_count = count_genes_in_pathways(csv_file)
