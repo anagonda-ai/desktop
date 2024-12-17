@@ -30,6 +30,7 @@ def build_bipartite_graph(candidate_sequences, mgc_sequences):
     return graph
 
 def check_identity(mgc_directory, candidate_directory, output_file):
+    unmatched_candidates = []
     with open(output_file, 'w') as out_file:
         for fasta_filename in os.listdir(candidate_directory):
             if fasta_filename.endswith(".fasta") or fasta_filename.endswith(".fa"):
@@ -52,12 +53,29 @@ def check_identity(mgc_directory, candidate_directory, output_file):
                 
                 if not all_match_found:
                     out_file.write(f"Not all sequences in {fasta_path} have matches in any MGC CSV file.\n")
+                    unmatched_candidates.append(fasta_path)
+    return unmatched_candidates
 
 def main():
-    mgc_directory = "/groups/itay_mayrose/alongonda/desktop/MGCs/Plant_MGC/csv_files"
+    mgc_directory = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/csv_files"
     candidate_directory = "/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered"
     output_file = os.path.join(candidate_directory, "comparison_results.txt")
-    check_identity(mgc_directory, candidate_directory, output_file)
+    
+    # Check the identity of the candidates
+    unmatched_candidates = check_identity(mgc_directory, candidate_directory, output_file)
+    
+    # Get the MGC filepaths
+    mgc_filepaths = os.listdir(mgc_directory)
+    # Prepend the full path to MGC filepaths
+    mgc_filepaths = [os.path.join(mgc_directory, filename) for filename in mgc_filepaths]
+    
+    # Merge the unmatched candidates with the MGC filepaths
+    merged_list = unmatched_candidates + mgc_filepaths
+    
+    # Write the merged list to a file
+    with open(os.path.join(candidate_directory, "merged_list.txt"), 'w') as merged_file:
+        for item in merged_list:
+            merged_file.write(f"{item}\n")
 
 if __name__ == "__main__":
     main()

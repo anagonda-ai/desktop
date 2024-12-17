@@ -111,8 +111,8 @@ def create_pathways_dict(pathways_file):
     return dict(pathways_dict)
 
 # Process each file in a directory using multithreading
-def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, min_genes=3, window_size=10):
-    print(f"Processing file: {file_path}")
+def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, window_size, min_genes=3):
+    print(f"Processing file: {file_path} with window size: {window_size}")
     total_matches = 0
     df = pd.read_csv(file_path, usecols=['id', 'start', 'end'])
     df = df.sort_values(by=['start', 'end'])
@@ -127,7 +127,7 @@ def process_file(file_path, pathway_tries, output_file, unique_tracker, file_loc
     return total_matches
 
 # Process a whole genome directory
-def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers):
+def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size):
     file_paths = [os.path.join(genome_dir, f) for f in os.listdir(genome_dir) 
                   if f.endswith('.csv') and os.path.isfile(os.path.join(genome_dir, f))]
     unique_tracker = UniqueMatchTracker()
@@ -142,7 +142,8 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers):
                     pathway_tries, 
                     output_file, 
                     unique_tracker, 
-                    file_lock
+                    file_lock,
+                    window_size
                 )
                 for file_path in file_paths
             ]
@@ -159,27 +160,33 @@ def main():
         "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
     ]
     pathways_file = "/groups/itay_mayrose/alongonda/desktop/plantcyc/all_organisms/merged_pathways.csv"
-    output_file = "/groups/itay_mayrose/alongonda/desktop/potential_groups_with_window_start_end.csv"
+    output_dir = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs"
+    
+    # Ensure the output directory exists
+    if not os.path.exists(output_dir):
+        os.makedirs(output_dir)
+        
     max_workers = min(32, os.cpu_count())
     print(f"Using {max_workers} workers")
     print("Loading pathways...")
 
     # Load pathway dictionary and build Aho-Corasick automaton
     pathway_dict = create_pathways_dict(pathways_file)
-    
     pathway_tries = build_aho_corasick(pathway_dict)
     print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
 
-    if os.path.exists(output_file):
-        os.remove(output_file)
+    for window_size in range(18, 21):
+        output_file = os.path.join(output_dir, f"potential_groups_with_window_size_{window_size}.csv")
+        if os.path.exists(output_file):
+            os.remove(output_file)
 
-    total_matches = 0
-    for genome_dir in genome_dirs:
-        print(f"Processing directory: {genome_dir}")
-        total_matches += process_genome_dir(genome_dir, pathway_tries, output_file, max_workers)
-    
-    print(f"TOTAL MATCHES FOUND: {total_matches}")
-    print(f"Results saved to: {output_file}")
+        total_matches = 0
+        for genome_dir in genome_dirs:
+            print(f"Processing directory: {genome_dir} with window size: {window_size}")
+            total_matches += process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size)
+        
+        print(f"TOTAL MATCHES FOUND for window size {window_size}: {total_matches}")
+        print(f"Results saved to: {output_file}")
 
 if __name__ == "__main__":
     main()

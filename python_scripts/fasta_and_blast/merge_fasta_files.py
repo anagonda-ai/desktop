@@ -1,4 +1,5 @@
 import os
+import sys
 
 def merge_fasta_files(files, output_file):
     with open(output_file, 'w') as outfile:
@@ -16,11 +17,17 @@ def find_fasta_files(base_dir):
     return fasta_files
 
 def main():
-    base_dir = "/groups/itay_mayrose/alongonda/desktop/plantcyc/pmn_mgc_potential"
-    output_file = os.path.join(base_dir, "pmn.fasta")
-    
-    # Find all start_end_*.fasta files in the base directory and subdirectories
-    files = find_fasta_files(base_dir)
+    if len(sys.argv) != 3:
+        print("Usage: python merge_fasta_files.py <fasta_paths.txt> <output_dir>")
+        sys.exit(1)
+
+    fasta_paths_file = sys.argv[1]
+    output_dir = sys.argv[2]
+
+    with open(fasta_paths_file, 'r') as f:
+        files = [line.strip() for line in f if line.strip()]
+
+    output_file = os.path.join(output_dir, "training_data_with_e2p2_tag.fasta")
     
     # Merge the found FASTA files into one big file
     merge_fasta_files(files, output_file)

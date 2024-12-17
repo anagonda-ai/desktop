@@ -26,7 +26,7 @@ with open(csv_file, "r") as csvfile:
             entries.append({
                 "pathway": pathway,
                 "window_cluster_genes": gene_id,
-                "mgc_candidate_id": mgc_candidate_id
+                "mgc_candidate_id": f"MGC_CANDIDATE_{mgc_candidate_id}",
             })
         mgc_candidate_id += 1
 

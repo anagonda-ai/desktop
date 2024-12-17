@@ -11,7 +11,7 @@ unique_clusters['Pathway_Extracted'] = unique_clusters['pathway']
 # Merge the DataFrames on the extracted Pathway name
 merged_df = pd.merge(
     candidate_gene_counts,
-    unique_clusters[['Pathway_Extracted', 'start', 'end']],
+    unique_clusters[['Pathway_Extracted', 'pathway_cluster_genes', 'start', 'end']],
     how='left',
     on='Pathway_Extracted'
 )
