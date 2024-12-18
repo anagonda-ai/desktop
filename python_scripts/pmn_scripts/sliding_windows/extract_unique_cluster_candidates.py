@@ -56,31 +56,31 @@ for filename in os.listdir(directory_path):
                     csv_writer.writerow(row)
                     unique_clusters.remove(normalized_cluster)
 
-# ensembl_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
-# plaza_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'
-# phytozome_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
+ensembl_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
+plaza_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'
+phytozome_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
 
-# ensembl_genes = []
-# plaza_genes = []
-# phytozome_genes = []
+ensembl_genes = []
+plaza_genes = []
+phytozome_genes = []
 
-# for gene, gene_file_path, pathway in clusters_with_file_and_pathway:
-#     if 'ensembl' in gene_file_path.lower():
-#         ensembl_genes.append([gene, gene_file_path, pathway])
-#     elif 'plaza' in gene_file_path.lower():
-#         plaza_genes.append([gene, gene_file_path, pathway])
-#     elif 'phytozome' in gene_file_path.lower():
-#         phytozome_genes.append([gene, gene_file_path, pathway])
+for gene, gene_file_path, pathway in clusters_with_file_and_pathway:
+    if 'ensembl' in gene_file_path.lower():
+        ensembl_genes.append([gene, gene_file_path, pathway])
+    elif 'plaza' in gene_file_path.lower():
+        plaza_genes.append([gene, gene_file_path, pathway])
+    elif 'phytozome' in gene_file_path.lower():
+        phytozome_genes.append([gene, gene_file_path, pathway])
 
-# with open(ensembl_file_path, mode='w', newline='') as ensembl_file, open(plaza_file_path, mode='w', newline='') as plaza_file, open(phytozome_file_path, mode='w', newline='') as phytozome_file:
-#     ensembl_csv_writer = csv.writer(ensembl_file)
-#     plaza_csv_writer = csv.writer(plaza_file)
-#     phytozome_csv_writer = csv.writer(phytozome_file)
-#     for gene, gene_file_path, pathway in clusters_with_file_and_pathway:
-#         if 'ensembl' in gene_file_path.lower():
-#             ensembl_csv_writer.writerow([gene, gene_file_path, pathway])
-#         elif 'plaza' in gene_file_path.lower():
-#             plaza_csv_writer.writerow([gene, gene_file_path, pathway])
-#         elif 'phytozome' in gene_file_path.lower():
-#             phytozome_csv_writer.writerow([gene, gene_file_path, pathway])
+with open(ensembl_file_path, mode='w', newline='') as ensembl_file, open(plaza_file_path, mode='w', newline='') as plaza_file, open(phytozome_file_path, mode='w', newline='') as phytozome_file:
+    ensembl_csv_writer = csv.writer(ensembl_file)
+    plaza_csv_writer = csv.writer(plaza_file)
+    phytozome_csv_writer = csv.writer(phytozome_file)
+    for gene, gene_file_path, pathway in clusters_with_file_and_pathway:
+        if 'ensembl' in gene_file_path.lower():
+            ensembl_csv_writer.writerow([gene, gene_file_path, pathway])
+        elif 'plaza' in gene_file_path.lower():
+            plaza_csv_writer.writerow([gene, gene_file_path, pathway])
+        elif 'phytozome' in gene_file_path.lower():
+            phytozome_csv_writer.writerow([gene, gene_file_path, pathway])
 

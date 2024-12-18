@@ -111,7 +111,7 @@ def create_pathways_dict(pathways_file):
     return dict(pathways_dict)
 
 # Process each file in a directory using multithreading
-def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, window_size, min_genes=3):
+def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, window_size, min_genes):
     print(f"Processing file: {file_path} with window size: {window_size}")
     total_matches = 0
     df = pd.read_csv(file_path, usecols=['id', 'start', 'end'])
@@ -127,7 +127,7 @@ def process_file(file_path, pathway_tries, output_file, unique_tracker, file_loc
     return total_matches
 
 # Process a whole genome directory
-def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size):
+def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes):
     file_paths = [os.path.join(genome_dir, f) for f in os.listdir(genome_dir) 
                   if f.endswith('.csv') and os.path.isfile(os.path.join(genome_dir, f))]
     unique_tracker = UniqueMatchTracker()
@@ -143,7 +143,8 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, wind
                     output_file, 
                     unique_tracker, 
                     file_lock,
-                    window_size
+                    window_size,
+                    min_genes
                 )
                 for file_path in file_paths
             ]
@@ -152,6 +153,13 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, wind
                 pbar.update(1)
     print(f"Directory {genome_dir} - Total Matches: {total_matches}")
     return total_matches
+
+def create_output_subdir(output_dir, min_genes):
+    """Create a subdirectory for each min_genes value."""
+    subdir = os.path.join(output_dir, f"min_genes_{min_genes}")
+    if not os.path.exists(subdir):
+        os.makedirs(subdir)
+    return subdir
 
 def main():
     genome_dirs = [
@@ -175,18 +183,25 @@ def main():
     pathway_tries = build_aho_corasick(pathway_dict)
     print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
 
-    for window_size in range(18, 21):
-        output_file = os.path.join(output_dir, f"potential_groups_with_window_size_{window_size}.csv")
-        if os.path.exists(output_file):
-            os.remove(output_file)
-
-        total_matches = 0
-        for genome_dir in genome_dirs:
-            print(f"Processing directory: {genome_dir} with window size: {window_size}")
-            total_matches += process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size)
+    for window_size in range(5, 21):
+        # Dynamically calculate the maximum value of min_genes
+        max_min_genes = (window_size // 2) + 1
         
-        print(f"TOTAL MATCHES FOUND for window size {window_size}: {total_matches}")
-        print(f"Results saved to: {output_file}")
+        for min_genes in range(3, max_min_genes + 1):  # Adjust min_genes based on the constraint
+            # Create subdirectory for the current min_genes
+            min_genes_subdir = create_output_subdir(output_dir, min_genes)
+            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
+            
+            if os.path.exists(output_file):
+                os.remove(output_file)
 
+            total_matches = 0
+            for genome_dir in genome_dirs:
+                print(f"Processing genome directory: {genome_dir} with window size: {window_size} and min_genes: {min_genes}")
+                total_matches += process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes)
+            
+            print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
+            print(f"Results saved to: {output_file}")
+            
 if __name__ == "__main__":
     main()

@@ -27,7 +27,7 @@ def main():
     with open(fasta_paths_file, 'r') as f:
         files = [line.strip() for line in f if line.strip()]
 
-    output_file = os.path.join(output_dir, "training_data_with_e2p2_tag.fasta")
+    output_file = os.path.join(output_dir, "training_data_negatives.fasta")
     
     # Merge the found FASTA files into one big file
     merge_fasta_files(files, output_file)
