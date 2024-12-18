@@ -42,7 +42,7 @@ for bar in bars:
     plt.text(bar.get_x() + bar.get_width()/2, yval, int(yval), va='bottom')  # va='bottom' to place text above the bar
 
 # שמירת ההיסטוגרמה לקובץ
-output_path = "window_size_histogram.png"
+output_path = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs/window_size_histogram.png"
 plt.savefig(output_path, dpi=300)  # שמירה ברזולוציה גבוהה
 plt.close()
 
