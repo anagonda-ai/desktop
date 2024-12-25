@@ -1,5 +1,6 @@
 from threading import Lock
 import os
+from typing import List
 import pandas as pd
 import hashlib
 import random
@@ -190,8 +191,8 @@ def process_file_with_statistics(file_path, pathway_tries, output_file, unique_t
             random_genes = random.sample(all_genes, window_size)
             random_window = pd.DataFrame({
                 'id': random_genes,
-                'start': range(len(random_genes)),
-                'end': range(1, len(random_genes) + 1)
+                'start': 1,
+                'end': 1
             })
             process_window_with_statistics(
                 random_window, pathway_tries, unique_tracker, output_file,
@@ -202,15 +203,28 @@ def process_file_with_statistics(file_path, pathway_tries, output_file, unique_t
     print(f"Completed file: {file_path}, Matches Found: {total_matches}")
     return total_matches
 
-def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes, stats_tracker):
-    """Process all files in a genome directory."""
-    file_paths = [os.path.join(genome_dir, f) for f in os.listdir(genome_dir) 
-                  if f.endswith('.csv') and os.path.isfile(os.path.join(genome_dir, f))]
+def process_genome_dirs(genome_dirs: List[str],
+                       pathway_tries: ahocorasick.Automaton,
+                       output_file: str,
+                       max_workers: int,
+                       window_size: int,
+                       min_genes: int,
+                       stats_tracker: WindowStatistics) -> int:
+    """Process all genome directories in parallel."""
+    # Collect all files from all directories
+    all_files = []
+    for genome_dir in genome_dirs:
+        files = [os.path.join(genome_dir, f) for f in os.listdir(genome_dir)
+                if f.endswith('.csv') and os.path.isfile(os.path.join(genome_dir, f))]
+        all_files.extend(files)
+    
     unique_tracker = UniqueMatchTracker()
     file_lock = Lock()
     total_matches = 0
     
-    with tqdm(total=len(file_paths), desc=f"Directory: {os.path.basename(genome_dir)}", unit="file") as pbar:
+    print(f"Processing {len(all_files)} total files across all directories")
+    
+    with tqdm(total=len(all_files), desc="Processing files", unit="file") as pbar:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [
                 executor.submit(
@@ -219,8 +233,9 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, wind
                     unique_tracker, file_lock, window_size,
                     min_genes, stats_tracker
                 )
-                for file_path in file_paths
+                for file_path in all_files
             ]
+            
             for future in as_completed(futures):
                 total_matches += future.result()
                 pbar.update(1)
@@ -298,6 +313,7 @@ def enrichment_ratio_of_clusters_for_windowsize_clustersize(root_directory):
 
 
 def main():
+    """Main execution function with improved parallel processing."""
     # Input directories and files
     genome_dirs = [
         "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_sorted",
@@ -308,73 +324,70 @@ def main():
     output_dir = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs_with_statistics"
     
     # Ensure output directory exists
-    if not os.path.exists(output_dir):
-        os.makedirs(output_dir)
+    os.makedirs(output_dir, exist_ok=True)
     
-    # Setup processing
-    max_workers = os.cpu_count()
+    # Use maximum available workers
+    max_workers = os.cpu_count()  # Use all CPU cores
     print(f"Using {max_workers} workers")
-    print("Loading pathways...")
     
-    # Load pathway dictionary and build Aho-Corasick automaton
+    print("Loading pathways...")
     pathway_dict = create_pathways_dict(pathways_file)
     pathway_tries = build_aho_corasick(pathway_dict)
-    print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
+    print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick automaton")
     
-    # Store results for statistical analysis
     results = []
+    window_sizes = range(5, 21)
+    total_configs = sum(((size // 2) + 1) - 2 for size in window_sizes)
     
-    # Process each window size and min_genes combination
-    for window_size in range(5, 21):
-        max_min_genes = (window_size // 2) + 1
-        
-        for min_genes in range(3, max_min_genes + 1):
-            print(f"\nProcessing window_size={window_size}, min_genes={min_genes}")
+    with tqdm(total=total_configs, desc="Processing configurations", unit="config") as config_pbar:
+        for window_size in window_sizes:
+            max_min_genes = (window_size // 2) + 1
             
-            # Create output directory and file
-            min_genes_subdir = create_output_subdir(output_dir, min_genes)
-            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
-            
-            if os.path.exists(output_file):
-                os.remove(output_file)
-            
-            # Initialize statistics tracker
-            stats_tracker = WindowStatistics()
-            
-            # Process all genome directories
-            total_matches = 0
-            for genome_dir in genome_dirs:
-                print(f"Processing genome directory: {genome_dir}")
-                total_matches += process_genome_dir(
-                    genome_dir, pathway_tries, output_file,
+            for min_genes in range(3, max_min_genes + 1):
+                print(f"\nProcessing window_size={window_size}, min_genes={min_genes}")
+                
+                min_genes_subdir = create_output_subdir(output_dir, min_genes)
+                output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
+                
+                if os.path.exists(output_file):
+                    os.remove(output_file)
+                
+                stats_tracker = WindowStatistics()
+                
+                # Process all directories at once
+                total_matches = process_genome_dirs(
+                    genome_dirs, pathway_tries, output_file,
                     max_workers, window_size, min_genes, stats_tracker
                 )
-            
-            # Collect statistics
-            stats = stats_tracker.get_statistics()
-            stats.update({
-                'window_size': window_size,
-                'min_genes': min_genes,
-                'total_matches': total_matches
-            })
-            
-            results.append(stats)
-            
-            
-            # Print current configuration results
-            print(f"\nConfiguration results:")
-            print(f"Window size: {window_size}, Min genes: {min_genes}")
-            print(f"Actual ratio: {stats['actual_ratio']:.4f}")
-            print(f"Random ratio: {stats['random_ratio']:.4f}")
-            print(f"Enrichment ratio: {stats['enrichment_ratio']:.4f}")
-            print(f"Total matches: {total_matches}")
-            print(f"Results saved to: {output_file}")
-            
-            # Save current configuration results to file
-            stats_output_file = os.path.join(min_genes_subdir, f"statistics_w{window_size}_m{min_genes}.csv")
-            pd.DataFrame([stats]).to_csv(stats_output_file, index=False)
+                
+                # Collect and save statistics
+                stats = stats_tracker.get_statistics()
+                stats.update({
+                    'window_size': window_size,
+                    'min_genes': min_genes,
+                    'total_matches': total_matches
+                })
+                
+                results.append(stats)
+                
+                # Save current configuration results
+                stats_output_file = os.path.join(
+                    min_genes_subdir,
+                    f"statistics_w{window_size}_m{min_genes}.csv"
+                )
+                pd.DataFrame([stats]).to_csv(stats_output_file, index=False)
+                
+                print(f"\nConfiguration results:")
+                print(f"Window size: {window_size}, Min genes: {min_genes}")
+                print(f"Actual ratio: {stats['actual_ratio']:.4f}")
+                print(f"Random ratio: {stats['random_ratio']:.4f}")
+                print(f"Enrichment ratio: {stats['enrichment_ratio']:.4f}")
+                print(f"Total matches: {total_matches}")
+                print(f"Results saved to: {output_file}")
+                
+                config_pbar.update(1)
     
-    # Save statistical results
+    # Save final results
     results_df = pd.DataFrame(results)
     stats_output = os.path.join(output_dir, 'window_configuration_statistics.csv')
     results_df.to_csv(stats_output, index=False)
@@ -383,10 +396,9 @@ def main():
     best_configs = results_df.nlargest(5, 'enrichment_ratio')
     print("\nTop 5 configurations by enrichment ratio:")
     print(best_configs[['window_size', 'min_genes', 'enrichment_ratio', 'actual_ratio', 'random_ratio']])
-
-    # Plot the enrichment_ratio vs file_name (ordered by ranking)
+    
+    # Generate final visualization
     enrichment_ratio_of_clusters_for_windowsize_clustersize(output_dir)
-
 
 if __name__ == "__main__":
     main()
