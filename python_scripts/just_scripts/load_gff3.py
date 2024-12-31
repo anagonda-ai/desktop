@@ -18,11 +18,12 @@ def process_file(file_path, output_directory):
     df_transformed = pd.DataFrame({
         'id': df_filtered.iloc[:, 8],
         'start': df_filtered.iloc[:, 3].astype(int),
-        'end': df_filtered.iloc[:, 4].astype(int)
+        'end': df_filtered.iloc[:, 4].astype(int),
+        'chromosome': df_filtered.iloc[:, 0],
     })
     
     # Sort the DataFrame by 'start' and 'end' columns
-    df_transformed = df_transformed.sort_values(by=['start', 'end'])
+    df_transformed = df_transformed.sort_values(by=['chromosome', 'start', 'end'])
     
     # Save the transformed DataFrame as a new CSV file
     transformed_output_file_path = os.path.join(output_directory, f"{os.path.splitext(os.path.basename(file_path))[0]}_transformed.csv")
@@ -55,7 +56,7 @@ def process_directory(directory, output_directory):
 
 def main():
     directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/Phytozome/"
-    output_directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
+    output_directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes/"
     dataframes = process_directory(directory, output_directory)
     for df in dataframes:
         print("DataFrame:")

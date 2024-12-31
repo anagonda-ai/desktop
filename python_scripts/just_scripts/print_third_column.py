@@ -21,13 +21,14 @@ def process_csv_file(csv_file_path, output_csv_file_path):
 
     with open(csv_file_path, mode='r') as csv_file:
         csv_reader = csv.reader(csv_file)
+        next(csv_reader)  # Skip the header row
         for row in csv_reader:
             if len(row) >= 3:
                 row_str = '\t'.join(row)
                 row_str = remove_parentheses_content(row_str).split('\t')
                 id = row_str[0]
-                start = row_str[4]
-                end = row_str[5]
+                start = row_str[3]
+                end = row_str[4]
                 data.append([id, start, end])
 
     # Create a new DataFrame
@@ -36,10 +37,18 @@ def process_csv_file(csv_file_path, output_csv_file_path):
     print(f"Data saved to {output_csv_file_path}")
 
 def main():
-    directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/annotations"
-    output_directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/processed_annotations"
+    directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/organisms"
+    output_directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_test"
     os.makedirs(output_directory, exist_ok=True)
 
+    for root, dirs, files in os.walk(directory):
+        for filename in files:
+            if filename.endswith(".csv"):
+                csv_file_path = os.path.join(root, filename)
+                output_file_name = os.path.basename(os.path.dirname(csv_file_path))
+                output_csv_file_path = os.path.join(output_directory, output_file_name + ".csv")
+                process_csv_file(csv_file_path, output_csv_file_path)
+                
     for filename in os.listdir(directory):
         if filename.endswith(".csv"):
             csv_file_path = os.path.join(directory, filename)

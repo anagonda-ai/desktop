@@ -318,7 +318,7 @@ def main():
     genome_dirs = [
         "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_sorted",
         "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/processed_annotations_sorted",
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
+        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes"
     ]
     pathways_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/merged_pathways.csv"
     output_dir = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs_with_statistics"
@@ -336,7 +336,8 @@ def main():
     print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick automaton")
     
     results = []
-    window_sizes = range(5, 21)
+    # window_sizes = range(5, 21)
+    window_sizes = [10]
     total_configs = sum(((size // 2) + 1) - 2 for size in window_sizes)
     
     with tqdm(total=total_configs, desc="Processing configurations", unit="config") as config_pbar:

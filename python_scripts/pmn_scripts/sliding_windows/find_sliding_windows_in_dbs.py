@@ -163,12 +163,12 @@ def create_output_subdir(output_dir, min_genes):
 
 def main():
     genome_dirs = [
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_sorted",
+        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_test",
         "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/processed_annotations_sorted",
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations"
+        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes"
     ]
     pathways_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/merged_pathways.csv"
-    output_dir = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs"
+    output_dir = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted"
     
     # Ensure the output directory exists
     if not os.path.exists(output_dir):
@@ -183,11 +183,13 @@ def main():
     pathway_tries = build_aho_corasick(pathway_dict)
     print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
 
-    for window_size in range(5, 21):
+    # for window_size in range(5, 21):
+    for window_size in [10]:
         # Dynamically calculate the maximum value of min_genes
         max_min_genes = (window_size // 2) + 1
         
-        for min_genes in range(3, max_min_genes + 1):  # Adjust min_genes based on the constraint
+        # for min_genes in range(3, max_min_genes + 1):  # Adjust min_genes based on the constraint
+        for min_genes in [3]:
             # Create subdirectory for the current min_genes
             min_genes_subdir = create_output_subdir(output_dir, min_genes)
             output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
