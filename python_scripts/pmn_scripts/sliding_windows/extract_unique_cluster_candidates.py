@@ -34,27 +34,29 @@ def print_clusters(clusters):
             print(cluster)
 
 # Example usage
-directory_path = '/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs'
-output_directory_path = '/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs'
+directory_path = '/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted'
+output_directory_path = '/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted'
 
 if not os.path.exists(output_directory_path):
     os.makedirs(output_directory_path)
 
-for filename in os.listdir(directory_path):
-    if filename.endswith('.csv'):
-        file_path = os.path.join(directory_path, filename)
-        clusters, clusters_with_file_and_pathway = load_csv(file_path)
-        unique_clusters = remove_subclusters(clusters)
-        
-        output_file_path = os.path.join(output_directory_path, f'unique_{filename}')
-        with open(file_path, mode='r') as infile, open(output_file_path, mode='w', newline='') as outfile:
-            csv_reader = csv.reader(infile)
-            csv_writer = csv.writer(outfile)
-            for row in csv_reader:
-                normalized_cluster = normalize_cluster(row[3])
-                if normalized_cluster in unique_clusters:
-                    csv_writer.writerow(row)
-                    unique_clusters.remove(normalized_cluster)
+for root, _, files in os.walk(directory_path):
+    for filename in files:
+        if filename.endswith('.csv'):
+            print(f'Processing {filename}')
+            file_path = os.path.join(root, filename)
+            clusters, clusters_with_file_and_pathway = load_csv(file_path)
+            unique_clusters = remove_subclusters(clusters)
+            
+            output_file_path = os.path.join(output_directory_path, f'unique_{filename}')
+            with open(file_path, mode='r') as infile, open(output_file_path, mode='w', newline='') as outfile:
+                csv_reader = csv.reader(infile)
+                csv_writer = csv.writer(outfile)
+                for row in csv_reader:
+                    normalized_cluster = normalize_cluster(row[3])
+                    if normalized_cluster in unique_clusters:
+                        csv_writer.writerow(row)
+                        unique_clusters.remove(normalized_cluster)
 
 ensembl_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
 plaza_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'

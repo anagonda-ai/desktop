@@ -22,8 +22,16 @@ def process_file(file_path, output_directory):
         'chromosome': df_filtered.iloc[:, 0],
     })
     
-    # Sort the DataFrame by 'start' and 'end' columns
-    df_transformed = df_transformed.sort_values(by=['chromosome', 'start', 'end'])
+    # Function to extract numeric part from chromosome for sorting
+    def extract_numeric_part(chromosome):
+        # Ensure chromosome is treated as a string
+        chromosome = str(chromosome)
+        return ''.join(filter(str.isdigit, chromosome)) or '0'
+    
+    # Sort the DataFrame by 'chromosome' (both numeric and text) and 'start' and 'end' columns
+    df_transformed['chromosome_numeric'] = df_transformed['chromosome'].apply(extract_numeric_part)
+    df_transformed = df_transformed.sort_values(by=['chromosome_numeric', 'chromosome', 'start', 'end'])
+    df_transformed = df_transformed.drop(columns=['chromosome_numeric'])
     
     # Save the transformed DataFrame as a new CSV file
     transformed_output_file_path = os.path.join(output_directory, f"{os.path.splitext(os.path.basename(file_path))[0]}_transformed.csv")

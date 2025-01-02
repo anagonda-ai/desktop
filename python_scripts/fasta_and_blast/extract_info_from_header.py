@@ -12,48 +12,46 @@ def extract_info_from_header(header):
     end_position = int(parts[2].split(':')[4])
     return gene_name, transcript_name, chrosomose, start_position, end_position
 
+def extract_numeric_part(chromosome):
+    return int(''.join(filter(str.isdigit, chromosome)) or 0)
+
 def process_file(file_path):
-    data = []
+    data = {}
     with open(file_path, 'r') as f:
-        # Variables to store current entry information
         current_header = None
         current_sequence = []
 
         for line in f:
             line = line.strip()
             if line.startswith('>'):
-                # If we already have a previous entry, save it
                 if current_header and current_sequence:
                     gene_name, transcript_name, chrosomose, start_position, end_position = extract_info_from_header(current_header)
                     protein_sequence = ''.join(current_sequence)
-                    
-                    if gene_name and transcript_name and start_position and end_position:
-                        data.append((gene_name, transcript_name, chrosomose, start_position, end_position, protein_sequence))
+                    transcript_length = end_position - start_position
+
+                    if gene_name not in data or transcript_length > data[gene_name][4] - data[gene_name][3]:
+                        data[gene_name] = (gene_name, transcript_name, chrosomose, start_position, end_position, protein_sequence)
                 
-                # Reset for new entry
                 current_header = line
                 current_sequence = []
             else:
-                # Collect sequence lines
                 current_sequence.append(line)
         
-        # Process the last entry
         if current_header and current_sequence:
             gene_name, transcript_name, chrosomose, start_position, end_position = extract_info_from_header(current_header)
             protein_sequence = ''.join(current_sequence)
-            
-            if gene_name and transcript_name and start_position and end_position:
-                data.append((gene_name, transcript_name, chrosomose, start_position, end_position, protein_sequence))
+            transcript_length = end_position - start_position
+
+            if gene_name not in data or transcript_length > data[gene_name][4] - data[gene_name][3]:
+                data[gene_name] = (gene_name, transcript_name, chrosomose, start_position, end_position, protein_sequence)
     
-    # Sort the data by start and end values
-    data.sort(key=lambda x: (x[2], x[3], x[4]))
-    
-    # Write the data to a CSV file
+    sorted_data = sorted(data.values(), key=lambda x: (extract_numeric_part(x[2]), x[2], x[3], x[4]))
+
     output_file = os.path.join(os.path.dirname(file_path), 'extracted_data.csv')
     with open(output_file, 'w', newline='') as csvfile:
         writer = csv.writer(csvfile)
-        writer.writerow(['gene_name', 'transcript', 'chrosomose', 'start', 'end', 'protein_sequence'])
-        writer.writerows(data)
+        writer.writerow(['gene_name', 'transcript_name', 'chrosomose', 'start_position', 'end_position', 'protein_sequence'])
+        writer.writerows(sorted_data)
     
     print(f"Data saved to {output_file}")
 

@@ -183,8 +183,7 @@ def main():
     pathway_tries = build_aho_corasick(pathway_dict)
     print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
 
-    # for window_size in range(5, 21):
-    for window_size in [10]:
+    for window_size in range(5, 21):
         # Dynamically calculate the maximum value of min_genes
         max_min_genes = (window_size // 2) + 1
         
