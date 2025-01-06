@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 import re
 
-directory_path = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs"
+directory_path = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted"
 
 window_sizes = []
 row_counts = []
@@ -14,13 +14,14 @@ average_cluster_sizes = []
 for file_name in os.listdir(directory_path):
     file_path = os.path.join(directory_path, file_name)
     if os.path.isfile(file_path):
-        match = re.search(r'window_size_(\d+)', file_name)
+        match = re.search(r'potential_groups_w(\d+)', file_name)
         if match:
             window_size = int(match.group(1))
             try:
                 df = pd.read_csv(file_path, sep=",")
                 window_sizes.append(window_size)
                 row_counts.append(len(df))
+                print(len(df))
                 
                 num_genes = df['pathway_cluster_genes'].str.split(',').map(len).sum()
                 num_of_genes.append(num_genes)
@@ -89,6 +90,6 @@ correlation_text = (
 plt.text(0.5, 0.5, correlation_text, ha='center', va='center', fontsize=20, bbox={"facecolor": "white", "alpha": 0.5, "pad": 5})
 
 
-output_path_genes = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs/window_size_histogram_genes.png"
+output_path_genes = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted/window_size_histogram_genes.png"
 plt.savefig(output_path_genes, dpi=300)
 plt.close()

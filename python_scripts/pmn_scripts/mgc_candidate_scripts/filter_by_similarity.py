@@ -1,10 +1,10 @@
+import logging
 import os
 import argparse
 import itertools
 import subprocess
-from Bio import SeqIO
+from Bio import SeqIO, SearchIO
 from pathlib import Path
-from Bio.Blast import NCBIXML
 from collections import defaultdict
 import concurrent.futures
 
@@ -33,27 +33,81 @@ def create_blast_db(pt_genes_file, db_name):
         print("makeblastdb error:", result.stderr)
 
 def run_blast(targets_file, db_name, output_file):
-    result = subprocess.run([
-        "blastp", 
-        "-query", targets_file, 
-        "-db", db_name, 
-        "-out", output_file, 
-    ], check=True)
-    if result.returncode != 0:
-        print("blastp error:", result.stderr)
+    try:
+        result = subprocess.run([
+            "blastp",
+            "-query", targets_file,
+            "-db", db_name,
+            "-out", output_file,
+            "-outfmt", "5"  # Explicitly specify XML output format
+        ], capture_output=True, text=True, check=True)
+        logging.info(f'Completed BLAST search: {output_file}')
+        
+        # Verify the output file exists and has content
+        if not os.path.exists(output_file) or os.path.getsize(output_file) == 0:
+            raise subprocess.SubprocessError(f"BLAST output file {output_file} is empty or not created")
+            
+    except subprocess.CalledProcessError as e:
+        logging.error(f'blastp error: {e.stderr}')
+        raise
 
 def parse_blast_results(blast_output, id_map, evalue_threshold=0.001):
     hits = set()
-    with open(blast_output) as result_handle:
-        blast_records = NCBIXML.parse(result_handle)
-        for blast_record in blast_records:
-            query_index = int(blast_record.query_id.split('_')[1]) - 1
-            original_id = id_map[query_index]
-            for alignment in blast_record.alignments:
-                for hsp in alignment.hsps:
-                    if hsp.expect < evalue_threshold:
-                        hits.add(original_id)
-                        break
+    try:
+        # Use parse instead of read for multiple queries
+        for blast_qresult in SearchIO.parse(blast_output, 'blast-xml'):
+            try:
+                query_id = blast_qresult.id
+                # If the query_id is directly in id_map, use it
+                if query_id in id_map:
+                    current_id = query_id
+                else:
+                    # Try to parse index if direct lookup fails
+                    try:
+                        query_index = int(query_id.split('_')[1]) - 1
+                        current_id = id_map[query_index]
+                    except (IndexError, ValueError):
+                        print(f'Could not parse query ID: {query_id}')
+                        continue
+
+                for hit in blast_qresult:
+                    for hsp in hit.hsps:
+                        if hsp.evalue < evalue_threshold:
+                            hits.add(current_id)
+                            break
+            except Exception as e:
+                print(f'Error processing hit in query {blast_qresult.id}: {str(e)}')
+                continue
+    except Exception as e:
+        print(f'Error parsing BLAST results from {blast_output}: {str(e)}')
+        # Try text format parsing as fallback
+        try:
+            with open(blast_output, 'r') as f:
+                current_query = None
+                for line in f:
+                    if line.startswith('Query='):
+                        # Extract the query ID
+                        query_id = line.split('=')[1].strip().split()[0]
+                        if query_id in id_map:
+                            current_query = query_id
+                        else:
+                            try:
+                                query_index = int(query_id.split('_')[1]) - 1
+                                current_query = id_map[query_index]
+                            except (IndexError, ValueError):
+                                current_query = None
+                                print(f'Could not parse query ID: {query_id}')
+                    elif line.strip() and not line.startswith(('#', 'Database:', 'Length=', 'BLASTP', ' ')):
+                        try:
+                            fields = line.split()
+                            if len(fields) >= 3 and float(fields[-1]) < evalue_threshold:
+                                if current_query:
+                                    hits.add(current_query)
+                        except (ValueError, IndexError):
+                            continue
+        except Exception as text_error:
+            print(f'Text parsing also failed: {str(text_error)}')
+            raise
     return hits
 
 def split_by_combinations(input_dict):
@@ -104,7 +158,6 @@ def process_target(target, output, main_path, filter_by, silent):
     filtered_records = [record for record in SeqIO.parse(target, 'fasta') if record.id not in all_hits]
     SeqIO.write(filtered_records, output_file, 'fasta')
     print(f'Filtered sequences written to {output_file.name}')
-    os.remove(blast_output)
     
 def filter_by_similarity(targets_dir, filter_by, relative, output, silent=True):
     
@@ -124,7 +177,8 @@ def filter_by_similarity(targets_dir, filter_by, relative, output, silent=True):
     filter_by = locate_filters(filter_by, main_path, output)
 
       
-    target_fastas = list(targets_dir.rglob('*.fa'))
+    target_fastas = list(targets_dir.rglob('*.fasta'))
+    target_fastas = [f for f in target_fastas if f.name.startswith("start_end_")]
     
     print(f'Found {len(target_fastas)} target files in {targets_dir}')
     with concurrent.futures.ThreadPoolExecutor() as executor:
