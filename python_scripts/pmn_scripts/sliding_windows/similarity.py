@@ -12,9 +12,9 @@ unique_df1 = df1[~df1.apply(tuple,1).isin(df2.apply(tuple,1))]
 unique_df2 = df2[~df2.apply(tuple,1).isin(df1.apply(tuple,1))]
 
 # Save the results to CSV files
-common_rows.to_csv('/groups/itay_mayrose/alongonda/desktop/python_scripts/pmn_scripts/sliding_windows/common_rows.csv', index=False)
-unique_df1.to_csv('/groups/itay_mayrose/alongonda/desktop/python_scripts/pmn_scripts/sliding_windows/unique_rows_df1.csv', index=False)
-unique_df2.to_csv('/groups/itay_mayrose/alongonda/desktop/python_scripts/pmn_scripts/sliding_windows/unique_rows_df2.csv', index=False)
+common_rows.to_csv('/groups/itay_mayrose_nosnap/alongonda/desktop/python_scripts/pmn_scripts/sliding_windows/common_rows.csv', index=False)
+unique_df1.to_csv('/groups/itay_mayrose_nosnap/alongonda/desktop/python_scripts/pmn_scripts/sliding_windows/unique_rows_df1.csv', index=False)
+unique_df2.to_csv('/groups/itay_mayrose_nosnap/alongonda/desktop/python_scripts/pmn_scripts/sliding_windows/unique_rows_df2.csv', index=False)
 
 # Display the results
 print("Common Rows:")
