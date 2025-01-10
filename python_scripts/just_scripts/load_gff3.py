@@ -34,7 +34,9 @@ def process_file(file_path, output_directory):
     df_transformed = df_transformed.drop(columns=['chromosome_numeric'])
     
     # Save the transformed DataFrame as a new CSV file
-    transformed_output_file_path = os.path.join(output_directory, f"{os.path.splitext(os.path.basename(file_path))[0]}_transformed.csv")
+    file_basename = os.path.splitext(os.path.basename(file_path))[0]
+    new_filename = file_basename.replace("annotation.selected_transcript.exon_features.", "")
+    transformed_output_file_path = os.path.join(output_directory, f"{new_filename}_transformed.csv")
     df_transformed.to_csv(transformed_output_file_path, index=False)
     print(f"Transformed and saved {file_path} to {transformed_output_file_path}")
     
@@ -50,7 +52,7 @@ def process_directory(directory, output_directory):
     # Iterate through each file in the directory
     for root, dirs, files in os.walk(directory):
         for file in files:
-            if file.endswith(".gene.gff3"):
+            if file.endswith(".gff3"):
                 file_path = os.path.join(root, file)
                 file_paths.append(file_path)
     
@@ -63,8 +65,8 @@ def process_directory(directory, output_directory):
     return dataframes
 
 def main():
-    directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/Phytozome/"
-    output_directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes/"
+    directory = "/groups/itay_mayrose/alongonda/full_genomes/plaza/gff3dir"
+    output_directory = "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes/"
     dataframes = process_directory(directory, output_directory)
     for df in dataframes:
         print("DataFrame:")

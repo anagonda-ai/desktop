@@ -3,9 +3,9 @@ import os
 from Bio import SeqIO
 
 # Input files
-csv_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/unique_clusters_start_end.csv"
-fasta_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/pmn.fasta"
-output_dir = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered"
+csv_file = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/unique_clusters_start_end.csv"
+fasta_file = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/pmn.fasta"
+output_dir = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered"
 
 # Create output directory
 os.makedirs(output_dir, exist_ok=True)

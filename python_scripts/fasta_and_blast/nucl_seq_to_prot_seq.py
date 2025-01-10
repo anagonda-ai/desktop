@@ -3,7 +3,7 @@ import os
 from Bio import SeqIO
 
 input_dir = "/groups/itay_mayrose_nosnap/ronenshtein/kalanchoe_2024/prep/run/pt_genes/"
-output_dir = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/chloroplast_prot_genes/"
+output_dir = "/groups/itay_mayrose/alongonda/full_genomes/chloroplast_prot_genes/"
 
 # Ensure output directory exists
 os.makedirs(output_dir, exist_ok=True)

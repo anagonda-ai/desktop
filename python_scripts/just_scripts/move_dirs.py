@@ -12,8 +12,8 @@ def move_directories(base_dir, new_dir, exclude_dir):
             print(f"Moved directory: {item_path} to {new_dir}")
 
 def main():
-    base_dir = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza"
-    new_dir = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/organisms"
+    base_dir = "/groups/itay_mayrose/alongonda/full_genomes/plaza"
+    new_dir = "/groups/itay_mayrose/alongonda/full_genomes/plaza/organisms"
     exclude_dir = "processed_annotations"
     
     move_directories(base_dir, new_dir, exclude_dir)

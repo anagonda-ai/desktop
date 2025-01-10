@@ -111,7 +111,7 @@ def process_directory(root_dir):
 
 # Main function
 def main():
-    root_dir = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/Phytozome/"
+    root_dir = "/groups/itay_mayrose/alongonda/full_genomes/phytozome/Phytozome/"
     process_directory(root_dir)
 
 

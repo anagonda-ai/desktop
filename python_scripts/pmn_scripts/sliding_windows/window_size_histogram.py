@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 from scipy.stats import pearsonr
 import re
 
-directory_path = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted"
+directory_path = "/groups/itay_mayrose/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted"
 
 window_sizes = []
 row_counts = []
@@ -90,6 +90,6 @@ correlation_text = (
 plt.text(0.5, 0.5, correlation_text, ha='center', va='center', fontsize=20, bbox={"facecolor": "white", "alpha": 0.5, "pad": 5})
 
 
-output_path_genes = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted/window_size_histogram_genes.png"
+output_path_genes = "/groups/itay_mayrose/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted/window_size_histogram_genes.png"
 plt.savefig(output_path_genes, dpi=300)
 plt.close()

@@ -4,7 +4,7 @@ import matplotlib.pyplot as plt
 
 def main():
     # Specify the root directory containing the CSV files
-    root_directory = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs_with_statistics"
+    root_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_with_statistics"
     file_pattern = "statistics"
 
     # Recursively find all CSV files matching the pattern

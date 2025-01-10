@@ -132,11 +132,11 @@ def extract_organism_file_mapping(csv_path, mode="phytozome"):
     start_time = time.time()
     
     if mode == "phytozome":
-        base_path = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/fasta_files/Phytozome"
+        base_path = "/groups/itay_mayrose/alongonda/full_genomes/phytozome/fasta_files/Phytozome"
     elif mode == "ensembl":
-        base_path = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/organisms"
+        base_path = "/groups/itay_mayrose/alongonda/full_genomes/ensembl/organisms"
     elif mode == "plaza":
-        base_path = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/organisms"
+        base_path = "/groups/itay_mayrose/alongonda/full_genomes/plaza/organisms"
     
     # Read CSV and get unique organisms
     df = pd.read_csv(csv_path, header=None, names=['gene_name', 'organism'])
@@ -211,8 +211,8 @@ def process_csv_and_extract_sequences(input_csv_path, output_fasta_path, mode="p
 
 # Example usage
 if __name__ == "__main__":
-    input_csv_path = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv"  # Replace with your input CSV path
-    output_fasta_path = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes_with_sequence.fasta"  # Replace with desired output path
+    input_csv_path = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv"  # Replace with your input CSV path
+    output_fasta_path = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes_with_sequence.fasta"  # Replace with desired output path
     mode = "phytozome"  # 'phytozome' or 'ensembl' or 'plaza'
     process_csv_and_extract_sequences(input_csv_path, output_fasta_path, mode=mode)
     print("Sequence extraction completed.")

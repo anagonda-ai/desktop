@@ -83,7 +83,7 @@ def find_gene_positions(pathways_dict, gene_dict):
     found_genes_df = pd.DataFrame(found_genes, columns=['Pathway', 'Gene', 'Transcripts'])
     not_found_genes_df = pd.DataFrame(not_found_genes, columns=['Pathway', 'Gene'])
     
-    new_dir = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/annotations/test_dir/pmn_genomes"
+    new_dir = "/groups/itay_mayrose/alongonda/full_genomes/annotations/test_dir/pmn_genomes"
     os.makedirs(new_dir, exist_ok=True)
     
     # Write the distances results to a new file
@@ -107,8 +107,8 @@ def find_gene_positions(pathways_dict, gene_dict):
     print(f"Number of genes not found: {not_found}")
 
 def main():
-    gene_files = ["/groups/itay_mayrose_nosnap/alongonda/full_genomes/annotations/test_dir/merged_annotations.csv"]
-    pathways_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/merged_pathways.csv"
+    gene_files = ["/groups/itay_mayrose/alongonda/full_genomes/annotations/test_dir/merged_annotations.csv"]
+    pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
     
     gene_dict = load_csv_to_dict(gene_files)
     pathways_dict = create_pathways_dict(pathways_file)

@@ -21,8 +21,8 @@ def reorder_csv_by_start(input_csv_dir, output_csv_dir):
             print(f"Saved sorted CSV to: {output_file_path}")
 
 def main():
-    input_csv_dir = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations"
-    output_csv_dir = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_sorted"
+    input_csv_dir = "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations"
+    output_csv_dir = "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_sorted"
     reorder_csv_by_start(input_csv_dir, output_csv_dir)
 
 if __name__ == "__main__":

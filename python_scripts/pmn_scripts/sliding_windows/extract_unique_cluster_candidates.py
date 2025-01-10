@@ -34,8 +34,8 @@ def print_clusters(clusters):
             print(cluster)
 
 # Example usage
-directory_path = '/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted'
-output_directory_path = '/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted'
+directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted'
+output_directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted'
 
 if not os.path.exists(output_directory_path):
     os.makedirs(output_directory_path)
@@ -58,9 +58,9 @@ for root, _, files in os.walk(directory_path):
                         csv_writer.writerow(row)
                         unique_clusters.remove(normalized_cluster)
 
-ensembl_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
-plaza_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'
-phytozome_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
+ensembl_file_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
+plaza_file_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'
+phytozome_file_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
 
 ensembl_genes = []
 plaza_genes = []

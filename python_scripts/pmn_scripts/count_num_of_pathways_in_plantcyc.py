@@ -16,7 +16,7 @@ def count_unique_ids(file_path):
     return unique_ids
 
 def main():
-    base_dir = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms'
+    base_dir = '/groups/itay_mayrose/alongonda/plantcyc/all_organisms'
     pathway_counts = defaultdict(int)
     file_paths = []
 

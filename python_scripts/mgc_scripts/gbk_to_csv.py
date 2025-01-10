@@ -38,5 +38,5 @@ def process_directory(gbk_directory):
             extract_genes_and_transcription(gbk_file, output_csv)
 
 # Example usage
-gbk_directory = "/groups/itay_mayrose_nosnap/alongonda/desktop/MGCs/Plant_MGC"  # Replace with your directory path
+gbk_directory = "/groups/itay_mayrose/alongonda/desktop/MGCs/Plant_MGC"  # Replace with your directory path
 process_directory(gbk_directory)

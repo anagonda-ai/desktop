@@ -168,9 +168,9 @@ def main(fasta_file, blast_file, mgc_dir, window_size, score_threshold, min_gene
 
 
 # פרמטרים
-fasta_file = "/groups/itay_mayrose_nosnap/alongonda/desktop/arabidopsis/sorted_Arabidopsis_thaliana.TAIR10.pep.all.fa"
-blast_file = "/groups/itay_mayrose_nosnap/alongonda/desktop/Arabidopsis_thaliana.TAIR10.pep.ordered.fa/best_normalized_blast_scores.csv"
-mgc_fasta = "/groups/itay_mayrose_nosnap/alongonda/desktop/MGCs/all_genes_from_mibig/mibig_prot_seqs_4.0.fasta"  # Replace with the path to your MGCs FASTA file
+fasta_file = "/groups/itay_mayrose/alongonda/desktop/arabidopsis/sorted_Arabidopsis_thaliana.TAIR10.pep.all.fa"
+blast_file = "/groups/itay_mayrose/alongonda/desktop/Arabidopsis_thaliana.TAIR10.pep.ordered.fa/best_normalized_blast_scores.csv"
+mgc_fasta = "/groups/itay_mayrose/alongonda/desktop/MGCs/all_genes_from_mibig/mibig_prot_seqs_4.0.fasta"  # Replace with the path to your MGCs FASTA file
 
 window_size = 10  # מספר גנים בחלון
 score_threshold = 0.8  # סף ציון

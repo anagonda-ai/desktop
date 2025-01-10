@@ -5,7 +5,7 @@ def create_id_file_mapping(base_dir):
   
   for dirpath, _, filenames in os.walk(base_dir):
     # Exclude directories containing the ignore path (optional)
-    # if "/groups/itay_mayrose_nosnap/alongonda/plantcyc/plantcyc" not in dirpath:
+    # if "/groups/itay_mayrose/alongonda/plantcyc/plantcyc" not in dirpath:
       for filename in filenames:
         if filename == "sequences_for_each_port_id.txt":
           file_path = os.path.join(dirpath, filename)
@@ -23,7 +23,7 @@ def count_total_sequences(base_dir):
   
   for dirpath, _, filenames in os.walk(base_dir):
     # Exclude directories containing the ignore path (optional)
-    # if "/groups/itay_mayrose_nosnap/alongonda/plantcyc/plantcyc" not in dirpath:
+    # if "/groups/itay_mayrose/alongonda/plantcyc/plantcyc" not in dirpath:
       for filename in filenames:
         if filename == "sequences_for_each_port_id.txt":
           # Build the file path
@@ -44,12 +44,12 @@ def count_total_sequences(base_dir):
 
 if __name__ == "__main__":
     # Replace with your base directory
-    base_dir = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/"
+    base_dir = "/groups/itay_mayrose/alongonda/plantcyc/"
     count_total_sequences(base_dir)
     id_file_mapping = create_id_file_mapping(base_dir)
     plantcyc_in_others = 0
     for key, item in id_file_mapping.items():
-        if "/groups/itay_mayrose_nosnap/alongonda/plantcyc/plantcyc/15.1.1/data/sequences_for_each_port_id.txt" in item:
+        if "/groups/itay_mayrose/alongonda/plantcyc/plantcyc/15.1.1/data/sequences_for_each_port_id.txt" in item:
             plantcyc_in_others += 1
         print(f"{key}, {item}")
     print(f"{plantcyc_in_others} genes are in plantcyc and other dbs")

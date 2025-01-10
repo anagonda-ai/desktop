@@ -43,10 +43,10 @@ def process_file(file_path):
     return organism, matches
 
 def main():
-    base_dir = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms'
-    output_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/dblinks_for_uniqueids.txt'
-    unique_dbs_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/unique_dbs_count.txt'
-    unique_dbs_for_unique_id_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/unique_dbs_for_unique_id.txt'
+    base_dir = '/groups/itay_mayrose/alongonda/plantcyc/all_organisms'
+    output_file_path = '/groups/itay_mayrose/alongonda/plantcyc/gene_by_db_seq/dblinks_for_uniqueids.txt'
+    unique_dbs_file_path = '/groups/itay_mayrose/alongonda/plantcyc/gene_by_db_seq/unique_dbs_count.txt'
+    unique_dbs_for_unique_id_file_path = '/groups/itay_mayrose/alongonda/plantcyc/gene_by_db_seq/unique_dbs_for_unique_id.txt'
     
     results = []
     unique_dbs = {}

@@ -53,6 +53,6 @@ def analyze_conservation(input_file, output_file):
     print(f"Results saved to {output_file}")
 
 # Example usage
-input_file = "/groups/itay_mayrose_nosnap/alongonda/desktop/test.csv"  # Replace with your input file
-output_file = "/groups/itay_mayrose_nosnap/alongonda/desktop/conservation_results.csv"  # Replace with your desired output file
+input_file = "/groups/itay_mayrose/alongonda/desktop/test.csv"  # Replace with your input file
+output_file = "/groups/itay_mayrose/alongonda/desktop/conservation_results.csv"  # Replace with your desired output file
 analyze_conservation(input_file, output_file)

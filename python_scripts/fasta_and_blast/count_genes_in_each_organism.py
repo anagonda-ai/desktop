@@ -20,7 +20,7 @@ def count_rows_in_files(directory):
                     output.write(f"{subdir.split('/')[-3]}: {row_count / 2}\n")
 
 # Replace with your desired directory path
-directory = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/"
-output_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms_row_count.txt"
+directory = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/"
+output_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms_row_count.txt"
 # Get the results
 count_rows_in_files(directory)

@@ -2,8 +2,8 @@ import csv
 import os
 
 # Define the input directory and output directory
-input_dir = '/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/csv_files'
-output_dir = '/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/fasta_files'
+input_dir = '/groups/itay_mayrose/alongonda/Plant_MGC/csv_files'
+output_dir = '/groups/itay_mayrose/alongonda/Plant_MGC/fasta_files'
 
 # Ensure the output directory exists
 os.makedirs(output_dir, exist_ok=True)

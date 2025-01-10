@@ -21,7 +21,7 @@ def process_directory(directory):
                 print(f"Deleted {gz_file_path}")
 
 def main():
-    directory = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome_test/Phytozome/"
+    directory = "/groups/itay_mayrose/alongonda/full_genomes/phytozome_test/Phytozome/"
     process_directory(directory)
 
 if __name__ == "__main__":

@@ -5,8 +5,8 @@
 #PBS -q itaym
 #PBS -v PBS_O_SHELL=bash,PBS_ENVIRONMENT=PBS_BATCH
 #PBS -N sliding_improved
-#PBS -e /groups/itay_mayrose_nosnap/alongonda/desktop/example_jobs/error.ER
-#PBS -o /groups/itay_mayrose_nosnap/alongonda/desktop/example_jobs/out.OU
+#PBS -e /groups/itay_mayrose/alongonda/desktop/example_jobs/error.ER
+#PBS -o /groups/itay_mayrose/alongonda/desktop/example_jobs/out.OU
 #PBS -l select=ncpus=32:mem=32gb
 
 # Check if a query file was provided
@@ -39,10 +39,10 @@ if [ $? -eq 0 ]; then
 
     CSV_OUT="$OUT_DIR/blast_output.csv"
     # Convert the OUT to .csv
-    python3 /groups/itay_mayrose_nosnap/alongonda/desktop/python_scripts/fasta_and_blast/normalize_blast/convert_blast_output6_to_csv.py "$OUT" "$CSV_OUT"
+    python3 /groups/itay_mayrose/alongonda/desktop/python_scripts/fasta_and_blast/normalize_blast/convert_blast_output6_to_csv.py "$OUT" "$CSV_OUT"
     
     # Run the normalize_blast_results.py script with the BLAST output as input
-    python3 /groups/itay_mayrose_nosnap/alongonda/desktop/python_scripts/fasta_and_blast/normalize_blast/normalize_blast_results.py "$CSV_OUT"
+    python3 /groups/itay_mayrose/alongonda/desktop/python_scripts/fasta_and_blast/normalize_blast/normalize_blast_results.py "$CSV_OUT"
     
     # Check if the normalization script ran successfully
     if [ $? -eq 0 ]; then
@@ -52,7 +52,7 @@ if [ $? -eq 0 ]; then
         NORMALIZED_FILE="$OUT_DIR/normalized_blast_scores.csv"
         
         # Run the filter_normalized_composite_score_for_qid.py script with the normalized results
-        python3 /groups/itay_mayrose_nosnap/alongonda/desktop/python_scripts/fasta_and_blast/normalize_blast/filter_normalized_composite_score_for_qid.py "$NORMALIZED_FILE"
+        python3 /groups/itay_mayrose/alongonda/desktop/python_scripts/fasta_and_blast/normalize_blast/filter_normalized_composite_score_for_qid.py "$NORMALIZED_FILE"
 
         # Remove the intermediate files
         rm "$$OUT" "$$CSV_OUT" "$$NORMALIZED_FILE"

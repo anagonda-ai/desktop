@@ -3,8 +3,8 @@ import pandas as pd
 
 def main():
     # Paths to your files - PLEASE VERIFY THESE PATHS
-    unfiltered_candidates_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/unfiltered_candidates_for_pairwise.csv'
-    output_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/random_candidates.json'
+    unfiltered_candidates_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/unfiltered_candidates_for_pairwise.csv'
+    output_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/random_candidates.json'
     
     # Load the CSV file
     df = pd.read_csv(unfiltered_candidates_path)

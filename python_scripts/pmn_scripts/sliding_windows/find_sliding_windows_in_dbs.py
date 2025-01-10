@@ -163,12 +163,12 @@ def create_output_subdir(output_dir, min_genes):
 
 def main():
     genome_dirs = [
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast",
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast",
-        "/groups/itay_mayrose_nosnap/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast"
+        "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast",
+        "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast",
+        "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast"
     ]
-    pathways_file = "/groups/itay_mayrose_nosnap/alongonda/plantcyc/all_organisms/merged_pathways.csv"
-    output_dir = "/groups/itay_mayrose_nosnap/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted_no_chloroplast"
+    pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
+    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted_no_chloroplast"
     
     # Ensure the output directory exists
     if not os.path.exists(output_dir):
@@ -183,7 +183,7 @@ def main():
     pathway_tries = build_aho_corasick(pathway_dict)
     print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
 
-    for window_size in range(5, 21):
+    for window_size in range(7, 21):
         # Dynamically calculate the maximum value of min_genes
         max_min_genes = (window_size // 2) + 1
         

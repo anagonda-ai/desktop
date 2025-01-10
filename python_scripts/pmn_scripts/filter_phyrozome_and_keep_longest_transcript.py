@@ -61,8 +61,8 @@ def search_in_phytozome_and_write_to_file(unique_ids, gene_to_id, unique_ids_seq
             unique_ids_seq_file.write(f">{row['gene']}\n{row['sequence']}\n")
 
 def main():
-    unique_ids_file_path = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/unique_dbs_for_unique_id.txt'
-    unique_ids_seq = '/groups/itay_mayrose_nosnap/alongonda/plantcyc/gene_by_db_seq/PHYTOZOME/unique_ids_seq.txt'
+    unique_ids_file_path = '/groups/itay_mayrose/alongonda/plantcyc/gene_by_db_seq/unique_dbs_for_unique_id.txt'
+    unique_ids_seq = '/groups/itay_mayrose/alongonda/plantcyc/gene_by_db_seq/PHYTOZOME/unique_ids_seq.txt'
     
     # Extract UNIQUE-IDs with ENSEMBL UNIQUE-DBLINK
     unique_ids, gene_to_id = extract_unique_ids(unique_ids_file_path)

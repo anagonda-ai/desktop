@@ -13,8 +13,8 @@ def load_and_rename_csv(input_csv, output_csv, new_column_name):
     print(f"Renamed first column to '{new_column_name}' and saved to {output_csv}")
 
 def main():
-    input_csv = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/annotations/phytozome_annotations.csv"
-    output_csv = "/groups/itay_mayrose_nosnap/alongonda/full_genomes/annotations/phytozome_annotations_fixed.csv"
+    input_csv = "/groups/itay_mayrose/alongonda/full_genomes/annotations/phytozome_annotations.csv"
+    output_csv = "/groups/itay_mayrose/alongonda/full_genomes/annotations/phytozome_annotations_fixed.csv"
     new_column_name = "id"
     
     load_and_rename_csv(input_csv, output_csv, new_column_name)
