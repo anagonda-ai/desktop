@@ -4,32 +4,11 @@
 # Ignore GeneMANIA.jar file
 GeneMANIA.jar
 
-# Ignore all_mibig directory
-all_mibig/
-
-# Ignore alphafold directory
-alphafold/
-
 # Ignore Alphapulldown_TestRun/ directory
 Alphapulldown_TestRun/
 
-# Ignore full genomes directory
-full_genomes/
-
-# Ignore coexpress directory
-coexpress/
-
 # Ignore foldseek directory
 foldseek/
-
-# Ignore geneMania_dataset directory
-geneMania_dataset/
-
-# Ignore gmdata-2021-04-19 directory
-gmdata-2021-04-19/
-
-# Ignore plantcyc directory
-plantcyc/
 
 # Ignore arabidopsis directory
 arabidopsis/
