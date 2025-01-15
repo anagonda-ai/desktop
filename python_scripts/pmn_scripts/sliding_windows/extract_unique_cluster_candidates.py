@@ -34,7 +34,7 @@ def print_clusters(clusters):
             print(cluster)
 
 # Example usage
-directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted'
+directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted_no_chloroplast'
 output_directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted'
 
 if not os.path.exists(output_directory_path):

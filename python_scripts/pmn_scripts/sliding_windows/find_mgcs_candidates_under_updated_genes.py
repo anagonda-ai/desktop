@@ -2,7 +2,7 @@ import csv
 from collections import defaultdict
 
 # File paths
-candidates_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/unique_clusters_start_end.csv'
+candidates_file = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted/unique_potential_groups_w10.csv'
 gene_tagging_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/combined_updated_genes.csv'
 output_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/candidates.csv'
 small_clusters_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/small_clusters_candidates.csv'
@@ -36,8 +36,8 @@ with open(candidates_file, mode='r') as infile:
         genes_with_ec = set()
 
         for gene in genes:
-            if gene in gene_tagging:  # Only process genes with EC numbers
-                ec_number = gene_tagging[gene]
+            if gene.lower() in gene_tagging:  # Only process genes with EC numbers
+                ec_number = gene_tagging[gene.lower()]
                 family = ec_number.split('.')[0]
                 subfamily = '.'.join(ec_number.split('.')[:2])
                 
@@ -70,7 +70,7 @@ with open(output_file, mode='w', newline='') as outfile, open(small_clusters_fil
         max_end = max(end for _, _, _, end in genes_with_ec)
         cluster_size = (max_end - min_start) / 1000
         # Write the pathway and gene details
-        gene_ec_list = [f"start: {gene_id} end:{ec_number}" for gene_id, ec_number, _, _ in genes_with_ec]
+        gene_ec_list = [f"{gene_id}:{ec_number}" for gene_id, ec_number, _, _ in genes_with_ec]
         gene_list = [f"{gene_id}" for gene_id, _, _, _ in genes_with_ec]
         writer.writerow([pathway, '; '.join(gene_ec_list), '; '.join(gene_list), min_start, max_end, f"{cluster_size} kbp"])
         if cluster_size < 50:
