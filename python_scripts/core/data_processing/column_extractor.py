@@ -29,10 +29,11 @@ def process_csv_file(csv_file_path, output_csv_file_path):
                 id = row_str[0]
                 start = row_str[3]
                 end = row_str[4]
-                data.append([id, start, end])
+                sequence = row_str[5]
+                data.append([id, start, end, sequence])
 
     # Create a new DataFrame
-    df = pd.DataFrame(data, columns=['id', 'start', 'end'])
+    df = pd.DataFrame(data, columns=['id', 'start', 'end', 'sequence'])
     df.to_csv(output_csv_file_path, index=False)
     print(f"Data saved to {output_csv_file_path}")
 
@@ -48,12 +49,6 @@ def main():
                 output_file_name = os.path.basename(os.path.dirname(csv_file_path))
                 output_csv_file_path = os.path.join(output_directory, output_file_name + ".csv")
                 process_csv_file(csv_file_path, output_csv_file_path)
-                
-    for filename in os.listdir(directory):
-        if filename.endswith(".csv"):
-            csv_file_path = os.path.join(directory, filename)
-            output_csv_file_path = os.path.join(output_directory, filename)
-            process_csv_file(csv_file_path, output_csv_file_path)
 
 if __name__ == "__main__":
     main()

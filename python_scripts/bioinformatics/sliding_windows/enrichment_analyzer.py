@@ -4,8 +4,8 @@ import matplotlib.pyplot as plt
 
 def main():
     # Specify the root directory containing the CSV files
-    root_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_with_statistics"
-    file_pattern = "statistics"
+    root_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/10_most_enriched_genomes_statistical_tests"
+    file_pattern = "enrichment"
 
     # Recursively find all CSV files matching the pattern
     csv_files = [
@@ -34,6 +34,8 @@ def main():
     # Create a DataFrame for ranking
     ranking_df = pd.DataFrame(rankings)
     ranking_df = ranking_df.sort_values(by="median_enrichment", ascending=False)
+    # Remove rows with infinite enrichment_ratio values
+    ranking_df = ranking_df.replace(float('inf'), pd.NA).dropna(subset=["median_enrichment"])
 
     # Save the ranking to a CSV file
     output_ranking_path = os.path.join(root_directory, "file_rankings.csv")
@@ -54,6 +56,11 @@ def main():
         labels=ordered_files,
         showfliers=False,
     )
+    for i, name in enumerate(ordered_files, start=1):
+        values = consolidated_df[consolidated_df["file_name"] == name]["enrichment_ratio"].values
+        for value in values:
+            plt.text(i, value, f'{value:.2f}', ha='center', va='bottom', fontsize=8)
+    
     plt.xticks(rotation=90)
     plt.title("Enrichment Ratio by File Name (Ordered by Median)")
     plt.xlabel("File Name")

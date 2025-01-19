@@ -15,20 +15,20 @@ def extract_gene_id(description):
 
 def get_genes_from_fasta(fasta_dir):
     """Extract all gene IDs from FASTA files in the directory"""
-    gene_ids = set()
+    gene_ids = dict()
     for root, dirs, files in os.walk(fasta_dir):
         for file in files:
             if file.endswith('.fasta'):
                 fasta_file = os.path.join(root, file)
                 for record in SeqIO.parse(fasta_file, 'fasta'):
                     # Assuming the ID in the FASTA header matches the annotation ID
-                    gene_id = record.id.split()[0]
+                    gene_id = extract_gene_id(record.description)
                     if gene_id:
-                        gene_ids.add(gene_id.lower())
+                        gene_ids[gene_id.lower()] = str(record.seq)
     return gene_ids
 
 def process_annotation_file(annotation_file, allowed_genes):
-    """Filter annotation file to keep only rows with genes present in allowed_genes"""
+    # """Filter annotation file to keep only rows with genes present in allowed_genes"""
     # filtered_rows = []
     
     # with open(annotation_file, 'r') as f:
@@ -38,12 +38,13 @@ def process_annotation_file(annotation_file, allowed_genes):
     #     for row in rows:
     #         if rows.index(row) == 0:
     #             continue
-    #         fields = row.split(';')
+    #         fields = row.split(',')
     #         # Extract gene ID from the first column
     #         id = fields[0]
-    #         gene_id = id.split("ID=")[1]
+    #         name = id.split(";")[1]
+    #         gene_name = name.split("Name=")[1]
             
-    #         if gene_id.lower() in allowed_genes:
+    #         if gene_name.lower() in allowed_genes:
     #             filtered_rows.append(row)
     
     # return filtered_rows
@@ -56,21 +57,19 @@ def process_annotation_file(annotation_file, allowed_genes):
     # Read the CSV file into a pandas DataFrame, handling quoted fields
     df = pd.read_csv(annotation_file, delimiter=',', quotechar='"', dtype=str)
     
-    # Extract the gene ID from the 'ID=' part of the 'id' column
-    df['gene_id'] = df['id'].str.extract(r'ID=([^;]+)', expand=False)
-    
     # Filter the DataFrame based on allowed_genes (case-insensitive)
-    filtered_df = df[df['gene_id'].str.lower().isin(allowed_genes)]
     
-    # Drop the temporary 'gene_id' column before returning
-    filtered_df = filtered_df.drop(columns=['gene_id'])
+    # filtered_df = df[df['id'].str.lower().isin(allowed_genes)]
+    filtered_df = df[df['id'].str.split(';').str[1].str.split('=').str[1].str.lower().isin(allowed_genes)]
+    # Add a new column with the corresponding sequence from allowed_genes
+    filtered_df['sequence'] = filtered_df['id'].str.split(';').str[1].str.split('=').str[1].str.lower().map(allowed_genes)
     
     return filtered_df
 
 def main():
     # Directories
-    fasta_dir = '/groups/itay_mayrose/alongonda/full_genomes/plaza_without_chloroplast'
-    annotations_dir = '/groups/itay_mayrose/alongonda/full_genomes/plaza/files_to_filter'
+    fasta_dir = '/groups/itay_mayrose/alongonda/full_genomes/phytozome_without_chloroplast'
+    annotations_dir = '/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes'
     
     # Get all genes from FASTA files
     print("Reading FASTA files...")
@@ -88,11 +87,8 @@ def main():
         # Create output filename
         output_file = annotation_file.with_stem(annotation_file.stem + '_filtered')
 
-        # Write filtered content as CSV using pandas
-        # df = pd.DataFrame([row.split(',') for row in filtered_rows])
-        # df.columns = ['id', 'start', 'end', 'chromosome']
         filtered_df.to_csv(output_file, index=False, header=True, sep=',')
-        # # Write filtered content
+        # Write filtered content
         # with open(output_file, 'w') as f:
         #     for row in filtered_rows:
         #         f.write(row + '\n')

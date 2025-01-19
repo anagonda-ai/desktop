@@ -123,17 +123,8 @@ def process_file(file_path, pathway_tries, output_file, unique_tracker, file_loc
             window_matches = process_window_with_aho_corasick(window, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
             total_matches += window_matches
             pbar.update(1)
-    
-    total_random_matches = 0
-    random_advantage = 10
-    with tqdm(total=num_windows * random_advantage, desc=f"Random Samples: {os.path.basename(file_path)}", unit="window") as pbar:
-        for i in range(num_windows):
-            window = df.sample(n=window_size)
-            window_matches = process_window_with_aho_corasick(window, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
-            total_random_matches += window_matches / random_advantage
-            pbar.update(1)
     print(f"Completed file: {file_path}, Matches Found: {total_matches}")
-    return total_matches, total_random_matches
+    return total_matches
 
 # Process a whole genome directory
 def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes):
@@ -142,7 +133,6 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, wind
     unique_tracker = UniqueMatchTracker()
     file_lock = Lock()
     total_matches = 0
-    total_random_matches = 0
     with tqdm(total=len(file_paths), desc=f"Directory: {os.path.basename(genome_dir)}", unit="file") as pbar:
         with ThreadPoolExecutor(max_workers=max_workers) as executor:
             futures = [
@@ -159,13 +149,10 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, wind
                 for file_path in file_paths
             ]
             for future in as_completed(futures):
-                future_matches, future_random_matches = future.result()
-                total_matches += future_matches
-                total_random_matches += future_random_matches
+                total_matches += future.result()
                 pbar.update(1)
     print(f"Directory {genome_dir} - Total Matches: {total_matches}")
-    print(f"Directory {genome_dir} - Total Random Matches: {total_random_matches}")
-    return total_matches, total_random_matches
+    return total_matches
 
 def create_output_subdir(output_dir, min_genes):
     """Create a subdirectory for each min_genes value."""
@@ -174,36 +161,14 @@ def create_output_subdir(output_dir, min_genes):
         os.makedirs(subdir)
     return subdir
 
-def enrichment_analysis(total_random_matches, total_matches, window_size, min_genes, enrichment_output_file):
-    # Calculate enrichment statistics
-            if total_random_matches > 0:
-                enrichment_ratio = total_matches / total_random_matches
-            else:
-                enrichment_ratio = float('inf')  # Avoid division by zero
-
-            enrichment_stats = {
-                'window_size': window_size,
-                'min_genes': min_genes,
-                'total_matches': total_matches,
-                'total_random_matches': total_random_matches,
-                'enrichment_ratio': enrichment_ratio
-            }
-
-            # Save enrichment statistics to a CSV file
-            enrichment_df = pd.DataFrame([enrichment_stats])
-            mode = 'a' if os.path.exists(enrichment_output_file) else 'w'
-            header = not os.path.exists(enrichment_output_file)
-            enrichment_df.to_csv(enrichment_output_file, mode=mode, header=header, index=False)
-
 def main():
-    # genome_dirs = [
-    #     "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
-    #     "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
-    #     "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
-    # ]
-    genome_dirs = ["/groups/itay_mayrose/alongonda/full_genomes/mgc_enriched_files"]
+    genome_dirs = [
+        "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
+        "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
+        "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
+    ]
     pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
-    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/10_most_enriched_genomes_statistical_tests"
+    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted_no_chloroplast"
     
     # Ensure the output directory exists
     if not os.path.exists(output_dir):
@@ -223,30 +188,21 @@ def main():
         max_min_genes = (window_size // 2) + 1
         
         # for min_genes in range(3, max_min_genes + 1):  # Adjust min_genes based on the constraint
-        for min_genes in range(3, max_min_genes):
+        for min_genes in [3]:
             # Create subdirectory for the current min_genes
             min_genes_subdir = create_output_subdir(output_dir, min_genes)
-            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}g{min_genes}.csv")
-            enrichment_output_file = os.path.join(min_genes_subdir, f"enrichment_w{window_size}g{min_genes}.csv")
+            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
             
             if os.path.exists(output_file):
                 os.remove(output_file)
 
             total_matches = 0
-            total_random_matches = 0
             for genome_dir in genome_dirs:
                 print(f"Processing genome directory: {genome_dir} with window size: {window_size} and min_genes: {min_genes}")
-                matches, random_matches = process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes)
-                total_matches += matches
-                total_random_matches += random_matches
+                total_matches += process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes)
             
             print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
-            print(f"TOTAL RANDOM MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_random_matches}")
-            
-            enrichment_analysis(total_random_matches, total_matches, window_size, min_genes, enrichment_output_file)
-            
             print(f"Results saved to: {output_file}")
-            print(f"Enrichment statistics saved to: {enrichment_output_file}")
             
 if __name__ == "__main__":
     main()

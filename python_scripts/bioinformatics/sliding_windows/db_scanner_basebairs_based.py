@@ -111,23 +111,38 @@ def create_pathways_dict(pathways_file):
     return dict(pathways_dict)
 
 # Process each file in a directory using multithreading
-def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, window_size, min_genes):
-    print(f"Processing file: {file_path} with window size: {window_size}")
+def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, min_genes, max_kbp):
+    print(f"Processing file: {file_path} with max_kbp: {max_kbp}")
     total_matches = 0
     df = pd.read_csv(file_path, usecols=['id', 'start', 'end'])
     df = df.sort_values(by=['start', 'end'])
-    num_windows = len(df) - window_size + 1
-    with tqdm(total=num_windows, desc=f"File: {os.path.basename(file_path)}", unit="window") as pbar:
-        for i in range(num_windows):
-            window = df.iloc[i:i + window_size]
-            window_matches = process_window_with_aho_corasick(window, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
+    df['start'] = df['start'].astype(int)
+    df['end'] = df['end'].astype(int)
+    num_genes = len(df)
+    with tqdm(total=num_genes, desc=f"File: {os.path.basename(file_path)}", unit="window") as pbar:
+        i = 0
+        while i < num_genes:
+            window = [df.iloc[i]]
+            start_pos = df.iloc[i]['start']
+            prev_end_pos = df.iloc[i]['end']
+            for j in range(i, num_genes):
+                end_pos = df.iloc[j]['end']
+                if (end_pos - start_pos <= max_kbp * 1000) and (end_pos > prev_end_pos):
+                    window.append(df.iloc[j])
+                    prev_end_pos = end_pos
+                else:
+                    break
+            window_df = pd.DataFrame(window)
+            
+            window_matches = process_window_with_aho_corasick(window_df, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
             total_matches += window_matches
             pbar.update(1)
+            i += 1  # Move to the next gene after the current window
     print(f"Completed file: {file_path}, Matches Found: {total_matches}")
     return total_matches
 
 # Process a whole genome directory
-def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes):
+def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, min_genes, max_kbp):
     file_paths = [os.path.join(genome_dir, f) for f in os.listdir(genome_dir) 
                   if f.endswith('.csv') and os.path.isfile(os.path.join(genome_dir, f))]
     unique_tracker = UniqueMatchTracker()
@@ -143,8 +158,8 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, wind
                     output_file, 
                     unique_tracker, 
                     file_lock,
-                    window_size,
-                    min_genes
+                    min_genes,
+                    max_kbp
                 )
                 for file_path in file_paths
             ]
@@ -163,12 +178,12 @@ def create_output_subdir(output_dir, min_genes):
 
 def main():
     genome_dirs = [
-        "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast",
-        "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast",
-        "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast"
+        "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
+        "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
+        "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
     ]
     pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
-    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted_no_chloroplast"
+    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted_no_chloroplast_basepairs_based"
     
     # Ensure the output directory exists
     if not os.path.exists(output_dir):
@@ -183,26 +198,24 @@ def main():
     pathway_tries = build_aho_corasick(pathway_dict)
     print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
 
-    for window_size in range(5, 21):
-        # Dynamically calculate the maximum value of min_genes
-        max_min_genes = (window_size // 2) + 1
+    min_genes = 3
+    
+    for max_kbp in [20, 40, 60, 80, 100]:
         
-        # for min_genes in range(3, max_min_genes + 1):  # Adjust min_genes based on the constraint
-        for min_genes in [3]:
-            # Create subdirectory for the current min_genes
-            min_genes_subdir = create_output_subdir(output_dir, min_genes)
-            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
-            
-            if os.path.exists(output_file):
-                os.remove(output_file)
+        # Create subdirectory for the current min_genes
+        min_genes_subdir = create_output_subdir(output_dir, min_genes)
+        output_file = os.path.join(min_genes_subdir, f"potential_groups_w{max_kbp}kbp.csv")
+        
+        if os.path.exists(output_file):
+            os.remove(output_file)
 
-            total_matches = 0
-            for genome_dir in genome_dirs:
-                print(f"Processing genome directory: {genome_dir} with window size: {window_size} and min_genes: {min_genes}")
-                total_matches += process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes)
-            
-            print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
-            print(f"Results saved to: {output_file}")
+        total_matches = 0
+        for genome_dir in genome_dirs:
+            print(f"Processing genome directory: {genome_dir} with window size: {max_kbp}kbp and min_genes: {min_genes}")
+            total_matches += process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, min_genes, max_kbp)
+        
+        print(f"TOTAL MATCHES FOUND for window size {max_kbp}kbp and min_genes {min_genes}: {total_matches}")
+        print(f"Results saved to: {output_file}")
             
 if __name__ == "__main__":
     main()

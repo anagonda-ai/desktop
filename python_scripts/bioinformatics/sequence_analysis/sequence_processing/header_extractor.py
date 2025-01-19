@@ -59,7 +59,7 @@ def process_fa_files(root_dir):
     file_paths = []
     for subdir, _, files in os.walk(root_dir):
         for file in files:
-            if file.endswith('.fa'):
+            if file.endswith('.fasta') and file.startswith('start_'):
                 file_path = os.path.join(subdir, file)
                 file_paths.append(file_path)
     
@@ -74,7 +74,7 @@ def process_fa_files(root_dir):
                 print(f"Error processing file {file_path}: {exc}")
 
 def main():
-    root_dir = "/groups/itay_mayrose/alongonda/full_genomes/ensembl/organisms"
+    root_dir = "/groups/itay_mayrose/alongonda/full_genomes/plaza/organisms"
     process_fa_files(root_dir)
 
 if __name__ == "__main__":
