@@ -114,14 +114,14 @@ def create_pathways_dict(pathways_file):
 def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, window_size, min_genes):
     print(f"Processing file: {file_path} with window size: {window_size}")
     total_matches = 0
-    df = pd.read_csv(file_path, usecols=['id', 'start', 'end'])
-    df = df.sort_values(by=['start', 'end'])
+    df = pd.read_csv(file_path, usecols=['id', 'start', 'end', 'chromosome'])
     num_windows = len(df) - window_size + 1
     with tqdm(total=num_windows, desc=f"File: {os.path.basename(file_path)}", unit="window") as pbar:
         for i in range(num_windows):
             window = df.iloc[i:i + window_size]
-            window_matches = process_window_with_aho_corasick(window, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
-            total_matches += window_matches
+            if len(window['chromosome'].unique()) == 1:  # Skip windows with multiple chromosomes
+                window_matches = process_window_with_aho_corasick(window, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
+                total_matches += window_matches
             pbar.update(1)
     print(f"Completed file: {file_path}, Matches Found: {total_matches}")
     return total_matches

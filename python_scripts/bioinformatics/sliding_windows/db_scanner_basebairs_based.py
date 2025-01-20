@@ -114,30 +114,33 @@ def create_pathways_dict(pathways_file):
 def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, min_genes, max_kbp):
     print(f"Processing file: {file_path} with max_kbp: {max_kbp}")
     total_matches = 0
-    df = pd.read_csv(file_path, usecols=['id', 'start', 'end'])
-    df = df.sort_values(by=['start', 'end'])
+    df = pd.read_csv(file_path, usecols=['id', 'start', 'end', 'chromosome'])
     df['start'] = df['start'].astype(int)
     df['end'] = df['end'].astype(int)
-    num_genes = len(df)
-    with tqdm(total=num_genes, desc=f"File: {os.path.basename(file_path)}", unit="window") as pbar:
-        i = 0
-        while i < num_genes:
-            window = [df.iloc[i]]
-            start_pos = df.iloc[i]['start']
-            prev_end_pos = df.iloc[i]['end']
-            for j in range(i, num_genes):
-                end_pos = df.iloc[j]['end']
-                if (end_pos - start_pos <= max_kbp * 1000) and (end_pos > prev_end_pos):
-                    window.append(df.iloc[j])
-                    prev_end_pos = end_pos
-                else:
-                    break
-            window_df = pd.DataFrame(window)
-            
-            window_matches = process_window_with_aho_corasick(window_df, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
-            total_matches += window_matches
-            pbar.update(1)
-            i += 1  # Move to the next gene after the current window
+    chromosomes = df['chromosome'].unique()
+    num_genes_total = len(df)
+    with tqdm(total=num_genes_total, desc=f"File: {os.path.basename(file_path)}", unit="window") as pbar:
+        for chromosome in chromosomes:
+            chromosome_data = df[df['chromosome'] == chromosome]
+            num_genes = len(chromosome_data)
+            i = 0
+            while i < num_genes:
+                window = [chromosome_data.iloc[i]]
+                start_pos = chromosome_data.iloc[i]['start']
+                prev_end_pos = chromosome_data.iloc[i]['end']
+                for j in range(i, num_genes):
+                    end_pos = chromosome_data.iloc[j]['end']
+                    if (end_pos - start_pos <= max_kbp * 1000) and (end_pos > prev_end_pos):
+                        window.append(chromosome_data.iloc[j])
+                        prev_end_pos = end_pos
+                    else:
+                        break
+                if len(window) >= min_genes:
+                    window_df = pd.DataFrame(window)
+                    window_matches = process_window_with_aho_corasick(window_df, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
+                    total_matches += window_matches
+                pbar.update(1)
+                i += 1  # Move to the next gene after the current window
     print(f"Completed file: {file_path}, Matches Found: {total_matches}")
     return total_matches
 
@@ -200,7 +203,7 @@ def main():
 
     min_genes = 3
     
-    for max_kbp in [20, 40, 60, 80, 100]:
+    for max_kbp in [50]:
         
         # Create subdirectory for the current min_genes
         min_genes_subdir = create_output_subdir(output_dir, min_genes)
