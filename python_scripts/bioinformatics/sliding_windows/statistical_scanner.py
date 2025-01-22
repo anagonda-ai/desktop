@@ -115,7 +115,6 @@ def process_file(file_path, pathway_tries, output_file, unique_tracker, file_loc
     print(f"Processing file: {file_path} with window size: {window_size}")
     total_matches = 0
     df = pd.read_csv(file_path, usecols=['id', 'start', 'end'])
-    df = df.sort_values(by=['start', 'end'])
     num_windows = len(df) - window_size + 1
     with tqdm(total=num_windows, desc=f"File: {os.path.basename(file_path)}", unit="window") as pbar:
         for i in range(num_windows):

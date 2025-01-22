@@ -17,7 +17,7 @@ def find_fasta_files(base_dir):
     return fasta_files
 
 def main():
-    if len(sys.argv) != 3:
+    if len(sys.argv) != 4:
         print("Usage: python merge_fasta_files.py <fasta_paths.txt> <output_dir> <file_name>")
         sys.exit(1)
 

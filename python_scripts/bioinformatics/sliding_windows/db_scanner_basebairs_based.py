@@ -128,7 +128,7 @@ def process_file(file_path, pathway_tries, output_file, unique_tracker, file_loc
                 window = [chromosome_data.iloc[i]]
                 start_pos = chromosome_data.iloc[i]['start']
                 prev_end_pos = chromosome_data.iloc[i]['end']
-                for j in range(i, num_genes):
+                for j in range(i+1, num_genes):
                     end_pos = chromosome_data.iloc[j]['end']
                     if (end_pos - start_pos <= max_kbp * 1000) and (end_pos > prev_end_pos):
                         window.append(chromosome_data.iloc[j])
