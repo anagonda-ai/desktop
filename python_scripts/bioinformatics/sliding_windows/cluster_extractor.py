@@ -1,5 +1,4 @@
 import csv
-from collections import Counter
 import os
 
 def remove_subclusters(clusters):
@@ -12,7 +11,7 @@ def remove_subclusters(clusters):
     return unique_clusters
 
 def normalize_cluster(cluster):
-    return tuple(sorted(cluster.split(',')))
+    return tuple(sorted(cluster.strip('"').split(',')))
 
 def load_csv(file_path):
     clusters = set()
@@ -21,9 +20,9 @@ def load_csv(file_path):
         csv_reader = csv.reader(file)
         for row in csv_reader:
             if len(row) > 3:
-                normalized_cluster = normalize_cluster(row[3])
+                normalized_cluster = normalize_cluster(row[2])
                 pathway = row[0]
-                row_path = row[7]
+                row_path = row[5]
                 clusters.add(normalized_cluster)
                 for gene in normalized_cluster:
                     clusters_with_file_and_pathway.append([gene, row_path, pathway])
@@ -34,8 +33,8 @@ def print_clusters(clusters):
             print(cluster)
 
 # Example usage
-directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted_no_chloroplast'
-output_directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_clusters_sliding_window_outputs_chromosome_sorted'
+directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/min_genes_only_metabolic_genes_input'
+output_directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_min_genes_only_metabolic_genes_input'
 
 if not os.path.exists(output_directory_path):
     os.makedirs(output_directory_path)
@@ -53,7 +52,7 @@ for root, _, files in os.walk(directory_path):
                 csv_reader = csv.reader(infile)
                 csv_writer = csv.writer(outfile)
                 for row in csv_reader:
-                    normalized_cluster = normalize_cluster(row[3])
+                    normalized_cluster = normalize_cluster(row[2])
                     if normalized_cluster in unique_clusters:
                         csv_writer.writerow(row)
                         unique_clusters.remove(normalized_cluster)
