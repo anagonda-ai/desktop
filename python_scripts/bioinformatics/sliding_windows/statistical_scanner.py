@@ -1,5 +1,6 @@
 from threading import Lock
 import os
+import numpy as np
 import pandas as pd
 import hashlib
 from collections import defaultdict
@@ -110,35 +111,110 @@ def create_pathways_dict(pathways_file):
                 pathways_dict[unique_id].append(gene_ids)
     return dict(pathways_dict)
 
-# Process each file in a directory using multithreading
-def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, window_size, min_genes):
-    print(f"Processing file: {file_path} with window size: {window_size}")
-    total_matches = 0
-    df = pd.read_csv(file_path, usecols=['id', 'start', 'end'])
-    num_windows = len(df) - window_size + 1
-    with tqdm(total=num_windows, desc=f"File: {os.path.basename(file_path)}", unit="window") as pbar:
-        for i in range(num_windows):
-            window = df.iloc[i:i + window_size]
-            window_matches = process_window_with_aho_corasick(window, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
-            total_matches += window_matches
-            pbar.update(1)
+def clean_and_process_genes_and_pathways(genes_and_pathways):
+    processed = {}
+    for gene, values in genes_and_pathways.items():
+        # Remove unwanted characters and split into elements
+        stripped_values = [''.join(c for c in v if c not in "[]'\"").split(",") for v in values]
+        processed[gene] = stripped_values
+    return processed
+
+def find_first_common_element(genes_and_pathways, min_genes):
+    from itertools import product, combinations
+    # Clean and process the input
+    processed = clean_and_process_genes_and_pathways(genes_and_pathways)
     
-    total_random_matches = 0
+    # Flatten any nested lists within each gene's pathways
+    sets = []
+    for paths in processed.values():
+        flattened = set(item.strip() for sublist in paths for item in sublist)
+        sets.append(flattened)
+        
+    # Generate all combinations of sets of size min_genes
+    set_combinations = combinations(sets, min_genes)
+    
+    for selected_sets in set_combinations:
+        # Generate all combinations with one element per selected set
+        all_combinations = product(*selected_sets)
+        
+        for combination in all_combinations:
+            # If all elements are the same, return the first match
+            if len(set(combination)) == 1:
+                return combination[0]
+    
+    return None  # No common element found
+
+def process_df(filtered_df, window_size, min_genes, file_path, file_lock, output_file):
+    total_matches = 0
+    # Group by chromosome and process each group
+    chromosomes = filtered_df['chromosome'].unique()
+    # Process each chromosome group
+    for chromosome in chromosomes:
+        chromosome_data = filtered_df[filtered_df['chromosome'] == chromosome]
+        num_genes = len(chromosome_data)
+        i = 0
+        while i < num_genes:
+            genes_and_pathways = dict()
+            window = [chromosome_data.iloc[i]]
+            genes_and_pathways[chromosome_data.iloc[i]['metabolic_gene']] = [chromosome_data.iloc[i]['pathway']]
+            start_index = chromosome_data.iloc[i]['index']
+            for j in range(i+1, num_genes):
+                end_index = chromosome_data.iloc[j]['index']
+                if (end_index - start_index <= window_size):
+                    window.append(chromosome_data.iloc[j])
+                    if (chromosome_data.iloc[j]['metabolic_gene'] not in genes_and_pathways.keys()):
+                        genes_and_pathways[chromosome_data.iloc[j]['metabolic_gene']] = [chromosome_data.iloc[j]['pathway']]
+                    else:
+                        genes_and_pathways[chromosome_data.iloc[j]['metabolic_gene']].append(chromosome_data.iloc[j]['pathway'])
+                else:
+                    break
+            if len(genes_and_pathways.keys()) >= min_genes:
+                window_df = pd.DataFrame(window)
+                pathway = find_first_common_element(genes_and_pathways, min_genes)
+                if pathway:
+                    group = {
+                        'pathway': pathway,  # Include occurrence info
+                        'genes': ','.join(window_df['id']),
+                        'metabolic_genes': ','.join(list(genes_and_pathways.keys())),
+                        'start': window_df['start'].min(),
+                        'end': window_df['end'].max(),
+                        'source_file': file_path
+                    }
+                    with file_lock:
+                        mode = 'a' if os.path.exists(output_file) else 'w'
+                        header = not os.path.exists(output_file)
+                        pd.DataFrame([group]).to_csv(output_file, mode=mode, header=header, index=False)
+                        total_matches += 1
+            i += 1
+    return total_matches
+
+# Process each file in a directory using multithreading
+def process_file(file_path, output_file, file_lock, window_size, min_genes):
+    print(f"Processing file: {file_path} with window size: {window_size}")
+    df = pd.read_csv(file_path)
+    df["index"] = df.index
+    # Filter out non-metabolic genes
+    filtered_df = df[df["pathway"].notna()]
+    total_matches = process_df(filtered_df, window_size, min_genes, file_path, file_lock, output_file)
+    
     random_advantage = 10
-    with tqdm(total=num_windows * random_advantage, desc=f"Random Samples: {os.path.basename(file_path)}", unit="window") as pbar:
-        for i in range(num_windows):
-            window = df.sample(n=window_size)
-            window_matches = process_window_with_aho_corasick(window, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
-            total_random_matches += window_matches / random_advantage
-            pbar.update(1)
+    # Shuffle the values in columns 'pathway' and 'metabolic_gene' identically
+    shuffled_df = df.copy()
+    total_random_matches = 0
+    for i in range(random_advantage):
+        permutation = np.random.permutation(len(shuffled_df))
+        shuffled_df['pathway'] = shuffled_df['pathway'].values[permutation]
+        shuffled_df['metabolic_gene'] = shuffled_df['metabolic_gene'].values[permutation]
+        filtered_shuffled_df = shuffled_df[shuffled_df["pathway"].notna()]
+        
+        total_random_matches += process_df(filtered_shuffled_df, window_size, min_genes, file_path, file_lock, output_file) / random_advantage
     print(f"Completed file: {file_path}, Matches Found: {total_matches}")
     return total_matches, total_random_matches
 
 # Process a whole genome directory
-def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes):
+def process_genome_dir(genome_dir, output_file, max_workers, window_size, min_genes):
     file_paths = [os.path.join(genome_dir, f) for f in os.listdir(genome_dir) 
                   if f.endswith('.csv') and os.path.isfile(os.path.join(genome_dir, f))]
-    unique_tracker = UniqueMatchTracker()
     file_lock = Lock()
     total_matches = 0
     total_random_matches = 0
@@ -148,9 +224,7 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, wind
                 executor.submit(
                     process_file, 
                     file_path, 
-                    pathway_tries, 
                     output_file, 
-                    unique_tracker, 
                     file_lock,
                     window_size,
                     min_genes
@@ -175,24 +249,24 @@ def create_output_subdir(output_dir, min_genes):
 
 def enrichment_analysis(total_random_matches, total_matches, window_size, min_genes, enrichment_output_file):
     # Calculate enrichment statistics
-            if total_random_matches > 0:
-                enrichment_ratio = total_matches / total_random_matches
-            else:
-                enrichment_ratio = float('inf')  # Avoid division by zero
+    if total_random_matches > 0:
+        enrichment_ratio = total_matches / total_random_matches
+    else:
+        enrichment_ratio = float('inf')  # Avoid division by zero
 
-            enrichment_stats = {
-                'window_size': window_size,
-                'min_genes': min_genes,
-                'total_matches': total_matches,
-                'total_random_matches': total_random_matches,
-                'enrichment_ratio': enrichment_ratio
-            }
+    enrichment_stats = {
+        'window_size': window_size,
+        'min_genes': min_genes,
+        'total_matches': total_matches,
+        'total_random_matches': total_random_matches,
+        'enrichment_ratio': enrichment_ratio
+    }
 
-            # Save enrichment statistics to a CSV file
-            enrichment_df = pd.DataFrame([enrichment_stats])
-            mode = 'a' if os.path.exists(enrichment_output_file) else 'w'
-            header = not os.path.exists(enrichment_output_file)
-            enrichment_df.to_csv(enrichment_output_file, mode=mode, header=header, index=False)
+    # Save enrichment statistics to a CSV file
+    enrichment_df = pd.DataFrame([enrichment_stats])
+    mode = 'a' if os.path.exists(enrichment_output_file) else 'w'
+    header = not os.path.exists(enrichment_output_file)
+    enrichment_df.to_csv(enrichment_output_file, mode=mode, header=header, index=False)
 
 def main():
     # genome_dirs = [
@@ -210,12 +284,6 @@ def main():
         
     max_workers = min(32, os.cpu_count())
     print(f"Using {max_workers} workers")
-    print("Loading pathways...")
-
-    # Load pathway dictionary and build Aho-Corasick automaton
-    pathway_dict = create_pathways_dict(pathways_file)
-    pathway_tries = build_aho_corasick(pathway_dict)
-    print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
 
     for window_size in range(5, 21):
         # Dynamically calculate the maximum value of min_genes
@@ -235,7 +303,7 @@ def main():
             total_random_matches = 0
             for genome_dir in genome_dirs:
                 print(f"Processing genome directory: {genome_dir} with window size: {window_size} and min_genes: {min_genes}")
-                matches, random_matches = process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, window_size, min_genes)
+                matches, random_matches = process_genome_dir(genome_dir, output_file, max_workers, window_size, min_genes)
                 total_matches += matches
                 total_random_matches += random_matches
             

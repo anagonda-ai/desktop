@@ -1,5 +1,5 @@
 from threading import Lock
-import re
+import string
 import os
 import pandas as pd
 from collections import defaultdict
@@ -41,6 +41,7 @@ class Trie:
         self.root = TrieNode()
 
     def insert(self, key):
+        """Insert a key into the trie."""
         node = self.root
         for char in key:
             if char not in node.children:
@@ -48,19 +49,35 @@ class Trie:
             node = node.children[char]
         node.key = key  # Mark the end of the word and store the full key
 
-    def search_substring(self, string):
-        """Search if any substring of the input string matches a key in the trie."""
-        for start in range(len(string)):
+    def search_substring(self, input_string):
+        """
+        Search if any substring of the input string matches a key in the trie.
+        The substring must contain at least one English letter to be considered valid.
+        
+        Args:
+            input_string: String to search within
+        
+        Returns:
+            The matching key if found, None otherwise
+        """
+        def contains_letter(substr):
+            """Check if substring contains at least one English letter."""
+            return any(char in string.ascii_letters for char in substr)
+        
+        for start in range(len(input_string)):
             node = self.root
-            for char in string[start:]:
+            current_substr = ""
+            
+            for char in input_string[start:]:
+                current_substr += char
                 if char in node.children:
                     node = node.children[char]
-                    if node.key:  # Found a match
+                    if node.key and contains_letter(current_substr):
                         return node.key
                 else:
                     break
-        return None  # No match found
-
+                    
+        return None
 
 # Process each file in a directory using multithreading
 def process_file(file_path, pathway_dict, output_file, file_lock, trie):
@@ -70,21 +87,26 @@ def process_file(file_path, pathway_dict, output_file, file_lock, trie):
         id_lower = id_value.lower()
         match = trie.search_substring(id_lower)
         return match
+    
+    def get_pathway_from_dict(x, pathway_dict):
+        key = find_key_in_id(x)
+        if key in pathway_dict:
+            return pathway_dict[key]
+        return None
         
     print(f"Processing file: {file_path}")
     df = pd.read_csv(file_path)
     # num_genes = len(df)
     # Compile a regular expression pattern for all keys in pathway_dict
     # Apply the filtering and mapping
-    filtered_df = df[df['id'].apply(lambda x: find_key_in_id(x) is not None)]
+    new_df = df
     # Add source_file column
-    filtered_df['source_file'] = file_path
+    new_df['source_file'] = file_path
     # Add pathway and index columns
-    filtered_df = filtered_df.assign(
-        index=filtered_df.index,
-        pathway=filtered_df['id'].apply(lambda x: pathway_dict[find_key_in_id(x)])
-    )
-    filtered_df.to_csv(output_file, mode='w', header=True, index=False)
+    new_df['pathway']=new_df['id'].apply(lambda x: get_pathway_from_dict(x, pathway_dict))
+    new_df['metabolic_gene'] = new_df['id'].apply(lambda x: find_key_in_id(x))
+
+    new_df.to_csv(output_file, mode='w', header=True, index=False)
     print(f"Completed file: {file_path}")
 
 # Process a whole genome directory
@@ -113,7 +135,7 @@ def process_genome_dir(genome_dir, pathway_dict, max_workers, output_dir, trie):
 
 def create_output_subdir(output_dir):
     """Create a subdirectory for each min_genes value."""
-    subdir = os.path.join(output_dir, "metabolic_genes")
+    subdir = os.path.join(output_dir, "metabolic_genes_with_letters")
     if not os.path.exists(subdir):
         os.makedirs(subdir)
     return subdir

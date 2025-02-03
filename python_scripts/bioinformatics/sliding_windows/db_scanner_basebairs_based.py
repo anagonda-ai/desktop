@@ -110,45 +110,98 @@ def create_pathways_dict(pathways_file):
                 pathways_dict[unique_id].append(gene_ids)
     return dict(pathways_dict)
 
+def clean_and_process_genes_and_pathways(genes_and_pathways):
+    processed = {}
+    for gene, values in genes_and_pathways.items():
+        # Remove unwanted characters and split into elements
+        stripped_values = [''.join(c for c in v if c not in "[]'\"").split(",") for v in values]
+        processed[gene] = stripped_values
+    return processed
+
+def find_first_common_element(genes_and_pathways, min_genes):
+    from itertools import product, combinations
+    # Clean and process the input
+    processed = clean_and_process_genes_and_pathways(genes_and_pathways)
+    
+    # Flatten any nested lists within each gene's pathways
+    sets = []
+    for paths in processed.values():
+        flattened = set(item.strip() for sublist in paths for item in sublist)
+        sets.append(flattened)
+        
+    # Generate all combinations of sets of size min_genes
+    set_combinations = combinations(sets, min_genes)
+    
+    for selected_sets in set_combinations:
+        # Generate all combinations with one element per selected set
+        all_combinations = product(*selected_sets)
+        
+        for combination in all_combinations:
+            # If all elements are the same, return the first match
+            if len(set(combination)) == 1:
+                return combination[0]
+    
+    return None  # No common element found
+
 # Process each file in a directory using multithreading
-def process_file(file_path, pathway_tries, output_file, unique_tracker, file_lock, min_genes, max_kbp):
-    print(f"Processing file: {file_path} with max_kbp: {max_kbp}")
+def process_file(file_path, output_file, file_lock, min_genes, max_kbp):
+    print(f"Processing file: {file_path} with max kbp: {max_kbp}")
     total_matches = 0
-    df = pd.read_csv(file_path, usecols=['id', 'start', 'end', 'chromosome'])
-    df['start'] = df['start'].astype(int)
-    df['end'] = df['end'].astype(int)
-    chromosomes = df['chromosome'].unique()
-    num_genes_total = len(df)
-    with tqdm(total=num_genes_total, desc=f"File: {os.path.basename(file_path)}", unit="window") as pbar:
-        for chromosome in chromosomes:
-            chromosome_data = df[df['chromosome'] == chromosome]
-            num_genes = len(chromosome_data)
-            i = 0
-            while i < num_genes:
-                window = [chromosome_data.iloc[i]]
-                start_pos = chromosome_data.iloc[i]['start']
-                prev_end_pos = chromosome_data.iloc[i]['end']
-                for j in range(i+1, num_genes):
-                    end_pos = chromosome_data.iloc[j]['end']
-                    if (end_pos - start_pos <= max_kbp * 1000) and (end_pos > prev_end_pos):
-                        window.append(chromosome_data.iloc[j])
-                        prev_end_pos = end_pos
+    df = pd.read_csv(file_path)
+    df["index"] = df.index
+    # Filter out non-metabolic genes
+    filtered_df = df[df["pathway"].notna()]
+    # Group by chromosome and process each group
+    chromosomes = filtered_df['chromosome'].unique()
+    # Process each chromosome group
+    for chromosome in chromosomes:
+        chromosome_data = filtered_df[filtered_df['chromosome'] == chromosome]
+        num_genes = len(chromosome_data)
+        i = 0
+        while i < num_genes:
+            genes_and_pathways = dict()
+            window = [chromosome_data.iloc[i]]
+            genes_and_pathways[chromosome_data.iloc[i]['metabolic_gene']] = [chromosome_data.iloc[i]['pathway']]
+            start_pos = chromosome_data.iloc[i]['start']
+            end_pos = chromosome_data.iloc[i]['end']
+            for j in range(i+1, num_genes):
+                current_end = chromosome_data.iloc[j]['end']
+                if (current_end - start_pos <= max_kbp * 1000) and (current_end > end_pos):
+                    window.append(chromosome_data.iloc[j])
+                    if (chromosome_data.iloc[j]['metabolic_gene'] not in genes_and_pathways.keys()):
+                        genes_and_pathways[chromosome_data.iloc[j]['metabolic_gene']] = [chromosome_data.iloc[j]['pathway']]
                     else:
-                        break
-                if len(window) >= min_genes:
-                    window_df = pd.DataFrame(window)
-                    window_matches = process_window_with_aho_corasick(window_df, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
-                    total_matches += window_matches
-                pbar.update(1)
-                i += 1  # Move to the next gene after the current window
+                        genes_and_pathways[chromosome_data.iloc[j]['metabolic_gene']].append(chromosome_data.iloc[j]['pathway'])
+                    end_pos = current_end
+                else:
+                    break
+            if len(genes_and_pathways.keys()) >= min_genes:
+                window_df = pd.DataFrame(window)
+                pathway = find_first_common_element(genes_and_pathways, min_genes)
+                if pathway:
+                    group = {
+                        'pathway': pathway,  # Include occurrence info
+                        'genes': ','.join(window_df['id']),
+                        'metabolic_genes': ','.join(list(genes_and_pathways.keys())),
+                        'start': window_df['start'].min(),
+                        'end': window_df['end'].max(),
+                        'source_file': file_path
+                    }
+                    with file_lock:
+                        mode = 'a' if os.path.exists(output_file) else 'w'
+                        header = not os.path.exists(output_file)
+                        pd.DataFrame([group]).to_csv(output_file, mode=mode, header=header, index=False)
+                        total_matches += 1
+                # window_matches = process_window_with_aho_corasick(window_df, pathway_tries, unique_tracker, output_file, file_lock, file_path, min_genes)
+                # total_matches += window_matches
+            i += 1
     print(f"Completed file: {file_path}, Matches Found: {total_matches}")
     return total_matches
 
 # Process a whole genome directory
-def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, min_genes, max_kbp):
+def process_genome_dir(genome_dir, output_file, max_workers, min_genes, max_kbp):
     file_paths = [os.path.join(genome_dir, f) for f in os.listdir(genome_dir) 
                   if f.endswith('.csv') and os.path.isfile(os.path.join(genome_dir, f))]
-    unique_tracker = UniqueMatchTracker()
     file_lock = Lock()
     total_matches = 0
     with tqdm(total=len(file_paths), desc=f"Directory: {os.path.basename(genome_dir)}", unit="file") as pbar:
@@ -156,10 +209,8 @@ def process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, min_
             futures = [
                 executor.submit(
                     process_file, 
-                    file_path, 
-                    pathway_tries, 
-                    output_file, 
-                    unique_tracker, 
+                    file_path,
+                    output_file,
                     file_lock,
                     min_genes,
                     max_kbp
@@ -181,12 +232,12 @@ def create_output_subdir(output_dir, min_genes):
 
 def main():
     genome_dirs = [
-        "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
-        "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
-        "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
+        "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences/metabolic_genes",
+        "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences/metabolic_genes",
+        "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences/metabolic_genes"
     ]
     pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
-    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs_chromosome_sorted_no_chloroplast_basepairs_based"
+    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/max_basepairs_only_metabolic_genes_input"
     
     # Ensure the output directory exists
     if not os.path.exists(output_dir):
@@ -194,16 +245,10 @@ def main():
         
     max_workers = min(32, os.cpu_count())
     print(f"Using {max_workers} workers")
-    print("Loading pathways...")
-
-    # Load pathway dictionary and build Aho-Corasick automaton
-    pathway_dict = create_pathways_dict(pathways_file)
-    pathway_tries = build_aho_corasick(pathway_dict)
-    print(f"Loaded {len(pathway_dict)} pathways with Aho-Corasick.")
 
     min_genes = 3
     
-    for max_kbp in [50]:
+    for max_kbp in [20, 40, 60, 80, 100]:
         
         # Create subdirectory for the current min_genes
         min_genes_subdir = create_output_subdir(output_dir, min_genes)
@@ -215,7 +260,7 @@ def main():
         total_matches = 0
         for genome_dir in genome_dirs:
             print(f"Processing genome directory: {genome_dir} with window size: {max_kbp}kbp and min_genes: {min_genes}")
-            total_matches += process_genome_dir(genome_dir, pathway_tries, output_file, max_workers, min_genes, max_kbp)
+            total_matches += process_genome_dir(genome_dir, output_file, max_workers, min_genes, max_kbp)
         
         print(f"TOTAL MATCHES FOUND for window size {max_kbp}kbp and min_genes {min_genes}: {total_matches}")
         print(f"Results saved to: {output_file}")
