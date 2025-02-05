@@ -111,17 +111,15 @@ def process_sequence_chunk(args):
         for seq1_id, (seq1, len1) in sequences1.items():
             for seq2_id, (seq2, len2) in sequences2.items():
                 if start_idx <= pairs_done < end_idx:
-                    # Early rejection based on cached lengths
-                    if abs(len1 - len2) / max(len1, len2) <= 0.3:
-                        score = calculate_global_alignment_score(seq1, seq2)
-                        if score > 0.0:  # Only store non-zero scores
-                            current_batch.append({
-                                'File1': file1,
-                                'File2': file2,
-                                'Sequence1': seq1_id,
-                                'Sequence2': seq2_id,
-                                'Similarity_Score': score
-                            })
+                    score = calculate_global_alignment_score(seq1, seq2)
+                    if score > 0.0:  # Only store non-zero scores
+                        current_batch.append({
+                            'File1': file1,
+                            'File2': file2,
+                            'Sequence1': seq1_id,
+                            'Sequence2': seq2_id,
+                            'Similarity_Score': score
+                        })
                     
                     if len(current_batch) >= batch_size:
                         results.extend(current_batch)
@@ -231,8 +229,7 @@ def perform_all_vs_all_alignment(input_dir, output_dir, max_workers=None, chunk_
             summary_data.append(summary)
         
         final_summary = pd.concat(summary_data).groupby(level=[0, 1]).mean()
-        summary_df = final_summary.unstack()
-        summary_df.to_csv(summary_output, compression='gzip')
+        final_summary.to_csv(summary_output, compression='gzip')
     except Exception as e:
         print(f"Error generating summary matrix: {str(e)}")
     
