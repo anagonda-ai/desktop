@@ -34,12 +34,16 @@ def process_batch(batch, output_csv):
     """Process multiple pairs in one batch to reduce I/O overhead."""
     results = []
     for fasta_file1, fasta_file2, genes1, genes2 in batch:
-        similarity_matrix = np.array([[compute_similarity(g1, g2) for g2 in genes2] for g1 in genes1])
-        row_ind, col_ind = linear_sum_assignment(similarity_matrix, maximize=True)
-        max_sum = similarity_matrix[row_ind, col_ind].sum()
+        if abs(len(genes1) - len(genes2)) > 1:
+            print(f"Skipping: {fasta_file1} vs {fasta_file2} due to gene count difference")
+            num_pairs = 0
+        else:
+            similarity_matrix = np.array([[compute_similarity(g1, g2) for g2 in genes2] for g1 in genes1])
+            row_ind, col_ind = linear_sum_assignment(similarity_matrix, maximize=True)
+            max_sum = similarity_matrix[row_ind, col_ind].sum()
         
         num_pairs = len(row_ind)
-        avg_max_sum = max_sum / num_pairs if num_pairs else 0
+        avg_max_sum = max_sum / num_pairs if not num_pairs == 0 else 0
         results.append([fasta_file1, fasta_file2, avg_max_sum])
         print(f"Processed: {fasta_file1} vs {fasta_file2} with similarity {avg_max_sum}")
         
