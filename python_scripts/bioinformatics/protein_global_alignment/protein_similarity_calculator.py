@@ -1,112 +1,125 @@
 import os
-from Bio import SeqIO
-from Bio import pairwise2
+import csv
+import pickle
 import networkx as nx
 import concurrent.futures
-import pickle
+import parasail
+from Bio import SeqIO
+from scipy.optimize import linear_sum_assignment
+import psutil  # To check system memory
+import numpy as np
 
-# Step 1: Parse each FASTA file to extract genes (sequences)
+# -------------- Step 1: Parse FASTA files ---------------- #
 def parse_fasta(fasta_file):
-    gene_sequences = []
-    for record in SeqIO.parse(fasta_file, "fasta"):
-        gene_sequences.append(str(record.seq))
-    return gene_sequences
+    """Extract sequences from a FASTA file."""
+    return [str(record.seq) for record in SeqIO.parse(fasta_file, "fasta")]
 
-# Step 2: Compute Pairwise Similarity using Needleman-Wunsch (Global Alignment)
-def compute_similarity(fasta_file1, fasta_file2, genes1, genes2):
-    similarity_scores = []
+# -------------- Step 2: Compute Global Alignment ---------------- #
+def compute_similarity(seq1, seq2):
+    """Compute global alignment score using parasail."""
+    alignment = parasail.nw_stats_striped_16(seq1, seq2, 10, 1, parasail.blosum62)
+    return alignment.score
 
-    # Perform global pairwise alignment for each gene in file1 with each gene in file2
-    for gene1 in genes1:
-        for gene2 in genes2:
-            alignments = pairwise2.align.globalxx(gene1, gene2)
-            best_alignment_score = alignments[0][2]  # Score is in the third column
-            similarity_scores.append(best_alignment_score)
+# -------------- Step 4: Graph Builder ---------------- #
+def graph_builder(G, output_csv):
+    """Reads similarity results from CSV and builds the graph incrementally."""
+    with open(output_csv, 'r') as csvfile:
+        reader = csv.reader(csvfile)
+        next(reader)  # Skip header
+        for row in reader:
+            file1, file2, score = row[0], row[1], float(row[2])
+            G.add_edge(file1, file2, weight=score)
+            
+def process_batch(batch, output_csv):
+    """Process multiple pairs in one batch to reduce I/O overhead."""
+    results = []
+    for fasta_file1, fasta_file2, genes1, genes2 in batch:
+        similarity_matrix = np.array([[compute_similarity(g1, g2) for g2 in genes2] for g1 in genes1])
+        row_ind, col_ind = linear_sum_assignment(similarity_matrix, maximize=True)
+        max_sum = similarity_matrix[row_ind, col_ind].sum()
+        
+        num_pairs = len(row_ind)
+        avg_max_sum = max_sum / num_pairs if num_pairs else 0
+        results.append([fasta_file1, fasta_file2, avg_max_sum])
+        print(f"Processed: {fasta_file1} vs {fasta_file2} with similarity {avg_max_sum}")
+        
 
-    avg_similarity_score = sum(similarity_scores) / len(similarity_scores) if similarity_scores else 0
-    return fasta_file1, fasta_file2, avg_similarity_score
+    # Write batch results
+    with open(output_csv, 'a', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerows(results)
 
-def process_results(future, G, output_path):
-    try:
-        file1, file2, similarity_score = future.result()
-        G.add_edge(file1, file2, weight=similarity_score)
-        print(f"Processed {file1} and {file2} with similarity score: {similarity_score:.4f}")
-        print(f"Graph has {len(G.nodes)} nodes and {len(G.edges)} edges.")
-
-        if len(G.edges) % 1000 == 0:
-            nx.write_edgelist(G, output_path, delimiter=",", data=["weight"])
-            print(f"Graph saved with {len(G.nodes)} nodes and {len(G.edges)} edges.")
-
-    except Exception as e:
-        print(f"Error processing a future: {e}")
-
-# Step 3: Build the graph based on pairwise similarity scores using multiprocessing
-def build_graph(fasta_files, output_path):
-    G = nx.Graph()
+# -------------- Step 5: Build Graph with Immediate Future Removal ---------------- #
+def build_graph(fasta_files, output_csv, output_graph, batch_size=100):
+    """Computes similarity for all file pairs and builds the graph."""
     num_files = len(fasta_files)
-    parsed_genes = {}
+    parsed_genes = {f: parse_fasta(f) for f in fasta_files}
 
-    # Parse all FASTA files once and cache results
-    for fasta_file in fasta_files:
-        parsed_genes[fasta_file] = parse_fasta(fasta_file)
+    # Clear previous CSV file and add header
+    with open(output_csv, 'w', newline='') as csvfile:
+        writer = csv.writer(csvfile)
+        writer.writerow(["File1", "File2", "Similarity"])
 
-    # Using ProcessPoolExecutor for parallel processing of file pairs
+    # Use multiprocessing for parallel processing
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        futures = set()  # Using a set for better performance with removals
+        futures = set()
 
+        # 🔥 **NEW: Loops through all file pairs** 🔥
         for i in range(num_files):
-            for j in range(i + 1, num_files):
-                file1 = fasta_files[i]
-                file2 = fasta_files[j]
+            for j in range(i + 1, num_files):  # Ensures every possible (i, j) is covered
+                batch = [(fasta_files[i], fasta_files[j], parsed_genes[fasta_files[i]], parsed_genes[fasta_files[j]])]
 
-                # Submit a task immediately
-                future = executor.submit(compute_similarity, file1, file2, parsed_genes[file1], parsed_genes[file2])
+                # Submit batch for processing
+                future = executor.submit(process_batch, batch, output_csv)
                 futures.add(future)
 
-                # Process results as they complete
-                done, _ = concurrent.futures.wait(futures, timeout=0, return_when=concurrent.futures.FIRST_COMPLETED)
-                for completed_future in done:
-                    process_results(completed_future, G, output_path)
-                    futures.remove(completed_future)
+                # Manage completed futures to avoid memory overload
+                if len(futures) >= batch_size:
+                    done, _ = concurrent.futures.wait(futures, return_when=concurrent.futures.FIRST_COMPLETED)
+                    for completed_future in done:
+                        completed_future.result()  # Ensure errors are caught
+                        futures.remove(completed_future)
 
-    print(f"Graph built with {len(G.nodes)} nodes and {len(G.edges)} edges.")
+        # Wait for any remaining futures to finish
+        concurrent.futures.wait(futures)
+
+    # Build graph from the CSV
+    G = nx.Graph()
+    graph_builder(G, output_csv)
+
+    # Save graph
+    with open(output_graph, 'wb') as f:
+        pickle.dump(G, f)
+
     return G
 
-# Step 4: Apply MWOP or a similar clustering algorithm
+# -------------- Step 6: Apply Clustering ---------------- #
 def apply_clustering(G):
+    """Apply clustering algorithm to the similarity graph."""
     communities = nx.algorithms.community.girvan_newman(G)
-    clusters = [list(cluster) for cluster in communities]
-    print(f"Found {len(clusters)} clusters.")
+    clusters = [list(cluster) for cluster in next(communities)]
     return clusters
 
-# Main function to execute the workflow
-def main(fasta_dir, output_path):
-    # Step 1: Get all FASTA files in the directory
+# -------------- Main Function ---------------- #
+def main(fasta_dir, output_csv, output_graph):
     fasta_files = [os.path.join(fasta_dir, f) for f in os.listdir(fasta_dir) if f.endswith(".fasta")]
-    print(f"Found {len(fasta_files)} FASTA files in directory: {fasta_dir}")
+    print(f"Found {len(fasta_files)} FASTA files.")
 
-    # Step 2: Build the graph from similarity scores
-    print("Building the similarity graph...")
-    G = build_graph(fasta_files, output_path)
-    
-    with open(output_path, 'wb') as f:
-        pickle.dump(G, f)
-        print(f"Graph saved with {len(G.nodes)} nodes and {len(G.edges)} edges.")
+    print("Building similarity graph...")
+    G = build_graph(fasta_files, output_csv, output_graph)
 
-    # Step 3: Apply clustering (MWOP or modularity-based)
-    print("Clustering files...")
+    print(f"Graph saved with {len(G.nodes)} nodes and {len(G.edges)} edges.")
+
+    print("Applying clustering...")
     clusters = apply_clustering(G)
 
-    # Output the clusters
-    print("Clusters:")
-    for idx, cluster in enumerate(clusters):
-        print(f"Cluster {idx + 1}: {', '.join(cluster)}")
-
+    print(f"Clusters found: {len(clusters)}")
+    for i, cluster in enumerate(clusters):
+        print(f"Cluster {i+1}: {', '.join(cluster)}")
 
 if __name__ == "__main__":
-    # Provide the path to the directory containing FASTA files
-    fasta_dir = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"  # Replace with your actual directory path
-    output_path = "/groups/itay_mayrose/alongonda/desktop/graph_output.pkl"  # Specify the path where the graph will be saved incrementally
-
-    # Execute the main function
-    main(fasta_dir, output_path)
+    fasta_dir = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    output_csv = "/groups/itay_mayrose/alongonda/desktop/graph_output.csv"
+    output_graph = "/groups/itay_mayrose/alongonda/desktop/graph_output.pkl"
+    
+    main(fasta_dir, output_csv, output_graph)
