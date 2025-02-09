@@ -33,8 +33,8 @@ def print_clusters(clusters):
             print(cluster)
 
 # Example usage
-directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/min_genes_only_metabolic_genes_input'
-output_directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_min_genes_only_metabolic_genes_input'
+directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/min_genes_only_metabolic_genes_input_test'
+output_directory_path = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_min_genes_only_metabolic_genes_input_test'
 
 if not os.path.exists(output_directory_path):
     os.makedirs(output_directory_path)

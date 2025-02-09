@@ -6,11 +6,11 @@ import pandas as pd
 
 def extract_gene_id(description):
     # Find the part that starts with 'gene:'
-    if 'locus=' in description:
+    if 'gene:' in description:
         # Split by space and find the element containing 'gene:'
         for part in description.split():
-            if part.startswith('locus='):
-                return part.split('locus=')[1]
+            if part.startswith('gene:'):
+                return part.split('gene:')[1]
     return None
 
 def get_genes_from_fasta(fasta_dir):
@@ -60,16 +60,14 @@ def process_annotation_file(annotation_file, allowed_genes):
     # Filter the DataFrame based on allowed_genes (case-insensitive)
     
     # filtered_df = df[df['id'].str.lower().isin(allowed_genes)]
-    filtered_df = df[df['id'].str.split(';').str[1].str.split('=').str[1].str.lower().isin(allowed_genes)]
-    # Add a new column with the corresponding sequence from allowed_genes
-    filtered_df['sequence'] = filtered_df['id'].str.split(';').str[1].str.split('=').str[1].str.lower().map(allowed_genes)
+    filtered_df = df[df['id'].str.lower().isin(allowed_genes)]
     
     return filtered_df
 
 def main():
     # Directories
-    fasta_dir = '/groups/itay_mayrose/alongonda/full_genomes/phytozome_without_chloroplast'
-    annotations_dir = '/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes'
+    fasta_dir = '/groups/itay_mayrose/alongonda/full_genomes/ensembl_without_chloroplast'
+    annotations_dir = '/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_full_data'
     
     # Get all genes from FASTA files
     print("Reading FASTA files...")

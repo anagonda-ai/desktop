@@ -2,97 +2,9 @@ from threading import Lock
 import os
 import numpy as np
 import pandas as pd
-import hashlib
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
-import ahocorasick
 from tqdm import tqdm  # For progress bar
-
-# Aho-Corasick Implementation to match multiple patterns in text
-def build_aho_corasick(pathway_dict):
-    automaton = ahocorasick.Automaton()
-    for pathway, gene_lists in pathway_dict.items():
-        for occurrence_idx, gene_list in enumerate(gene_lists):
-            # Ensure the unique occurrence index is consistent
-            unique_occurrence_id = f"{pathway}__{occurrence_idx}"
-            for gene in gene_list:
-                automaton.add_word(gene.lower(), (unique_occurrence_id, gene.lower()))
-    automaton.make_automaton()
-    return automaton
-
-class UniqueMatchTracker:
-    def __init__(self):
-        self._seen_matches = []
-        self._lock = Lock()
-
-    def is_unique_match(self, pathway_cluster):
-        new_cluster_genes = set(pathway_cluster['pathway_cluster_genes'].split(','))
-
-        with self._lock:
-            # Check if the new match is a subset of any existing match
-            for match in self._seen_matches:
-                existing_genes = set(match.split(','))
-                if new_cluster_genes.issubset(existing_genes):
-                    return False
-
-            # If unique, add the new match
-            self._seen_matches.append(pathway_cluster['pathway_cluster_genes'])
-            return True
-
-def generate_group_hash(group):
-    sorted_genes = sorted(group['pathway_cluster_genes'].split(','))
-    hash_string = f"{'|'.join(sorted_genes)}"
-    return hashlib.md5(hash_string.encode()).hexdigest()
-
-# Process a sliding window of data, matching gene sequences with Aho-Corasick
-def process_window_with_aho_corasick(window_data, automaton, unique_tracker, output_file, file_lock, file_path, min_genes):
-    gene_ids = [gene.lower() for gene in window_data['id']]
-    matches_found = 0
-    matched_pathways = defaultdict(lambda: defaultdict(set))  # Nested dict to track matches per occurrence
-    gene_positions = defaultdict(dict)  # Store start and end positions for matched genes
-
-    # Use Aho-Corasick to find all matching genes in the window
-    for end_pos, (unique_occurrence_id, gene) in automaton.iter(" ".join(gene_ids)):
-        pathway, occurrence_idx = unique_occurrence_id.split('__')
-        matched_pathways[pathway][occurrence_idx].add(gene)
-
-    # Process matches for each pathway occurrence
-    for pathway, occurrences in matched_pathways.items():
-        for occurrence_idx, genes in occurrences.items():
-            # Find window genes that match the pathway (in their original case from window_data['id'])
-            if len(genes) >= min_genes:
-                matched_window_genes = []
-                for window_gene, start, end in zip(window_data['id'], window_data['start'], window_data['end']):
-                    if any(gene in window_gene.lower() for gene in genes):
-                        matched_window_genes.append(window_gene)
-                        gene_positions[window_gene] = {'start': start, 'end': end}
-
-                unique_genes = set(genes)
-                matched_positions = [
-                    f"{gene}({gene_positions[gene]['start']}-{gene_positions[gene]['end']})"
-                    for gene in matched_window_genes if gene in gene_positions
-                ]
-                group = {
-                    'pathway': f"{pathway} (Occurrence {occurrence_idx})",  # Include occurrence info
-                    'genes': ','.join(window_data['id']),
-                    'pathway_cluster_genes': ','.join(sorted(unique_genes)),
-                    'window_cluster_genes': ','.join(sorted(matched_window_genes)),  # Only matched genes from the window
-                    'gene_positions': ','.join(matched_positions),  # Include gene positions
-                    'start': window_data['start'].min(),
-                    'end': window_data['end'].max(),
-                    'source_file': file_path
-                }
-                pathway_cluster = {'pathway_cluster_genes': group['pathway_cluster_genes']}
-                if unique_tracker.is_unique_match(pathway_cluster):
-                    matches_found += 1
-                    with file_lock:
-                        mode = 'a' if os.path.exists(output_file) else 'w'
-                        header = not os.path.exists(output_file)
-                        pd.DataFrame([group]).to_csv(output_file, mode=mode, header=header, index=False)
-                    print(f"Match Found: Pathway={pathway} (Occurrence {occurrence_idx}), "
-                          f"Genes={group['genes']}, Matching Genes={group['pathway_cluster_genes']}, "
-                          f"File={group['source_file']}")
-    return matches_found
 
 # Optimized create_pathways_dict
 def create_pathways_dict(pathways_file):

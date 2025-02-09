@@ -120,28 +120,31 @@ def clean_and_process_genes_and_pathways(genes_and_pathways):
 
 def find_first_common_element(genes_and_pathways, min_genes):
     from itertools import product, combinations
+    
     # Clean and process the input
     processed = clean_and_process_genes_and_pathways(genes_and_pathways)
     
     # Flatten any nested lists within each gene's pathways
-    sets = []
-    for paths in processed.values():
+    gene_sets = {}
+    for gene, paths in processed.items():
         flattened = set(item.strip() for sublist in paths for item in sublist)
-        sets.append(flattened)
-        
-    # Generate all combinations of sets of size min_genes
-    set_combinations = combinations(sets, min_genes)
+        gene_sets[gene] = flattened
     
-    for selected_sets in set_combinations:
+    # Generate all combinations of genes of size min_genes
+    gene_combinations = combinations(gene_sets.keys(), min_genes)
+    
+    for selected_genes in gene_combinations:
+        selected_sets = [gene_sets[gene] for gene in selected_genes]
+        
         # Generate all combinations with one element per selected set
         all_combinations = product(*selected_sets)
         
         for combination in all_combinations:
-            # If all elements are the same, return the first match
+            # If all elements are the same, return the first match and corresponding genes
             if len(set(combination)) == 1:
-                return combination[0]
+                return combination[0], list(selected_genes)
     
-    return None  # No common element found
+    return None, []  # No common element found
 
 # Process each file in a directory using multithreading
 def process_file(file_path, output_file, file_lock, min_genes, max_kbp):
@@ -177,12 +180,12 @@ def process_file(file_path, output_file, file_lock, min_genes, max_kbp):
                     break
             if len(genes_and_pathways.keys()) >= min_genes:
                 window_df = pd.DataFrame(window)
-                pathway = find_first_common_element(genes_and_pathways, min_genes)
+                pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
                 if pathway:
                     group = {
                         'pathway': pathway,  # Include occurrence info
                         'genes': ','.join(window_df['id']),
-                        'metabolic_genes': ','.join(list(genes_and_pathways.keys())),
+                        'metabolic_genes': ','.join(metabolic_genes),
                         'start': window_df['start'].min(),
                         'end': window_df['end'].max(),
                         'source_file': file_path
@@ -237,7 +240,7 @@ def main():
         "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences/metabolic_genes"
     ]
     pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
-    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/max_basepairs_only_metabolic_genes_input"
+    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/max_basepairs_only_metabolic_genes_input_test"
     
     # Ensure the output directory exists
     if not os.path.exists(output_dir):
