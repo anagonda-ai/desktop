@@ -7,8 +7,8 @@
 #SBATCH --mem=32G
 #SBATCH --partition=itaym
 
-# Load required modules if necessary
-module load python  # Adjust if a specific Python module is required
+conda init
+conda activate base
 
 # Run your script
 python /groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/girvan_newman_graph_clustering.py
