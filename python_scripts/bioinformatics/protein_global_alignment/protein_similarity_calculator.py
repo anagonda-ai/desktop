@@ -123,7 +123,7 @@ def main(fasta_dir, output_csv, output_graph):
 
 if __name__ == "__main__":
     fasta_dir = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"
-    output_csv = "/groups/itay_mayrose/alongonda/desktop/graph_output.csv"
-    output_graph = "/groups/itay_mayrose/alongonda/desktop/graph_output.pkl"
+    output_csv = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/graph_output.csv"
+    output_graph = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/graph_output.pkl"
     
     main(fasta_dir, output_csv, output_graph)
