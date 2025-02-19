@@ -26,7 +26,7 @@ def rename_files(directory, species_map):
                 print(f"Renamed {filename} to {full_name}")
 
 def main():
-    directory = "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations"
+    directory = "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations"
     species_info_path = "/groups/itay_mayrose/alongonda/desktop/species_information.csv"
     
     # Read the species information

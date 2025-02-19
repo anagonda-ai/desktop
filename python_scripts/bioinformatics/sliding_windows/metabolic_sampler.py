@@ -88,9 +88,9 @@ def process_genome_dir(genome_dir, automaton, output_file, sample_size, window_s
 
 def main():
     genome_dirs = [
-        "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_sorted",
-        "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_sorted",
-        "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes"
+        "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_sorted",
+        "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_sorted",
+        "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes"
     ]
     pathways_file = "/groups/itay_mayrose/alongonda/datasets/plantcyc/all_organisms/merged_pathways.csv"
     output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs"

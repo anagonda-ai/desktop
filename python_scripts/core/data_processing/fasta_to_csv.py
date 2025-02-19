@@ -10,7 +10,7 @@ def process_fasta_files(base_dir):
                 print(f"Removed directory: {dir_path}")
 
 def main():
-    base_dir = "/groups/itay_mayrose/alongonda/full_genomes/phytozome/Phytozome"
+    base_dir = "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/Phytozome"
     process_fasta_files(base_dir)
 
 if __name__ == "__main__":

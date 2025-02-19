@@ -182,11 +182,11 @@ def enrichment_analysis(total_random_matches, total_matches, window_size, min_ge
 
 def main():
     # genome_dirs = [
-    #     "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
-    #     "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
-    #     "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
+    #     "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
+    #     "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
+    #     "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
     # ]
-    genome_dirs = ["/groups/itay_mayrose/alongonda/full_genomes/mgc_enriched_files"]
+    genome_dirs = ["/groups/itay_mayrose/alongonda/datasets/full_genomes/mgc_enriched_files"]
     pathways_file = "/groups/itay_mayrose/alongonda/datasets/plantcyc/all_organisms/merged_pathways.csv"
     output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/10_most_enriched_genomes_statistical_tests"
     

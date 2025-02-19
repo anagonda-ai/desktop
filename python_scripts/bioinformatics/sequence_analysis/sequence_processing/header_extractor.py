@@ -74,7 +74,7 @@ def process_fa_files(root_dir):
                 print(f"Error processing file {file_path}: {exc}")
 
 def main():
-    root_dir = "/groups/itay_mayrose/alongonda/full_genomes/plaza/organisms"
+    root_dir = "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/organisms"
     process_fa_files(root_dir)
 
 if __name__ == "__main__":

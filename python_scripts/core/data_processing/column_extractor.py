@@ -38,8 +38,8 @@ def process_csv_file(csv_file_path, output_csv_file_path):
     print(f"Data saved to {output_csv_file_path}")
 
 def main():
-    directory = "/groups/itay_mayrose/alongonda/full_genomes/ensembl/organisms"
-    output_directory = "/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test"
+    directory = "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/organisms"
+    output_directory = "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test"
     os.makedirs(output_directory, exist_ok=True)
 
     for root, dirs, files in os.walk(directory):

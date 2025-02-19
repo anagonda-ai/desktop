@@ -65,8 +65,8 @@ def process_directory(directory, output_directory):
     return dataframes
 
 def main():
-    directory = "/groups/itay_mayrose/alongonda/full_genomes/plaza/gff3dir"
-    output_directory = "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_with_chromosomes/"
+    directory = "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/gff3dir"
+    output_directory = "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes/"
     dataframes = process_directory(directory, output_directory)
     for df in dataframes:
         print("DataFrame:")

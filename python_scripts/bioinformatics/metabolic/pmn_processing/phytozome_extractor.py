@@ -132,11 +132,11 @@ def extract_organism_file_mapping(csv_path, mode="phytozome"):
     start_time = time.time()
     
     if mode == "phytozome":
-        base_path = "/groups/itay_mayrose/alongonda/full_genomes/phytozome/fasta_files/Phytozome"
+        base_path = "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/fasta_files/Phytozome"
     elif mode == "ensembl":
-        base_path = "/groups/itay_mayrose/alongonda/full_genomes/ensembl/organisms"
+        base_path = "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/organisms"
     elif mode == "plaza":
-        base_path = "/groups/itay_mayrose/alongonda/full_genomes/plaza/organisms"
+        base_path = "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/organisms"
     
     # Read CSV and get unique organisms
     df = pd.read_csv(csv_path, header=None, names=['gene_name', 'organism'])

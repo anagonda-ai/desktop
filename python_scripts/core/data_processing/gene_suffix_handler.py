@@ -22,8 +22,8 @@ def add_unique_suffix_to_ids(csv_file, column_name, output_csv):
     print(f"Added unique suffix to '{column_name}' and saved to {output_csv}")
 
 def main():
-    input_csv = "/groups/itay_mayrose/alongonda/full_genomes/annotations/phytozome_annotations.csv"
-    output_csv = "/groups/itay_mayrose/alongonda/full_genomes/annotations/phytozome_annotations_with_suffix.csv"
+    input_csv = "/groups/itay_mayrose/alongonda/datasets/full_genomes/annotations/phytozome_annotations.csv"
+    output_csv = "/groups/itay_mayrose/alongonda/datasets/full_genomes/annotations/phytozome_annotations_with_suffix.csv"
     column_name_to_count = "id"
     
     # Add unique suffix to each id in the specified column and save to a new CSV file

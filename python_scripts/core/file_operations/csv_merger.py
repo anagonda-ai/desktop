@@ -39,8 +39,8 @@ def merge_csv_files(csv_dir, output_csv_path):
     print(f"Saved merged CSV to: {output_csv_path}")
 
 def main():
-    csv_dir = "/groups/itay_mayrose/alongonda/full_genomes/ensembl/organisms"
-    output_csv_path = "/groups/itay_mayrose/alongonda/full_genomes/annotations/ensembl_annotations.csv"
+    csv_dir = "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/organisms"
+    output_csv_path = "/groups/itay_mayrose/alongonda/datasets/full_genomes/annotations/ensembl_annotations.csv"
     merge_csv_files(csv_dir, output_csv_path)
 
 if __name__ == "__main__":

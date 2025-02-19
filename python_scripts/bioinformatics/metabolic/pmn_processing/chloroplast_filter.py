@@ -66,8 +66,8 @@ def process_annotation_file(annotation_file, allowed_genes):
 
 def main():
     # Directories
-    fasta_dir = '/groups/itay_mayrose/alongonda/full_genomes/ensembl_without_chloroplast'
-    annotations_dir = '/groups/itay_mayrose/alongonda/full_genomes/ensembl/processed_annotations_test_full_data'
+    fasta_dir = '/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl_without_chloroplast'
+    annotations_dir = '/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_full_data'
     
     # Get all genes from FASTA files
     print("Reading FASTA files...")

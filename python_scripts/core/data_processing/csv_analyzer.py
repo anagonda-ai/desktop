@@ -21,7 +21,7 @@ def extract_and_print_sorted_distances(file_path):
     print(sorted_max_distances[-1])
 
 def main():
-    file_path = '/groups/itay_mayrose/alongonda/full_genomes/pmn_genomes/pathway_neighboring_distances.csv'
+    file_path = '/groups/itay_mayrose/alongonda/datasets/full_genomes/pmn_genomes/pathway_neighboring_distances.csv'
     extract_and_print_sorted_distances(file_path)
 
 if __name__ == "__main__":

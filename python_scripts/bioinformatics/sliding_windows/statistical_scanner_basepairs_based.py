@@ -174,7 +174,7 @@ def enrichment_analysis(total_random_matches, total_matches, max_kbp, min_genes,
     enrichment_df.to_csv(enrichment_output_file, mode=mode, header=header, index=False)
 
 def main():
-    genome_dirs = ["/groups/itay_mayrose/alongonda/full_genomes/mgc_enriched_files"]
+    genome_dirs = ["/groups/itay_mayrose/alongonda/datasets/full_genomes/mgc_enriched_files"]
     pathways_file = "/groups/itay_mayrose/alongonda/datasets/plantcyc/all_organisms/merged_pathways.csv"
     output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/basepairs_based_10_most_enriched_genomes_statistical_tests"
     
