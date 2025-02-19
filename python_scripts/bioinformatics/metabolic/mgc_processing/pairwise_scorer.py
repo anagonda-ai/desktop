@@ -9,9 +9,9 @@ import matplotlib.pyplot as plt
 import math
 
 # Input files
-json_file = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/random_candidates.json"  # JSON file containing pathway genes
-fasta_file = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/pmn.fasta"       # Original protein FASTA file
-output_dir = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/filtered_out_blastp_self_comparison_results"  # Base directory for results
+json_file = "/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/random_candidates.json"  # JSON file containing pathway genes
+fasta_file = "/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/pmn.fasta"       # Original protein FASTA file
+output_dir = "/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/filtered_out_blastp_self_comparison_results"  # Base directory for results
 
 # STEP 1: Load JSON file and extract pathways with 'window_cluster_genes'
 def load_pathways(json_file):

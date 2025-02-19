@@ -31,8 +31,8 @@ def process_pathways_files(base_dir):
     return merged_df
 
 def main():
-    base_dir = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms"
-    output_csv_path = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
+    base_dir = "/groups/itay_mayrose/alongonda/datasets/plantcyc/all_organisms"
+    output_csv_path = "/groups/itay_mayrose/alongonda/datasets/plantcyc/all_organisms/merged_pathways.csv"
     merged_df = process_pathways_files(base_dir)
     print("Merged DataFrame:")
     print(merged_df.head())  # Print the first few rows of the merged DataFrame

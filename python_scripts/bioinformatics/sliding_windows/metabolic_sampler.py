@@ -92,7 +92,7 @@ def main():
         "/groups/itay_mayrose/alongonda/full_genomes/plaza/processed_annotations_sorted",
         "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes"
     ]
-    pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
+    pathways_file = "/groups/itay_mayrose/alongonda/datasets/plantcyc/all_organisms/merged_pathways.csv"
     output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/sliding_window_outputs"
     
     if not os.path.exists(output_dir):

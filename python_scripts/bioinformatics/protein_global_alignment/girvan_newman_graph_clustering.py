@@ -146,7 +146,7 @@ def main(csv_file, threshold, output_graph, output_clusters, chunk_size=5_000_00
     print("Processing complete. Clusters and centers saved.")
 
 if __name__ == "__main__":
-    csv_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/graph_output.csv"
+    csv_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/graph_output_mwp.csv"
     threshold = 150  # Adjust as needed
     output_graph = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/girvan_newman_clustering_output/filtered_graph_updated.pkl"
     output_clusters = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/girvan_newman_clustering_output/clusters_updated.txt"

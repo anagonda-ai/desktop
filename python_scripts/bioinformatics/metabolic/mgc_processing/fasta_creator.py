@@ -6,7 +6,7 @@ from concurrent.futures import ProcessPoolExecutor
 
 # Input files
 CSV_FILE = "/groups/itay_mayrose/alongonda/Plant_MGC/unique_min_genes_only_metabolic_genes_input_test/unique_potential_groups_w10.csv"
-OUTPUT_DIR = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+OUTPUT_DIR = "/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"
 
 # Create output directory
 os.makedirs(OUTPUT_DIR, exist_ok=True)

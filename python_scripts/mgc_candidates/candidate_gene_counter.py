@@ -16,8 +16,8 @@ def count_genes_in_pathways(csv_file):
     return result
 
 def main():
-    csv_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/candidates.csv'
-    output_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/candidate_gene_counts.csv'
+    csv_file = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/candidates.csv'
+    output_file = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/candidate_gene_counts.csv'
     
     pathway_gene_count = count_genes_in_pathways(csv_file)
 

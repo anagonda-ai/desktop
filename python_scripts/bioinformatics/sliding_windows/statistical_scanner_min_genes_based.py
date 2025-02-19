@@ -187,7 +187,7 @@ def main():
     #     "/groups/itay_mayrose/alongonda/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
     # ]
     genome_dirs = ["/groups/itay_mayrose/alongonda/full_genomes/mgc_enriched_files"]
-    pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
+    pathways_file = "/groups/itay_mayrose/alongonda/datasets/plantcyc/all_organisms/merged_pathways.csv"
     output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/10_most_enriched_genomes_statistical_tests"
     
     # Ensure the output directory exists

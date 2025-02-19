@@ -57,9 +57,9 @@ for root, _, files in os.walk(directory_path):
                         csv_writer.writerow(row)
                         unique_clusters.remove(normalized_cluster)
 
-ensembl_file_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
-plaza_file_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'
-phytozome_file_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
+ensembl_file_path = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv'
+plaza_file_path = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv'
+phytozome_file_path = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
 
 ensembl_genes = []
 plaza_genes = []

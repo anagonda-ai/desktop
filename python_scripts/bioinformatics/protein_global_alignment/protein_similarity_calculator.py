@@ -38,11 +38,21 @@ def process_batch(batch, output_csv):
             print(f"Skipping: {fasta_file1} vs {fasta_file2} due to gene count difference")
             num_pairs = 0
         else:
-            similarity_matrix = np.array([[compute_similarity(g1, g2) for g2 in genes2] for g1 in genes1])
-            row_ind, col_ind = linear_sum_assignment(similarity_matrix, maximize=True)
-            max_sum = similarity_matrix[row_ind, col_ind].sum()
+            # Create the bipartite graph
+            G = nx.Graph()
+
+            # Compute similarity scores and add edges
+            for i, g1 in enumerate(genes1):
+                for j, g2 in enumerate(genes2):
+                    score = compute_similarity(g1, g2)
+                    if score > 0:  # Keep only meaningful edges
+                        G.add_edge(g1, g2, weight=score)
+            # Solve MWOP using maximum weight matching
+            matching = nx.algorithms.matching.max_weight_matching(G, maxcardinality=False, weight="weight")
+            num_pairs = len(matching)
+            # Compute max sum
+            max_sum = sum(G[u][v]["weight"] for u, v in matching)
         
-        num_pairs = len(row_ind)
         avg_max_sum = max_sum / num_pairs if not num_pairs == 0 else 0
         results.append([fasta_file1, fasta_file2, avg_max_sum])
         print(f"Processed: {fasta_file1} vs {fasta_file2} with similarity {avg_max_sum}")
@@ -122,8 +132,8 @@ def main(fasta_dir, output_csv, output_graph):
         print(f"Cluster {i+1}: {', '.join(cluster)}")
 
 if __name__ == "__main__":
-    fasta_dir = "/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"
-    output_csv = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/graph_output.csv"
-    output_graph = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/graph_output.pkl"
+    fasta_dir = "/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    output_csv = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/test.csv"
+    output_graph = "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/test.pkl"
     
     main(fasta_dir, output_csv, output_graph)

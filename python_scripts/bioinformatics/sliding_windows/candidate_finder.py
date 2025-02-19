@@ -2,10 +2,10 @@ import csv
 from collections import defaultdict
 
 # File paths
-candidates_file = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_min_genes_only_metabolic_genes_input/unique_potential_groups_w10.csv'
-gene_tagging_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/combined_updated_genes.csv'
-output_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/candidates.csv'
-small_clusters_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/small_clusters_candidates.csv'
+candidates_file = '/groups/itay_mayrose/alongonda/Plant_MGC/unique_min_genes_only_metabolic_genes_input_test/unique_potential_groups_w10.csv'
+gene_tagging_file = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/combined_updated_genes.csv'
+output_file = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/candidates.csv'
+small_clusters_file = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/small_clusters_candidates.csv'
 
 # Data structure to store gene tagging details from the gene tagging file
 gene_tagging = {}

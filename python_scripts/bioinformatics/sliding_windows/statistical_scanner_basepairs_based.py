@@ -175,7 +175,7 @@ def enrichment_analysis(total_random_matches, total_matches, max_kbp, min_genes,
 
 def main():
     genome_dirs = ["/groups/itay_mayrose/alongonda/full_genomes/mgc_enriched_files"]
-    pathways_file = "/groups/itay_mayrose/alongonda/plantcyc/all_organisms/merged_pathways.csv"
+    pathways_file = "/groups/itay_mayrose/alongonda/datasets/plantcyc/all_organisms/merged_pathways.csv"
     output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/basepairs_based_10_most_enriched_genomes_statistical_tests"
     
     if not os.path.exists(output_dir):

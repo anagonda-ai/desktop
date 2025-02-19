@@ -2,13 +2,13 @@ import pandas as pd
 
 # Define the paths to the CSV files
 csv_files = [
-    '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv',
-    '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv',
-    '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
+    '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/plaza/plaza_genes.csv',
+    '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/ensembl/ensembl_genes.csv',
+    '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/phytozome/phytozome_genes.csv'
 ]
 
 # Define the path to the DeepEC_Result.txt file
-deep_ec_result_file = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/pmn.1736748420/log_files/3digit_EC_prediction.txt'
+deep_ec_result_file = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/pmn.1736748420/log_files/3digit_EC_prediction.txt'
 
 # Read the DeepEC_Result.txt file into a DataFrame
 deep_ec_df = pd.read_csv(deep_ec_result_file, sep='\t')
@@ -37,5 +37,5 @@ updated_df = updated_df.dropna(subset=['Predicted EC number'])
 updated_df = updated_df[updated_df['Predicted EC number'] != 'EC number not predicted']
 
 # Save the combined and updated DataFrame to a new CSV file
-new_file_path = '/groups/itay_mayrose/alongonda/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/combined_updated_genes.csv'
+new_file_path = '/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/results/combined_updated_genes.csv'
 updated_df.to_csv(new_file_path, index=False)
