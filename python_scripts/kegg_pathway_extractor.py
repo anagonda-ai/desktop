@@ -99,10 +99,15 @@ def process_pathway(org_folder, org_code, pathway_line):
 
 # Iterate over each plant organism
 for org_code, org_name in plants.items():
-    print(f"Processing plant: {org_code} - {org_name}")
+    org_folder = os.path.join(root_folder, org_code)
+    
+    # Skip if the organism folder already exists and contains pathway files
+    if os.path.exists(org_folder) and any(fname.endswith(".txt") for fname in os.listdir(org_folder)):
+        print(f"⏩ Skipping already processed plant: {org_code} - {org_name}")
+        continue
 
     # Create a directory for the plant
-    org_folder = os.path.join(root_folder, org_code)
+    print(f"Processing plant: {org_code} - {org_name}")
     os.makedirs(org_folder, exist_ok=True)
 
     # Get all pathways for the plant

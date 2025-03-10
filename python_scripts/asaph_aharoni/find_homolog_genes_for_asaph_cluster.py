@@ -1,7 +1,10 @@
+from collections import defaultdict
 import os
+import re
 import subprocess
 import csv
-import pandas as pd
+from matplotlib import pyplot as plt
+import numpy as np
 import concurrent.futures
 
 # Directories containing CSV files
@@ -24,7 +27,7 @@ query_fastas = [
 ]
 
 # Output directory for BLAST results
-blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results"
+blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated"
 os.makedirs(blast_results_dir, exist_ok=True)
 
 # Function to convert CSV to FASTA, skipping empty files
@@ -97,62 +100,122 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
             query_fasta, csv_file, output_file = result
             blast_results_map[(query_fasta, csv_file)] = output_file
 
-# Function to parse BLAST results and extract best hit
+# Function to parse BLAST results and extract the best hit for each chromosome
 def parse_blast_results(blast_file):
-    best_hit = None
-    best_score = float("-inf")
+    best_hits_by_organism = defaultdict(dict)  # Organism -> Chromosome -> Best Hit
 
     with open(blast_file, "r") as f:
         for line in f:
             cols = line.strip().split("\t")
             if len(cols) < 12:
                 continue  # Skip malformed lines
+
+            query_fasta = cols[0]  # The original FASTA file name
+            subject_gene = cols[1]  # Full subject ID
+            start = int(cols[3])  # Gene start position
+            end = int(cols[4])  # Gene end position
+            identity = float(cols[5])  # Percentage identity
+            evalue = float(cols[10])  # E-value
+            bit_score = float(cols[11])  # Bit score
             
-            query = cols[0]
-            subject_info = cols[1].split("|")  # Extract first part before `;`
-            
-            # ✅ Extract chromosome, start, and end correctly
-            subject_id = subject_info[0]
-            chromosome = subject_info[1] if len(subject_info) > 1 else "Unknown"
-            start = subject_info[2] if len(subject_info) > 2 else "Unknown"
-            end = subject_info[3] if len(subject_info) > 3 else "Unknown"
+            # Extract chromosome correctly
+            subject_info = subject_gene.split("|")
+            if len(subject_info) > 1:
+                chromosome = subject_info[1]  # This should be the chromosome
+            else:
+                chromosome = "Unknown"  # If missing, set as unknown
 
-            identity = float(cols[2])
-            evalue = float(cols[10])  # Handles scientific notation properly
-            bit_score = float(cols[11])  # Extracts bit score correctly
-            
-            if bit_score > best_score:
-                best_score = bit_score
-                best_hit = (subject_id, chromosome, start, end, identity, evalue, bit_score)  # ✅ Now includes Chromosome, Start, End
+            # Extract organism name from BLAST filename
+            organism_name = os.path.basename(blast_file).replace("_results.txt", "")
 
-    return best_hit
+            # Keep only the best-scoring homolog per chromosome
+            if chromosome not in best_hits_by_organism[organism_name] or bit_score > best_hits_by_organism[organism_name][chromosome][-1]:
+                best_hits_by_organism[organism_name][chromosome] = [query_fasta, subject_gene, chromosome, start, end, identity, evalue, bit_score]
 
+    # Convert dictionary to list format for saving
+    for organism in best_hits_by_organism:
+        best_hits_by_organism[organism] = list(best_hits_by_organism[organism].values())
 
+    return best_hits_by_organism  # Returns {organism: list_of_best_hits}
 
-# Extract best hits in parallel
-best_hits_by_csv = {csv_file: [] for csv_file in blast_dbs.keys()}
-with concurrent.futures.ThreadPoolExecutor() as executor:
-    futures = {executor.submit(parse_blast_results, blast_file): (query_fasta, csv_file) for (query_fasta, csv_file), blast_file in blast_results_map.items()}
-    for future in concurrent.futures.as_completed(futures):
-        best_hit = future.result()
-        if best_hit:
-            query_fasta, csv_file = futures[future]
-            best_hits_by_csv[csv_file].append([os.path.basename(query_fasta)] + list(best_hit))
+# Function to analyze chromosome statistics
+def analyze_chromosome_statistics(best_hits):
+    analysis_results = {}
+    
+    for chrom, hits in best_hits.items():
+        positions = sorted([hit[3] for hit in hits])  # Extract start positions
+        distances = np.diff(positions)  # Compute distances between genes
+        
+        analysis_results[chrom] = {
+            "total_genes": len(positions),
+            "mean_distance": np.mean(distances) if len(distances) > 0 else 0,
+            "median_distance": np.median(distances) if len(distances) > 0 else 0,
+            "std_dev_distance": np.std(distances) if len(distances) > 0 else 0,
+            "min_distance": np.min(distances) if len(distances) > 0 else 0,
+            "max_distance": np.max(distances) if len(distances) > 0 else 0,
+        }
+    
+    return analysis_results
 
-# Save best hits summary in parallel
-def save_best_hits(csv_file, best_hits):
-    best_hits_dir = os.path.join(blast_results_dir, f"best_hits")
+def extract_organism_name(filename):
+    match = re.search(r"fasta_(.+?)\.csv", filename)
+    return match.group(1) if match else "Unknown"
+
+# Save best hits grouped by chromosome
+def save_best_hits(best_hits_by_organism, output_dir):
+    best_hits_dir = os.path.join(output_dir, "best_hits_by_organism")
     os.makedirs(best_hits_dir, exist_ok=True)
-    summary_file = os.path.join(best_hits_dir, f"best_hits_{csv_file}.csv")
-    print(best_hits)
-    with open(summary_file, "w") as f:
-        f.write("query_gene,subject_gene,chromosome,start,end,identity,value,bit_score\n")
-        for hit in best_hits:
-            f.write(",".join(map(str, hit)) + "\n")
-    print(f"✅ Best hits saved: {summary_file}")
+
+    for organism, hits in best_hits_by_organism.items():
+        organism_name = extract_organism_name(organism)
+        organism_dir = os.path.join(best_hits_dir, organism_name)
+        os.makedirs(organism_dir, exist_ok=True)
+        summary_file = os.path.join(organism_dir, organism)
+        with open(summary_file, "w", encoding="utf-8") as f:
+            f.write("query_fasta,subject_gene,chromosome,start,end,identity,evalue,bit_score\n")
+            for hit in hits:
+                f.write(",".join(map(str, hit)) + "\n")
+
+        print(f"✅ Best hits saved for organism: {organism}")
+
+# Function to visualize gene distances
+def plot_gene_distances(analysis_results, output_dir):
+    plt.figure(figsize=(12, 6))
+    chromosomes = list(analysis_results.keys())
+    mean_distances = [analysis_results[chrom]["mean_distance"] for chrom in chromosomes]
+    
+    plt.bar(chromosomes, mean_distances)
+    plt.xlabel("Chromosome")
+    plt.ylabel("Mean Gene Distance")
+    plt.title("Mean Distance Between Genes per Chromosome")
+    plt.xticks(rotation=90)
+    plt.savefig(os.path.join(output_dir, "gene_distance_analysis.png"))
+    plt.close()
+    print("📊 Gene distance analysis plot saved.")
+
+# Main execution loop to parse and save best hits
+best_hits_by_organism = defaultdict(dict)
 
 with concurrent.futures.ThreadPoolExecutor() as executor:
-    futures = {executor.submit(save_best_hits, csv_file, best_hits) for csv_file, best_hits in best_hits_by_csv.items()}
-    concurrent.futures.wait(futures)
+    futures = {executor.submit(parse_blast_results, os.path.join(blast_results_dir, blast_file)): blast_file
+               for blast_file in os.listdir(blast_results_dir) if blast_file.endswith(".txt")}
 
-print("🚀 All tasks completed successfully!")
+    for future in concurrent.futures.as_completed(futures):
+        blast_file = futures[future]
+        parsed_hits = future.result()
+
+        # Merge results per organism
+        for organism, hits in parsed_hits.items():
+            for hit in hits:
+                chrom = hit[2]  # Chromosome
+                if chrom not in best_hits_by_organism[organism] or hit[-1] > best_hits_by_organism[organism][chrom][-1]:  # Compare bit scores
+                    best_hits_by_organism[organism][chrom] = hit
+
+# Convert dictionaries to lists for final output
+for organism in best_hits_by_organism:
+    best_hits_by_organism[organism] = list(best_hits_by_organism[organism].values())
+
+# Save the results
+save_best_hits(best_hits_by_organism, blast_results_dir)
+
+print("🚀 Processing completed successfully with intelligent analysis!")
