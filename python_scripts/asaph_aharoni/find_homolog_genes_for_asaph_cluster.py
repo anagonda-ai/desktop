@@ -138,25 +138,6 @@ def parse_blast_results(blast_file):
 
     return best_hits_by_organism  # Returns {organism: list_of_best_hits}
 
-# Function to analyze chromosome statistics
-def analyze_chromosome_statistics(best_hits):
-    analysis_results = {}
-    
-    for chrom, hits in best_hits.items():
-        positions = sorted([hit[3] for hit in hits])  # Extract start positions
-        distances = np.diff(positions)  # Compute distances between genes
-        
-        analysis_results[chrom] = {
-            "total_genes": len(positions),
-            "mean_distance": np.mean(distances) if len(distances) > 0 else 0,
-            "median_distance": np.median(distances) if len(distances) > 0 else 0,
-            "std_dev_distance": np.std(distances) if len(distances) > 0 else 0,
-            "min_distance": np.min(distances) if len(distances) > 0 else 0,
-            "max_distance": np.max(distances) if len(distances) > 0 else 0,
-        }
-    
-    return analysis_results
-
 def extract_organism_name(filename):
     match = re.search(r"fasta_(.+?)\.csv", filename)
     return match.group(1) if match else "Unknown"
@@ -177,21 +158,6 @@ def save_best_hits(best_hits_by_organism, output_dir):
                 f.write(",".join(map(str, hit)) + "\n")
 
         print(f"✅ Best hits saved for organism: {organism}")
-
-# Function to visualize gene distances
-def plot_gene_distances(analysis_results, output_dir):
-    plt.figure(figsize=(12, 6))
-    chromosomes = list(analysis_results.keys())
-    mean_distances = [analysis_results[chrom]["mean_distance"] for chrom in chromosomes]
-    
-    plt.bar(chromosomes, mean_distances)
-    plt.xlabel("Chromosome")
-    plt.ylabel("Mean Gene Distance")
-    plt.title("Mean Distance Between Genes per Chromosome")
-    plt.xticks(rotation=90)
-    plt.savefig(os.path.join(output_dir, "gene_distance_analysis.png"))
-    plt.close()
-    print("📊 Gene distance analysis plot saved.")
 
 # Main execution loop to parse and save best hits
 best_hits_by_organism = defaultdict(dict)
