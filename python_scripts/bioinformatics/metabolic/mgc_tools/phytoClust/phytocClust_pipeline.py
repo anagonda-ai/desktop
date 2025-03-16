@@ -7,7 +7,6 @@ from Bio import SeqIO
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from tensorflow.keras.models import load_model
-from Bio import SeqIO
 from sklearn.preprocessing import StandardScaler
 
 # Convert NumPy data types to regular Python types
@@ -57,7 +56,7 @@ class PhytoClust:
                                 break
         return predicted_genes
     
-    def extract_kegg_proteins(kegg_path, output_fasta="kegg_proteins.fasta"):
+    def extract_kegg_proteins(self, kegg_path, output_fasta="kegg_proteins.fasta"):
         """Extract and translate KEGG gene sequences to protein sequences."""
         protein_records = []
 
@@ -85,70 +84,43 @@ class PhytoClust:
         print(f"✅ Extracted {len(protein_records)} protein sequences from KEGG.")
 
         return output_fasta
-    
-    def run_hmmer_against_kegg(query_fasta, kegg_fasta="kegg_proteins.fasta", output_file="hmmer_kegg_results.txt"):
-        """Run HMMER to match predicted genes against KEGG metabolic proteins."""
-        cmd = f"hmmsearch --cpu 8 --tblout {output_file} {query_fasta} {kegg_fasta}"
-        subprocess.run(cmd, shell=True)
+
+    def run_hmmer_against_kegg(self, query_fasta, kegg_fasta="kegg_proteins.fasta", output_file="hmmer_kegg_results.txt"):
+        """Run PHMMER to match predicted genes against KEGG metabolic proteins."""
+        cmd = f"phmmer --cpu 8 --tblout {output_file} {query_fasta} {kegg_fasta}"
+        subprocess.run(cmd, shell=True, check=True)
+
+        if not os.path.exists(output_file):
+            raise FileNotFoundError(f"❌ HMMER failed. No output file found: {output_file}")
+
         return output_file
 
-    def annotate_genes(self, genes, fasta_file):
-        """Uses HMMER to scan genes against the Pfam-A.hmm database."""
-        output_file = "hmmscan_results.txt"
-        cmd = f"hmmsearch --cpu 8 --tblout {output_file} {self.hmm_db} {fasta_file}"
-        subprocess.run(cmd, shell=True)
-
-        annotations = {}
-        with open(output_file, "r") as f:
-            for line in f:
-                if not line.startswith("#"):
-                    parts = line.split()
-                    annotations[parts[3]] = parts[0]  # Query gene ID → Matched Pfam domain
-        for gene in genes:
-            gene["annotation"] = annotations.get(gene["id"], "Unknown")
-        return genes
-
-    def predict_pathways(self, genes):
-        """Batch prediction for pathway classification using deep learning."""
-        # Prepare batch feature matrix
-        feature_matrix = np.array([[len(g['sequence']), 1, 0.42, 8.5] for g in genes])
-
-        # Ensure correct shape (batch_size, num_features)
-        feature_matrix = feature_matrix.reshape(len(genes), 4)
-
-        # Run batch prediction once
-        pathway_predictions = np.argmax(self.deep_model.predict(feature_matrix), axis=1)
-
-        # Assign predicted pathways to genes
-        for gene, predicted_pathway in zip(genes, pathway_predictions):
-            gene['pathway'] = predicted_pathway
-
-        return genes
-    
-    def parse_hmmer_results(hmmer_file, evalue_threshold=1e-5):
-        """Parse HMMER results and return genes with strong KEGG similarity."""
-        metabolic_genes = set()
+    def parse_hmmer_results(self, hmmer_file, evalue_threshold=1e-5):
+        """Parse PHMMER results and return genes with strong KEGG similarity based on bit-score."""
+        metabolic_gene_scores = {}
 
         with open(hmmer_file, "r") as f:
             for line in f:
                 if not line.startswith("#"):
                     parts = line.split()
                     query_gene = parts[0]  # Our predicted gene
-                    e_value = float(parts[6])  # E-value
+                    target_gene = parts[1]  # KEGG match
+                    e_value = float(parts[4])  # Correct column for E-value
+                    bit_score = float(parts[5])  # Get bit-score
 
                     if e_value < evalue_threshold:  # Strong match
-                        metabolic_genes.add(query_gene)
+                        metabolic_gene_scores[query_gene] = bit_score
 
-        print(f"✅ Found {len(metabolic_genes)} metabolic genes based on KEGG similarity.")
-        return metabolic_genes
+        print(f"✅ Found {len(metabolic_gene_scores)} metabolic genes based on sequence similarity.")
+        return metabolic_gene_scores  # Dictionary with scores
 
 
-    def detect_metabolic_gene_clusters(self, annotated_genes, metabolic_gene_set):
-        """Detects clusters of metabolic genes within a 10kbp window."""
+    def detect_metabolic_gene_clusters(self, annotated_genes, metabolic_gene_scores):
+        """Detects clusters of metabolic genes using sequence similarity scores instead of names."""
         clusters = []
 
-        # Keep only genes that matched KEGG via HMMER
-        metabolic_genes = [g for g in annotated_genes if g["id"] in metabolic_gene_set]
+        # Keep only genes that have a significant match in KEGG
+        metabolic_genes = [g for g in annotated_genes if g["id"] in metabolic_gene_scores]
 
         if not metabolic_genes:
             print("⚠️ No metabolic genes found based on sequence similarity.")
@@ -168,7 +140,7 @@ class PhytoClust:
                 last_gene = current_cluster[-1]
                 
                 # Check if within 10kbp
-                if gene['start'] - last_gene['end'] <= 10000:
+                if gene['start'] - cluster_start <= self.cluster_max_distance:
                     current_cluster.append(gene)
                 else:
                     # Save valid clusters
@@ -185,31 +157,34 @@ class PhytoClust:
         return clusters
 
 
-
     def run_pipeline(self, fasta_file, kegg_path):
         """Complete pipeline: predict genes, match them to KEGG, and cluster metabolic genes."""
-        kegg_fasta = self.extract_kegg_proteins(kegg_path)  # Convert KEGG sequences to protein
-        predicted_genes = self.predict_genes(fasta_file)  # Predict genes from FASTA
+        kegg_fasta = self.extract_kegg_proteins(kegg_path)  
+        predicted_genes = self.predict_genes(fasta_file)  
         predicted_fasta = "predicted_genes.fasta"
-        
-        # Write predicted genes to FASTA for HMMER
+
+        # Save predicted genes to FASTA
         SeqIO.write([SeqRecord(Seq(g['sequence']), id=g['id'], description="") for g in predicted_genes], 
                     predicted_fasta, "fasta")
 
-        hmmer_results = self.run_hmmer_against_kegg(predicted_fasta, kegg_fasta)  # Match genes to KEGG
-        metabolic_genes = self.parse_hmmer_results(hmmer_results)  # Extract metabolic genes
+        hmmer_results = self.run_hmmer_against_kegg(predicted_fasta, kegg_fasta)  
+        metabolic_genes = self.parse_hmmer_results(hmmer_results)  
         
-        annotated_genes = self.annotate_genes(predicted_genes, fasta_file, metabolic_genes)
-        clusters = self.detect_metabolic_gene_clusters(annotated_genes, metabolic_genes)
+        clusters = self.detect_metabolic_gene_clusters(predicted_genes, metabolic_genes)
 
         return clusters
 
 if __name__ == "__main__":
     hmm_db = "/groups/itay_mayrose/alongonda/datasets/hmmer_profile/Pfam-A.hmm"
-    analyzer = PhytoClust(hmm_db, "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/metabolic/mgc_tools/phytoClust/models/phytoClust_optimized_model.pkl", "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/metabolic/mgc_tools/phytoClust/models/pathway_prediction_model.pkl", "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/metabolic/mgc_tools/phytoClust/models/phytoClust_deep_model.h5")
+    analyzer = PhytoClust(hmm_db, 
+                          "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/metabolic/mgc_tools/phytoClust/models/phytoClust_optimized_model.pkl", 
+                          "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/metabolic/mgc_tools/phytoClust/models/pathway_prediction_model.pkl", 
+                          "/groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/metabolic/mgc_tools/phytoClust/models/phytoClust_deep_model.h5")
 
     genome_file = "/groups/itay_mayrose/alongonda/datasets/arabidopsis_thaliana/protein/Arabidopsis_thaliana.TAIR10.protein.fa"
-    clusters = analyzer.run_pipeline(genome_file)
+    kegg_path = "/groups/itay_mayrose/alongonda/datasets/KEGG"
+
+    clusters = analyzer.run_pipeline(genome_file, kegg_path)
 
     with open("cluster_results.json", "w") as f:
         json.dump({"clusters": clusters}, f, indent=4, default=convert_numpy)

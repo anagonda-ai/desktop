@@ -9,9 +9,9 @@ import concurrent.futures
 
 # Directories containing CSV files
 csv_dirs = [
-    "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
+    # "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
     "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
-    "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
+    # "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
 ]
 
 # Directory to store generated FASTA files and BLAST DBs
@@ -83,7 +83,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 # Function to run BLASTP
 def run_blastp(query_fasta, csv_file, blast_db):
     output_file = os.path.join(blast_results_dir, f"{os.path.basename(query_fasta)}_{csv_file}_results.txt")
-    cmd = f"blastp -query {query_fasta} -db {blast_db} -evalue 0.01 -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -max_target_seqs 50 -gapopen 11 -gapextend 1 -out {output_file}"
+    cmd = f"blastp -query {query_fasta} -db {blast_db} -evalue 0.01 -qcov_hsp_perc 70 -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -max_target_seqs 50 -gapopen 11 -gapextend 1 -out {output_file}"
     try:
         subprocess.run(cmd, shell=True, check=True)
         return (query_fasta, csv_file, output_file)

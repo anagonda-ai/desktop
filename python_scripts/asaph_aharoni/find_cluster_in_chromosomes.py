@@ -29,6 +29,13 @@ def calculate_gene_distances(df):
     distances = distances[distances > 0].tolist()  # Remove zero or negative distances
     return distances
 
+def select_highest_score_genes(df):
+    """Select the gene with the highest score if it appears in multiple chromosomes."""
+    if 'bit_score' not in df.columns:
+        print("Warning: Required column 'bit_score' not found. Using all genes as-is.")
+        return df
+    return df.loc[df.groupby('origin_file')['bit_score'].idxmax()]
+
 def process_organism(organism, file_paths, output_dir, all_distances):
     print(f"Processing organism: {organism}")
     organism_output_dir = os.path.join(organism, output_dir)
@@ -47,19 +54,16 @@ def process_organism(organism, file_paths, output_dir, all_distances):
         
         try:
             df = pd.read_csv(file_path, delimiter=delimiter, on_bad_lines="skip")
-        except pd.errors.EmptyDataError:
-            print(f"Skipping invalid or empty file: {file_path}")
-            continue
-        except pd.errors.ParserError:
-            print(f"Skipping malformed CSV file: {file_path}, possible inconsistent columns.")
+        except (pd.errors.EmptyDataError, pd.errors.ParserError):
+            print(f"Skipping invalid or malformed file: {file_path}")
             continue
         
-        # Normalize column names (strip whitespace, lowercase)
+        # Normalize column names
         df.columns = df.columns.str.strip().str.lower()
         
-        # Ensure 'chromosome' column exists
+        # Ensure required columns exist
         if 'chromosome' not in df.columns:
-            print(f"Skipping file {file_path}, missing 'chromosome' column.")
+            print(f"Skipping file {file_path}, missing required columns.")
             continue
         
         # Add origin file column
@@ -74,6 +78,13 @@ def process_organism(organism, file_paths, output_dir, all_distances):
     
     # Create separate CSVs and collect distances for general statistics
     local_distances = []
+    
+    if chromosome_data:
+        all_genes_df = pd.concat([pd.DataFrame(rows) for rows in chromosome_data.values()], ignore_index=True)
+    else:
+        all_genes_df = pd.DataFrame()  # Prevent error when concatenating empty list
+    
+    # Process chromosomes separately
     for chrom, rows in chromosome_data.items():
         if not any(row['origin_file'].startswith(('adcs', 'cs')) for row in rows) or len(rows) < 2:
             print(f"Skipping chromosome {chrom} for {organism}, not enough data.")
@@ -87,6 +98,13 @@ def process_organism(organism, file_paths, output_dir, all_distances):
         # Compute gene distances and store them
         distances = calculate_gene_distances(chrom_df)
         local_distances.extend(distances)
+    
+    # Save cross-chromosome clusters with highest scores
+    if not all_genes_df.empty:
+        highest_score_genes_df = select_highest_score_genes(all_genes_df)
+        cross_chrom_output_file = os.path.join(organism_output_dir, "cross_chromosome_clusters.csv")
+        highest_score_genes_df.to_csv(cross_chrom_output_file, index=False)
+        print(f"Saved cross-chromosome clusters: {cross_chrom_output_file}")
     
     # Append to shared distance list
     all_distances.extend(local_distances)
