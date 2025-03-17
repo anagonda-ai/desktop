@@ -53,7 +53,7 @@ def label_function(clade):
     label = clade.name
     replaced_label = label.replace("_", " ") if label else label
     if label and replaced_label in gene_counts:
-        label = f"{label}:{gene_counts.get(replaced_label, 0)}"
+        label = f"{label}:{gene_counts.get(replaced_label, 0)}_genes"
     print(f"Labeling Clade: {label}")  # Debugging print
     return label
 
