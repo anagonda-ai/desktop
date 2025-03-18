@@ -112,9 +112,9 @@ def parse_blast_results(blast_file):
 
             query_fasta = cols[0]  # The original FASTA file name
             subject_gene = cols[1]  # Full subject ID
-            start = int(cols[3])  # Gene start position
-            end = int(cols[4])  # Gene end position
-            identity = float(cols[5])  # Percentage identity
+            start = int(cols[8])  # Correct subject start position
+            end = int(cols[9])  # Correct subject end position
+            identity = float(cols[2])  # Percentage identity
             evalue = float(cols[10])  # E-value
             bit_score = float(cols[11])  # Bit score
             

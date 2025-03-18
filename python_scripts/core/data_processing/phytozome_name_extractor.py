@@ -63,7 +63,10 @@ if __name__ == "__main__":
     df.rename(columns={'index': 'Original Filename'}, inplace=True)
 
     # Save the DataFrame to a CSV file
+    outpud_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output"
+    os.makedirs(outpud_dir, exist_ok=True)
     output_csv_file = "dataset_organism_mapping.csv"
-    df.to_csv(output_csv_file)
+    output_path = os.path.join(outpud_dir, output_csv_file)
+    df.to_csv(output_path)
 
-    print(f"\nMapping saved to {output_csv_file}")
+    print(f"\nMapping saved to {output_path}")

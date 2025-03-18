@@ -5,8 +5,8 @@ from Bio import Phylo
 import re
 
 # Define file paths
-MAPPING_FILE = "/groups/itay_mayrose/alongonda/desktop/dataset_organism_mapping.csv"
-TREE_FILE = "/groups/itay_mayrose/alongonda/desktop/ncbi_species_tree_named.nwk"
+MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.csv"
+TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/ncbi_species_tree_named.nwk"
 COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated/best_hits_by_organism/comparison_results.csv"
 
 # Load phylogenetic tree
@@ -31,6 +31,18 @@ if os.path.exists(COMPARISON_FILE):
     
     comparison_df['Cleaned_Name'] = comparison_df['Directory'].apply(clean_directory_name)
     
+    def calculate_largest_chromosome_length(row):
+        if not pd.isna(row['Largest Chromosome File']):
+            largest_chromosome_file = row['Directory'] + '/' + row['Largest Chromosome File']
+            if os.path.exists(largest_chromosome_file):
+                chrom_df = pd.read_csv(largest_chromosome_file)
+                chrom_df = chrom_df.sort_values(by='start')
+                length = chrom_df['end'].iloc[-1] - chrom_df['start'].iloc[0]
+                return length
+        return None
+
+    comparison_df['Largest Chromosome Length'] = comparison_df.apply(calculate_largest_chromosome_length, axis=1)
+    
     # Match Cleaned_Name with any substring in mapping_dict keys
     def find_matching_organism(cleaned_name):
         for key in mapping_dict:
@@ -46,14 +58,25 @@ else:
 # Create a dictionary for organism to gene count mapping
 if comparison_df is not None:
     gene_counts = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Cross Chromosome Lines']))  # Adjust column name if necessary
+    chromosome_lines = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Lines']))
+    chromosome_cluster_length = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Length']))
+    print("Sample Gene Counts:", list(gene_counts.items())[:5])
+    print("Sample Largest Chromosome Lines:", list(chromosome_lines.items())[:5])
+    print("Sample Largest Chromosome Length:", list(chromosome_cluster_length.items())[:5])
 else:
     gene_counts = {}
+    chromosome_lines = {}
+    chromosome_cluster_length = {}
     
 def label_function(clade):
     label = clade.name
     replaced_label = label.replace("_", " ") if label else label
     if label and replaced_label in gene_counts:
-        label = f"{label}:{gene_counts.get(replaced_label, 0)}_genes"
+        gene_count = gene_counts.get(replaced_label, 0)
+        chrom_lines = chromosome_lines.get(replaced_label, 0)
+        dict_length = chromosome_cluster_length.get(replaced_label, 0)
+        chrom_length = dict_length if not pd.isna(dict_length) else 0
+        label = f"{label}:{gene_count}_GeneseMultiChromosome_{chrom_lines}_GeneseMaxChromosome_{chrom_length}bp_Length"
     print(f"Labeling Clade: {label}")  # Debugging print
     return label
 
@@ -62,7 +85,13 @@ fig, ax = plt.subplots(figsize=(15, 15))
 Phylo.draw(tree, axes=ax, label_func=label_function, do_show=False)
 
 # Save the annotated tree
-plt.savefig("phylogenetic_tree_with_cross_chromosome_genes.png", dpi=300, bbox_inches="tight")
+
+# **Step 6: Save tree in Newick format**
+output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/"
+os.makedirs(output_dir, exist_ok=True)
+fig_path = os.path.join(output_dir, "phylogenetic_tree_with_cross_chromosome_genes.png")
+
+plt.savefig(fig_path, dpi=300, bbox_inches="tight")
 plt.show()
 
 print("\n✅ Phylogenetic tree saved as 'phylogenetic_tree_with_cross_chromosome_genes.png'")

@@ -13,8 +13,8 @@ os.environ["QT_QPA_PLATFORM"] = "offscreen"
 ncbi = NCBITaxa()
 
 # **Load species list from CSV**
-df = pd.read_csv("/groups/itay_mayrose/alongonda/desktop/dataset_organism_mapping.csv")
-species_list = df['Organism'].drop_duplicates().tolist()  # Limit to first 10 species for demo
+df = pd.read_csv("/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.csv")
+species_list = df['Organism'].drop_duplicates().tolist()
 print(species_list)
 
 # **Step 1: Retrieve NCBI TaxIDs using Multiprocessing**
@@ -102,12 +102,15 @@ divergence_times = {(s1, s2): time for result in divergence_results if result is
 print(f"\n✅ Retrieved divergence times for {len(divergence_times)} species pairs.")
 
 # **Step 6: Save tree in Newick format**
-tree.write(outfile="ncbi_species_tree_named.nwk", format=1)
+output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/"
+os.makedirs(output_dir, exist_ok=True)
+
+tree_path = os.path.join(output_dir, "ncbi_species_tree_named.nwk")
+tree.write(outfile=tree_path, format=1)
 print("\n✅ NCBI Taxonomic Tree saved as 'ncbi_species_tree_named.nwk'")
 
 # **Step 7: Load and visualize tree**
-tree_file = "ncbi_species_tree_named.nwk"
-tree = Phylo.read(tree_file, "newick")
+tree = Phylo.read(tree_path, "newick")
 
 # **Step 9: Scale branch lengths by divergence times**
 for clade in tree.get_nonterminals():
@@ -124,7 +127,8 @@ Phylo.draw(tree, axes=ax)
 ax.set_xlabel("Evolutionary Distance (Millions of Years)")
 
 # **Save visualization**
-plt.savefig("phylogenetic_tree_circular.png", dpi=300, bbox_inches="tight")
+fih_path = os.path.join(output_dir, "phylogenetic_tree_circular.png")
+plt.savefig(fih_path, dpi=300, bbox_inches="tight")
 plt.show()
 
 print("\n✅ Phylogenetic tree saved as 'phylogenetic_tree_circular.png'")

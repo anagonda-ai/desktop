@@ -1,6 +1,7 @@
 import os
 import csv
 import matplotlib.pyplot as plt
+import numpy as np
 
 def count_lines_in_csv(file_path):
     """Counts the number of lines in a CSV file efficiently, excluding the header."""
@@ -40,7 +41,7 @@ def compare_csvs_in_each_dir(root_dir, output_file):
                 largest_file if largest_file else "None",
                 max_lines,
                 cross_lines,
-                max_lines - cross_lines
+                cross_lines - max_lines
             ])
 
     # Save results to a CSV file
@@ -53,34 +54,73 @@ def compare_csvs_in_each_dir(root_dir, output_file):
     
     return results
     
-def plot_results(results, output_dir):
-    """Plots comparison between chromosome_*.csv and cross_chromosome_clusters.csv."""
+def plot_results(results, output_dir, chunk_size=50):
+    """Plots comparison between chromosome_*.csv and cross_chromosome_clusters.csv, 
+       splitting into multiple plots if necessary for better visualization."""
+    
+    sub_dir_name = "comparison_plots"
+    sub_dir = os.path.join(output_dir, sub_dir_name)
+    # Ensure output directory exists
+    os.makedirs(sub_dir, exist_ok=True)
+
+    # Extract directories and values
     directories = [os.path.basename(res[0]) for res in results]
     chrom_lines = [res[2] for res in results]
     cross_lines = [res[3] for res in results]
 
-    plt.figure(figsize=(12, 6))
-    bar_width = 0.4
-    x_indexes = range(len(directories))
+    # Determine how many plots are needed
+    total_plots = (len(directories) // chunk_size) + (1 if len(directories) % chunk_size != 0 else 0)
 
-    plt.bar(x_indexes, chrom_lines, width=bar_width, label="Largest Chromosome File", alpha=0.7)
-    plt.bar([x + bar_width for x in x_indexes], cross_lines, width=bar_width, label="Cross Chromosome File", alpha=0.7)
+    for i in range(total_plots):
+        start_idx = i * chunk_size
+        end_idx = min((i + 1) * chunk_size, len(directories))
 
-    plt.xlabel("Directories")
-    plt.ylabel("Number of Lines")
-    plt.title("Comparison of Largest Chromosome File vs. Cross Chromosome File")
-    plt.xticks([x + bar_width / 2 for x in x_indexes], directories, rotation=45, ha="right")
-    plt.legend()
-    plt.tight_layout()
+        chunk_dirs = directories[start_idx:end_idx]
+        chunk_chrom_lines = chrom_lines[start_idx:end_idx]
+        chunk_cross_lines = cross_lines[start_idx:end_idx]
 
-    plt.savefig(os.path.join(output_dir, "comparison_plot.png"))  # Save plot as an image file
-    plt.show()  # Display the plot
+        # Create figure
+        plt.figure(figsize=(16, 8))
+
+        # Bar positions
+        bar_width = 0.4
+        x_indexes = np.arange(len(chunk_dirs))
+
+        # Creating the bars
+        plt.bar(x_indexes - bar_width / 2, chunk_chrom_lines, width=bar_width, 
+                label="Largest Chromosome File", color="royalblue", alpha=0.8)
+        plt.bar(x_indexes + bar_width / 2, chunk_cross_lines, width=bar_width, 
+                label="Cross Chromosome File", color="coral", alpha=0.8)
+
+        # Labels and title
+        plt.xlabel("Directories", fontsize=12)
+        plt.ylabel("Number of Lines", fontsize=12)
+        plt.title(f"Comparison of Largest Chromosome File vs. Cross Chromosome File (Part {i+1})", fontsize=14)
+
+        # Keep all x-tick labels but rotate them for better readability
+        plt.xticks(x_indexes, chunk_dirs, rotation=90, ha="right", fontsize=10)
+        plt.yticks(fontsize=10)
+        plt.legend(fontsize=12)
+        plt.grid(axis="y", linestyle="--", alpha=0.7)
+
+        # Adjust layout
+        plt.tight_layout()
+
+        # Save plot in the new directory
+        plot_filename = os.path.join(sub_dir, f"comparison_plot_part_{i+1}.png")
+        plt.savefig(plot_filename)
+        plt.close()  # Close the figure to save memory
+
+    print(f"Plots saved in: {sub_dir}")
 
 if __name__ == "__main__":
     root_directory = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated/best_hits_by_organism"  # Replace with the actual root directory
+    output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output"  # Replace with the actual output directory
     output_filename = "comparison_results.csv"  # Output file name
-    output_file = os.path.join(root_directory, output_filename)
+    output_file = os.path.join(output_dir, output_filename)
 
     results = compare_csvs_in_each_dir(root_directory, output_file)
+    
+    
     if results:
-        plot_results(results, root_directory)
+        plot_results(results, output_dir)

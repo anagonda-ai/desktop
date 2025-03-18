@@ -25,9 +25,10 @@ def detect_delimiter(file_path):
 def calculate_gene_distances(df):
     """Calculate gene distances and return distance values, ensuring no zero distances."""
     df = df.sort_values(by='start')  # Ensure genes are ordered
-    distances = df['start'].diff().dropna()  # Calculate distances and remove NaN
-    distances = distances[distances > 0].tolist()  # Remove zero or negative distances
-    return distances
+    first_gene_start = df['start'].iloc[0]
+    last_gene_end = df['end'].iloc[-1]
+    total_distance = last_gene_end - first_gene_start
+    return [total_distance]
 
 def select_highest_score_genes(df):
     """Select the gene with the highest score if it appears in multiple chromosomes."""
@@ -141,7 +142,9 @@ def process_csv_files(root_dir):
             'median_distance': sorted(all_distances)[len(all_distances) // 2]
         }
         stats_df = pd.DataFrame([stats])
-        stats_output_file = os.path.join(root_dir, "general_summary_statistics.csv")
+        output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output"
+        os.makedirs(output_dir, exist_ok=True)
+        stats_output_file = os.path.join(output_dir, "general_summary_statistics.csv")
         stats_df.to_csv(stats_output_file, index=False)
         print(f"Saved general summary statistics: {stats_output_file}")
 
