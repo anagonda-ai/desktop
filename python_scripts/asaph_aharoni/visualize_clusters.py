@@ -7,7 +7,7 @@ import re
 # Define file paths
 MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.csv"
 TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/ncbi_species_tree_named.nwk"
-COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated/best_hits_by_organism/comparison_results.csv"
+COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/comparison_results.csv"
 
 # Load phylogenetic tree
 tree = Phylo.read(TREE_FILE, "newick")
@@ -37,11 +37,15 @@ if os.path.exists(COMPARISON_FILE):
             if os.path.exists(largest_chromosome_file):
                 chrom_df = pd.read_csv(largest_chromosome_file)
                 chrom_df = chrom_df.sort_values(by='start')
+                chrom_df["index"] = chrom_df["subject_gene"].apply(lambda x: x.split("|")[4] if isinstance(x, str) and len(x.split("|")) > 4 else None)
                 length = chrom_df['end'].iloc[-1] - chrom_df['start'].iloc[0]
-                return length
+                index_diff = int(chrom_df['index'].iloc[-1]) - int(chrom_df['index'].iloc[0])
+                return length, index_diff
         return None
 
-    comparison_df['Largest Chromosome Length'] = comparison_df.apply(calculate_largest_chromosome_length, axis=1)
+    comparison_df[['Largest Chromosome Length', 'Index Difference']] = pd.DataFrame(
+        comparison_df.apply(calculate_largest_chromosome_length, axis=1).tolist()
+    )
     
     # Match Cleaned_Name with any substring in mapping_dict keys
     def find_matching_organism(cleaned_name):
@@ -60,6 +64,7 @@ if comparison_df is not None:
     gene_counts = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Cross Chromosome Lines']))  # Adjust column name if necessary
     chromosome_lines = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Lines']))
     chromosome_cluster_length = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Length']))
+    chromosome_cluster_length_genes = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Index Difference']))
     print("Sample Gene Counts:", list(gene_counts.items())[:5])
     print("Sample Largest Chromosome Lines:", list(chromosome_lines.items())[:5])
     print("Sample Largest Chromosome Length:", list(chromosome_cluster_length.items())[:5])
@@ -67,6 +72,7 @@ else:
     gene_counts = {}
     chromosome_lines = {}
     chromosome_cluster_length = {}
+    chromosome_cluster_length_genes = {}
     
 def label_function(clade):
     label = clade.name
@@ -75,8 +81,10 @@ def label_function(clade):
         gene_count = gene_counts.get(replaced_label, 0)
         chrom_lines = chromosome_lines.get(replaced_label, 0)
         dict_length = chromosome_cluster_length.get(replaced_label, 0)
+        dict_length_genes = chromosome_cluster_length_genes.get(replaced_label, 0)
         chrom_length = dict_length if not pd.isna(dict_length) else 0
-        label = f"{label}:{gene_count}_GeneseMultiChromosome_{chrom_lines}_GeneseMaxChromosome_{chrom_length}bp_Length"
+        chrom_length_genes = dict_length_genes if not pd.isna(dict_length_genes) else 0
+        label = f"{label}:{gene_count}_GeneseMultiChromosome_{chrom_lines}_GeneseMaxChromosome_{chrom_length}bp_Length_{chrom_length_genes}_Genes"
     print(f"Labeling Clade: {label}")  # Debugging print
     return label
 

@@ -38,9 +38,9 @@ def csv_to_fasta(csv_path):
 
     with open(csv_path, 'r') as csv_in, open(fasta_path, 'w') as fasta_out:
         reader = csv.DictReader(csv_in, delimiter=',')
-        for row in reader:
+        for row_index, row in enumerate(reader, start=1):
             if all(k in row for k in ['id', 'sequence', 'chromosome', 'start', 'end']) and row['sequence'].strip():
-                fasta_out.write(f">{row['id']}|{row['chromosome']}|{row['start']}|{row['end']}\n{row['sequence']}\n")
+                fasta_out.write(f">{row['id']}|{row['chromosome']}|{row['start']}|{row['end']}|{row_index}\n{row['sequence']}\n")
                 valid_entries += 1
 
     if valid_entries == 0:
@@ -109,21 +109,16 @@ def parse_blast_results(blast_file):
             cols = line.strip().split("\t")
             if len(cols) < 12:
                 continue  # Skip malformed lines
-
+            
             query_fasta = cols[0]  # The original FASTA file name
             subject_gene = cols[1]  # Full subject ID
-            start = int(cols[8])  # Correct subject start position
-            end = int(cols[9])  # Correct subject end position
+            subject_info = subject_gene.split("|")
+            chromosome = subject_info[1] if len(subject_info) > 1 else "Unknown" # This should be the chromosome
+            start = int(subject_info[2]) if len(subject_info) > 1 else "Unknown" # Correct subject start position
+            end = int(subject_info[3]) if len(subject_info) > 1 else "Unknown"  # Correct subject end position
             identity = float(cols[2])  # Percentage identity
             evalue = float(cols[10])  # E-value
             bit_score = float(cols[11])  # Bit score
-            
-            # Extract chromosome correctly
-            subject_info = subject_gene.split("|")
-            if len(subject_info) > 1:
-                chromosome = subject_info[1]  # This should be the chromosome
-            else:
-                chromosome = "Unknown"  # If missing, set as unknown
 
             # Extract organism name from BLAST filename
             organism_name = os.path.basename(blast_file).replace("_results.txt", "")
@@ -153,7 +148,7 @@ def save_best_hits(best_hits_by_organism, output_dir):
         os.makedirs(organism_dir, exist_ok=True)
         summary_file = os.path.join(organism_dir, organism)
         with open(summary_file, "w", encoding="utf-8") as f:
-            f.write("query_fasta,subject_gene,chromosome,start,end,identity,evalue,bit_score\n")
+            f.write("query_fasta,subject_gene,chromosome,start,end,identity,evalue,bit_score,row_index\n")
             for hit in hits:
                 f.write(",".join(map(str, hit)) + "\n")
 

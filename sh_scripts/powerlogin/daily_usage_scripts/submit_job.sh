@@ -8,4 +8,9 @@
 #PBS -e /groups/itay_mayrose/alongonda/desktop/example_jobs/error.ER
 #PBS -o /groups/itay_mayrose/alongonda/desktop/example_jobs/out.OU
 #PBS -l select=ncpus=32:mem=32gb
-python /groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/protein_global_alignment/girvan_newman_graph_clustering.py
+
+conda deactivate
+conda activate plantismash
+
+# Run your script
+python /groups/itay_mayrose/alongonda/tools/plant_mgc_existing_tools/plantismash/run_antismash.py /groups/itay_mayrose/alongonda/datasets/arabidopsis_thaliana/dna/Arabidopsis_thaliana.TAIR10.dna_rm.chromosome.1.fa
