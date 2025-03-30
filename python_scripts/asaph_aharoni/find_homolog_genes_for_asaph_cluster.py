@@ -5,6 +5,7 @@ import subprocess
 import csv
 from matplotlib import pyplot as plt
 import numpy as np
+import threading
 import concurrent.futures
 
 # Directories containing CSV files
@@ -66,7 +67,7 @@ def create_blast_db(fasta_file):
     db_name = fasta_file + "_blastdb"
     cmd = f"makeblastdb -in {fasta_file} -dbtype prot -out {db_name}"
     try:
-        subprocess.run(cmd, shell=True, check=True)
+        # subprocess.run(cmd, shell=True, check=True)
         return db_name
     except subprocess.CalledProcessError:
         return None
@@ -85,7 +86,7 @@ def run_blastp(query_fasta, csv_file, blast_db):
     output_file = os.path.join(blast_results_dir, f"{os.path.basename(query_fasta)}_{csv_file}_results.txt")
     cmd = f"blastp -query {query_fasta} -db {blast_db} -evalue 0.01 -qcov_hsp_perc 70 -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -max_target_seqs 50 -gapopen 11 -gapextend 1 -out {output_file}"
     try:
-        subprocess.run(cmd, shell=True, check=True)
+        # subprocess.run(cmd, shell=True, check=True)
         return (query_fasta, csv_file, output_file)
     except subprocess.CalledProcessError:
         return None
@@ -99,6 +100,13 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
         if result:
             query_fasta, csv_file, output_file = result
             blast_results_map[(query_fasta, csv_file)] = output_file
+            
+def extract_organism_name(filename):
+    match = re.search(r"fasta_(.+?)\.csv", filename)
+    return match.group(1) if match else "Unknown"
+
+used_row_indexes = defaultdict(lambda: defaultdict(set))
+lock = threading.Lock()
 
 # Function to parse BLAST results and extract the best hit for each chromosome
 def parse_blast_results(blast_file):
@@ -116,26 +124,32 @@ def parse_blast_results(blast_file):
             chromosome = subject_info[1] if len(subject_info) > 1 else "Unknown" # This should be the chromosome
             start = int(subject_info[2]) if len(subject_info) > 1 else "Unknown" # Correct subject start position
             end = int(subject_info[3]) if len(subject_info) > 1 else "Unknown"  # Correct subject end position
+            row_index = int(subject_info[4]) if len(subject_info) > 1 else "Unknown"  # Correct subject end position
             identity = float(cols[2])  # Percentage identity
             evalue = float(cols[10])  # E-value
             bit_score = float(cols[11])  # Bit score
 
             # Extract organism name from BLAST filename
             organism_name = os.path.basename(blast_file).replace("_results.txt", "")
+            dir_name = extract_organism_name(organism_name)
+            hit = [query_fasta, subject_gene, chromosome, start, end, identity, evalue, bit_score, row_index]
 
-            # Keep only the best-scoring homolog per chromosome
-            if chromosome not in best_hits_by_organism[organism_name] or bit_score > best_hits_by_organism[organism_name][chromosome][-1]:
-                best_hits_by_organism[organism_name][chromosome] = [query_fasta, subject_gene, chromosome, start, end, identity, evalue, bit_score]
+            with lock:
+                # skip if row_index already used in this dir_name/chromosome
+                if row_index in used_row_indexes[dir_name][chromosome]:
+                    continue
 
-    # Convert dictionary to list format for saving
+                # only accept hit if it's the best for this organism_name/chromosome
+                current_hit = best_hits_by_organism[organism_name].get(chromosome)
+                if current_hit is None or bit_score > current_hit[-2]:
+                    best_hits_by_organism[organism_name][chromosome] = hit
+                    used_row_indexes[dir_name][chromosome].add(row_index)
+
+    # Flatten hits for saving
     for organism in best_hits_by_organism:
         best_hits_by_organism[organism] = list(best_hits_by_organism[organism].values())
 
-    return best_hits_by_organism  # Returns {organism: list_of_best_hits}
-
-def extract_organism_name(filename):
-    match = re.search(r"fasta_(.+?)\.csv", filename)
-    return match.group(1) if match else "Unknown"
+    return best_hits_by_organism
 
 # Save best hits grouped by chromosome
 def save_best_hits(best_hits_by_organism, output_dir):
@@ -152,7 +166,7 @@ def save_best_hits(best_hits_by_organism, output_dir):
             for hit in hits:
                 f.write(",".join(map(str, hit)) + "\n")
 
-        print(f"✅ Best hits saved for organism: {organism}")
+        # print(f"✅ Best hits saved for organism: {organism}")
 
 # Main execution loop to parse and save best hits
 best_hits_by_organism = defaultdict(dict)
