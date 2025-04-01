@@ -104,11 +104,8 @@ def process_organism(organism, file_paths, output_dir, all_distances):
     if not all_genes_df.empty:
         highest_score_genes_df = select_highest_score_genes(all_genes_df)
         cross_chrom_output_file = os.path.join(organism_output_dir, "cross_chromosome_clusters.csv")
-        if len(highest_score_genes_df) < 2 or not any(highest_score_genes_df['origin_file'].str.startswith(('adcs', 'cs'))):
-            print(f"Skipping cross-chromosome clusters for {organism}, not enough data.")
-        else:
-            highest_score_genes_df.to_csv(cross_chrom_output_file, index=False)
-            print(f"Saved cross-chromosome clusters: {cross_chrom_output_file}")
+        highest_score_genes_df.to_csv(cross_chrom_output_file, index=False)
+        print(f"Saved cross-chromosome clusters: {cross_chrom_output_file}")
     
     # Append to shared distance list
     all_distances.extend(local_distances)

@@ -9,7 +9,7 @@ from matplotlib.colors import to_rgb
 
 # Define file paths
 MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.csv"
-TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/ncbi_species_tree_named.nwk"
+TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.nwk"
 COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/comparison_results.csv"
 
 # Load dataset organism mapping file
@@ -116,6 +116,11 @@ def plot_tree(tree, data_dict, filename, cmap_name="viridis"):
         clade.color = color  # Assign color to clade
         clade.name = label if clade.is_terminal() else clade.name.split(":")[0] if clade.name else None  # Set formatted label
 
+    # Clear internal node names (non-terminal)
+    for clade in tree.get_nonterminals():
+        clade.name = None
+        clade.confidence = None  # This hides the number shown on the branch
+        
     # Draw tree
     Phylo.draw(tree, axes=ax, do_show=False)
 
@@ -138,6 +143,7 @@ def plot_tree(tree, data_dict, filename, cmap_name="viridis"):
     # Save the figure
     plt.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close()
+    plt.tight_layout()
     
 def get_color_discrete(value, discrete_values=[0, 1, 2, 3, 4], cmap_name="viridis"):
     """Returns a discrete color from a colormap for specific values."""
@@ -197,6 +203,11 @@ def plot_tree_discrete(tree, data_dict, filename, cmap_name="viridis"):
     cbar.set_ticks(discrete_values)
     cbar.set_ticklabels([str(v) for v in discrete_values])  # Ensure only these labels appear
     
+    # Clear internal node names (non-terminal)
+    for clade in tree.get_nonterminals():
+        clade.name = None
+        clade.confidence = None  # This hides the number shown on the branch
+    
     # Draw tree
     Phylo.draw(tree, axes=ax, do_show=False)
     
@@ -213,6 +224,8 @@ def plot_tree_discrete(tree, data_dict, filename, cmap_name="viridis"):
     # Save the figure
     plt.savefig(filename, dpi=300, bbox_inches="tight")
     plt.close()
+    plt.tight_layout()
+    
     
 def normalize_metric_colors(data_dict, cmap_name="viridis"):
     """Normalize values to colors using a colormap."""
@@ -222,7 +235,7 @@ def normalize_metric_colors(data_dict, cmap_name="viridis"):
     return {k.replace("_", " "): cmap(norm(v)) for k, v in data_dict.items()}
 
 def plot_metric_column(ax, metric_dict, colormap, title, y_positions, leaf_names):
-    """Draw a column with colored bars and values."""
+    """Draw a column with colored bars and values, using a strikethrough line for NaN values."""
     ax.set_xlim(0, 1)
     ax.set_xticks([])
     ax.set_yticks(y_positions)
@@ -233,10 +246,15 @@ def plot_metric_column(ax, metric_dict, colormap, title, y_positions, leaf_names
     for i, name in enumerate(leaf_names):
         val = metric_dict.get(name, None)
         color = colormap.get(name, (1, 1, 1, 0))
-        ax.barh(i, 1, color=color, edgecolor='none')
-        if val is not None:
-            label = f"≥{val}" if val == 200 else str(val)
-            ax.text(0.5, i, label, ha='center', va='center', fontsize=7, color='black')
+        ax.barh(y_positions[i], 1, color=color, edgecolor='none')
+
+        if val is None or (isinstance(val, float) and np.isnan(val)):
+            # Draw a horizontal line to indicate "deletion" (NaN)
+            ax.plot([0.1, 0.9], [y_positions[i]] * 2, color="black", linewidth=1.5)
+        else:
+            display_text = f"≥{val}" if val == 200 else str(val)
+            ax.text(0.5, y_positions[i], display_text, ha='center', va='center', fontsize=7, color='black')
+
 
 def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titles, cmap_name="viridis"):
     """Creates a single tree plot with multiple value-annotated sidebars."""
@@ -244,9 +262,15 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
     leaf_names = [leaf.name.replace("_", " ") for leaf in tree.get_terminals()]
     num_leaves = len(leaf_names)
 
-    fig = plt.figure(figsize=(18, 15))
+    scale_factor = max(10, len(tree.get_terminals()) * 0.25)  # auto-scale height
+    fig = plt.figure(figsize=(18, scale_factor))
     gs = gridspec.GridSpec(1, len(metrics) + 1, width_ratios=[3] + [0.5] * len(metrics), wspace=0.05)
 
+    # Clear internal node names (non-terminal)
+    for clade in tree.get_nonterminals():
+        clade.name = None
+        clade.confidence = None  # This hides the number shown on the branch
+    
     # Tree
     ax_tree = fig.add_subplot(gs[0, 0])
     Phylo.draw(tree, axes=ax_tree, do_show=False)
@@ -261,6 +285,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
 
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
+    plt.tight_layout()
     print(f"✅ Combined tree saved: {output_path}")
 
 # Save figures
@@ -275,7 +300,7 @@ plot_combined_tree_with_metrics(
     tree_file=TREE_FILE,
     output_path=os.path.join(output_dir, "CombinedClusterMetrics.png"),
     metrics=[gene_counts, chromosome_lines, chromosome_cluster_length_genes],
-    metric_titles=["Multi-Chr Genes", "Single-Chr Genes", "Cluster Length (Genes)"],
+    metric_titles=["Genes in the Genome", "Single-Chr Genes", "Cluster Length (Genes)"],
     cmap_name="viridis"
 )
 plot_tree_discrete(MultiChromosomeGenesTree, gene_counts, os.path.join(output_dir, "NumberOfHitsInGenome.png"))
