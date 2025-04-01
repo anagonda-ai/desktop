@@ -238,22 +238,26 @@ def plot_metric_column(ax, metric_dict, colormap, title, y_positions, leaf_names
     """Draw a column with colored bars and values, using a strikethrough line for NaN values."""
     ax.set_xlim(0, 1)
     ax.set_xticks([])
-    ax.set_yticks(y_positions)
-    ax.set_yticklabels([])
-    ax.invert_yaxis()
+    ax.set_yticks([])
+    
+    # Set vertical limits to fully cover the tree height
+    ax.set_ylim(min(y_positions) - 1, max(y_positions) + 1)
+
     ax.set_title(title, fontsize=10)
 
     for i, name in enumerate(leaf_names):
+        y = y_positions[i]
         val = metric_dict.get(name, None)
         color = colormap.get(name, (1, 1, 1, 0))
-        ax.barh(y_positions[i], 1, color=color, edgecolor='none')
+        ax.barh(y, 1, color=color, edgecolor='black', height=1.0)
 
         if val is None or (isinstance(val, float) and np.isnan(val)):
             # Draw a horizontal line to indicate "deletion" (NaN)
-            ax.plot([0.1, 0.9], [y_positions[i]] * 2, color="black", linewidth=1.5)
+            ax.plot([0.1, 0.9], [y] * 2, color="black", linewidth=1.5)
         else:
             display_text = f"≥{val}" if val == 200 else str(val)
-            ax.text(0.5, y_positions[i], display_text, ha='center', va='center', fontsize=7, color='black')
+            ax.text(0.5, y, display_text, ha='center', va='center', fontsize=7, color='black')
+
 
 
 def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titles, cmap_name="viridis"):
@@ -276,12 +280,17 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
     Phylo.draw(tree, axes=ax_tree, do_show=False)
     ax_tree.set_xticks([])
     ax_tree.set_yticks([])
+    
+    # Get y-positions of leaf labels
+    leaf_positions = {text.get_text(): text.get_position()[1] for text in ax_tree.texts if text.get_text()}
+    sorted_leaves = sorted(leaf_positions.items(), key=lambda x: x[1], reverse=True)
+    y_positions = [y for _, y in sorted_leaves]
 
     # Metric columns
     for i, (metric_dict, title) in enumerate(zip(metrics, metric_titles)):
         ax = fig.add_subplot(gs[0, i + 1])
         color_map = normalize_metric_colors(metric_dict, cmap_name)
-        plot_metric_column(ax, metric_dict, color_map, title, list(range(num_leaves)), leaf_names)
+        plot_metric_column(ax, metric_dict, color_map, title, y_positions, leaf_names)
 
     plt.savefig(output_path, dpi=300, bbox_inches='tight')
     plt.close()
