@@ -1,40 +1,46 @@
+import os
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from Bio import Entrez, SeqIO
 from Bio.SeqRecord import SeqRecord
 from Bio.Seq import Seq
 import time
+import os
 
-# Set your email address to identify your queries to NCBI
+# NCBI email
 Entrez.email = "alongonda@mail.tau.ac.il"
+Entrez.api_key = "13b51c448a0ba246af8a501b77f7dc0fe309"
+
+# Limit NCBI hits (officially 3/sec for anonymous users)
+NCBI_DELAY = 0.1  # 3 queries/sec
+
+# How many parallel threads?
+MAX_WORKERS = 8
 
 def fetch_gene_coordinates(gene_id):
-    """Fetch RefSeq and GenBank coordinates for a given NCBI GeneID."""
+    """Fetch both RefSeq and GenBank coordinates for a GeneID."""
     try:
-        # Step 1: Fetch gene summary
         handle = Entrez.esummary(db="gene", id=gene_id, retmode="xml")
         record = Entrez.read(handle)
-        handle.close()      
+        handle.close()
         
         docsum = record['DocumentSummarySet']['DocumentSummary'][0]
         genomic_info = docsum.get('GenomicInfo')
-        # Fetch from RefSeq (NC_)
+
         refseq_data = None
         if genomic_info:
-            chrom = genomic_info[0].get('ChrAccVer')    # RefSeq accession (e.g., NC_...)
-            start = int(genomic_info[0].get('ChrStart')) + 1 # Convert 0-based to 1-based
+            chrom = genomic_info[0].get('ChrAccVer')
+            start = int(genomic_info[0].get('ChrStart')) + 1
             end = int(genomic_info[0].get('ChrStop')) + 1
             strand = genomic_info[0].get('Strand')
             if start > end:
                 start, end = end, start
             refseq_data = (chrom, start, end, strand)
-            
-        # Step 2: Fetch full gene record (for Related Sequences GenBank)
+
         handle = Entrez.efetch(db="gene", id=gene_id, rettype="xml")
         records = Entrez.read(handle)
         handle.close()
 
         genbank_data = None
-        related_sequences = None
-
         try:
             comments = records[0].get('Entrezgene_comments', [])
             for comment in comments:
@@ -46,7 +52,6 @@ def fetch_gene_coordinates(gene_id):
                             version = prod.get('Gene-commentary_version')
                             full_acc = f"{acc}.{version}"
 
-                            # Now get the start/end
                             seq_info = prod.get('Gene-commentary_seqs', [])
                             if seq_info:
                                 interval = seq_info[0]['Seq-loc_int']['Seq-interval']
@@ -70,53 +75,66 @@ def fetch_gene_coordinates(gene_id):
         print(f"Error fetching data for GeneID {gene_id}: {e}")
         return None, None
 
-def process_fasta(fasta_file, output_file):
-    """Process a FASTA file to extract gene information and fetch coordinates."""
+def process_fasta_file(input_fasta, output_fasta):
+    """Process one FASTA file concurrently."""
     updated_records = []
-    
-    with open(fasta_file, "r") as file:
-        for record in SeqIO.parse(file, "fasta"):
-            header = record.id
-            organism_code, gene_id = header.split(":")
-            
-            refseq_info, genbank_info = fetch_gene_coordinates(gene_id)
-            
-            print(f"\nGene {gene_id} ({organism_code}):")
-            
-            if refseq_info:
-                chrom, start, end, strand = refseq_info
-                strand_str = "+" if strand == 1 else "-"
-                print(f"  RefSeq: {chrom}:{start}-{end} ({strand_str} strand)")
-            else:
-                print("  RefSeq: Not available")
 
-            if genbank_info:
-                genbank_seq, gb_start, gb_end, gb_strand = genbank_info
-                gb_strand_str = "+" if gb_strand == 1 else "-"
-                print(f"  GenBank: {genbank_seq}:{gb_start}-{gb_end} ({gb_strand_str} strand)")
-                new_header = f"{header}|{genbank_seq}|{gb_start}|{gb_end}"
-            else:
-                new_header = header
-                print("  GenBank: Not available")
-                
-            # Create a new SeqRecord with updated header
-            updated_record = SeqRecord(
-                Seq(str(record.seq)),
-                id=new_header,
-                description=""
-            )
-            updated_records.append(updated_record)
+    gene_records = list(SeqIO.parse(input_fasta, "fasta"))
 
-            print(f"Updated {header} → {new_header}")
-            # Be nice to NCBI servers
-            time.sleep(0.35)
-        
-        # Write to new FASTA
-    with open(output_file, "w") as out_f:
+    def process_record(record):
+        header = record.id
+        organism_code, gene_id = header.split(":")
+        refseq_info, genbank_info = fetch_gene_coordinates(gene_id)
+        if genbank_info:
+            genbank_seq, gb_start, gb_end, gb_strand = genbank_info
+            new_header = f"{header}|{genbank_seq}|{gb_start}|{gb_end}"
+        else:
+            new_header = header
+
+        updated_record = SeqRecord(
+            Seq(str(record.seq)),
+            id=new_header,
+            description=""
+        )
+        time.sleep(NCBI_DELAY)  # respect API rate limit
+        return updated_record
+
+    with ThreadPoolExecutor(max_workers=MAX_WORKERS) as executor:
+        futures = [executor.submit(process_record, record) for record in gene_records]
+        for future in as_completed(futures):
+            try:
+                updated_records.append(future.result())
+            except Exception as e:
+                print(f"Error processing a record: {e}")
+
+    # Save updated FASTA
+    with open(output_fasta, "w") as out_f:
         SeqIO.write(updated_records, out_f, "fasta-2line")
 
+def process_all_kegg_fasta(root_input_folder, root_output_folder):
+    """Process ALL .fasta files inside root_input_folder and save to root_output_folder."""
+    for organism_dir in os.listdir(root_input_folder):
+        organism_input_path = os.path.join(root_input_folder, organism_dir)
+
+        if os.path.isdir(organism_input_path):
+            print(f"\n📂 Processing organism: {organism_dir}")
+            organism_output_path = os.path.join(root_output_folder, organism_dir)
+            os.makedirs(organism_output_path, exist_ok=True)
+
+            fasta_files = [f for f in os.listdir(organism_input_path) if f.endswith(".fasta")]
+
+            for fasta_file in fasta_files:
+                input_fasta = os.path.join(organism_input_path, fasta_file)
+                output_fasta = os.path.join(organism_output_path, fasta_file)
+
+                print(f"  ⚡ Processing {fasta_file}")
+
+                process_fasta_file(input_fasta, output_fasta)
+
+                print(f"  ✅ Done {fasta_file}")
+
 # Example usage
-process_fasta(
-    "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta/aans/aans00071.fasta",
-    "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta/aans/aans00071_UPDATED.fasta"
-)
+input_root = "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta"
+output_root = "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta_updated"
+
+process_all_kegg_fasta(input_root, output_root)
