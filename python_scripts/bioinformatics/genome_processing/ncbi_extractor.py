@@ -31,49 +31,38 @@ def fetch_gene_coordinates(gene_id):
             chrom = genomic_info[0].get('ChrAccVer')
             start = int(genomic_info[0].get('ChrStart')) + 1
             end = int(genomic_info[0].get('ChrStop')) + 1
-            strand = genomic_info[0].get('Strand')
             if start > end:
                 start, end = end, start
-            refseq_data = (chrom, start, end, strand)
+            refseq_data = (chrom, start, end)
 
         handle = Entrez.efetch(db="gene", id=gene_id, rettype="xml")
         records = Entrez.read(handle)
         handle.close()
 
-        genbank_data = None
-        try:
-            comments = records[0].get('Entrezgene_comments', [])
-            for comment in comments:
-                if comment.get('Gene-commentary_heading') == 'Related Sequences':
-                    products = comment.get('Gene-commentary_products', [])
-                    for prod in products:
-                        if prod.get('Gene-commentary_heading') == 'Genomic':
-                            acc = prod.get('Gene-commentary_accession')
-                            version = prod.get('Gene-commentary_version')
-                            full_acc = f"{acc}.{version}"
-
-                            seq_info = prod.get('Gene-commentary_seqs', [])
-                            if seq_info:
-                                interval = seq_info[0]['Seq-loc_int']['Seq-interval']
-                                start_genbank = int(interval['Seq-interval_from']) + 1
-                                end_genbank = int(interval['Seq-interval_to']) + 1
-                                strand_info = interval['Seq-interval_strand']['Na-strand']
-                                strand_value = strand_info.attributes.get('value', 'plus')
-                                strand = 1 if strand_value == 'plus' else -1
-
-                                if start_genbank > end_genbank:
-                                    start_genbank, end_genbank = end_genbank, start_genbank
-
-                                genbank_data = (full_acc, start_genbank, end_genbank, strand)
-        except Exception as e:
-            print(f"Error parsing related sequences: {e}")
-            genbank_data = None
-
-        return refseq_data, genbank_data
+        return refseq_data
 
     except Exception as e:
-        print(f"Error fetching data for GeneID {gene_id}: {e}")
-        return None, None
+        print(f"⚠️ Primary fetch failed for {gene_id}: {e}")
+        print(f"🔄 Trying fallback search for locus tag...")
+        
+        # Now treat it as a Locus Tag
+        try:
+            search_handle = Entrez.esearch(db="gene", term=f"{gene_id}[Gene Name]", retmode="xml")
+            search_results = Entrez.read(search_handle)
+            search_handle.close()
+
+            id_list = search_results.get("IdList", [])
+            if id_list:
+                real_gene_id = id_list[0]
+                print(f"✅ Found real GeneID for {gene_id}: {real_gene_id}")
+                return fetch_gene_coordinates(real_gene_id)  # recursive call with real ID
+            else:
+                print(f"❌ No match found for locus tag {gene_id}")
+                return None, None, None
+
+        except Exception as e2:
+            print(f"❌ Failed fallback search for {gene_id}: {e2}")
+            return None, None, None
 
 def process_fasta_file(input_fasta, output_fasta):
     """Process one FASTA file concurrently."""
@@ -84,10 +73,10 @@ def process_fasta_file(input_fasta, output_fasta):
     def process_record(record):
         header = record.id
         organism_code, gene_id = header.split(":")
-        refseq_info, genbank_info = fetch_gene_coordinates(gene_id)
-        if genbank_info:
-            genbank_seq, gb_start, gb_end, gb_strand = genbank_info
-            new_header = f"{header}|{genbank_seq}|{gb_start}|{gb_end}"
+        refseq_info = fetch_gene_coordinates(gene_id)
+        if refseq_info:
+            chrom, gb_start, gb_end = refseq_info
+            new_header = f"{header}|{chrom}|{gb_start}|{gb_end}"
         else:
             new_header = header
 
