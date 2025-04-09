@@ -46,7 +46,7 @@ def batch_fetch_gene_coordinates(gene_ids):
     return gene_info
 
 def batch_resolve_locus_tags(locus_tags):
-    """Batch resolve locus tags (gene names) to GeneIDs using OR search."""
+    """Batch resolve locus tags (gene names) to GeneIDs and coordinates."""
     resolved = {}
 
     if not locus_tags:
@@ -70,14 +70,31 @@ def batch_resolve_locus_tags(locus_tags):
 
             for docsum in summaries['DocumentSummarySet']['DocumentSummary']:
                 real_gene_id = docsum.attributes.get('uid')
-                name = docsum.get('Name')
-                if real_gene_id and name:
-                    resolved[name] = real_gene_id
+                other_aliases = docsum.get('OtherAliases', '')
+
+                if other_aliases:
+                    alias_list = [alias.strip() for alias in other_aliases.split(',')]
+
+                    for alias in alias_list:
+                        if alias in locus_tags:
+                            genomic_info = docsum.get('GenomicInfo')
+
+                            if genomic_info:
+                                chrom_acc = genomic_info[0].get('ChrAccVer')
+                                chrom_num = genomic_info[0].get('ChrLoc')
+                                start = int(genomic_info[0].get('ChrStart')) + 1
+                                end = int(genomic_info[0].get('ChrStop')) + 1
+                                if start > end:
+                                    start, end = end, start
+                                resolved[alias] = (chrom_num, chrom_acc, start, end)
+                            else:
+                                resolved[alias] = None
 
     except Exception as e:
         print(f"⚠️ Batch locus tag search failed: {e}")
 
     return resolved
+
 
 def process_fasta_file(input_fasta, output_csv):
     """Process one FASTA file in batch + concurrent mode."""
@@ -102,21 +119,13 @@ def process_fasta_file(input_fasta, output_csv):
     # Step 2: Resolve locus tags (batch)
     resolved_locus_tags = batch_resolve_locus_tags(locus_tags)
 
-    # Merge resolved locus tags
-    for header, tag in id_map.items():
-        if not tag.isdigit():
-            real_id = resolved_locus_tags.get(tag)
-            if real_id:
-                id_map[header] = real_id
-            else:
-                id_map[header] = None  # unresolved
-
     # Step 3: Collect real GeneIDs
     all_gene_ids = [gid for gid in id_map.values() if gid is not None]
 
     # Step 4: Batch fetch gene coordinates concurrently
     batches = [all_gene_ids[i:i+BATCH_SIZE] for i in range(0, len(all_gene_ids), BATCH_SIZE)]
     gene_coordinates = {}
+    gene_coordinates.update(resolved_locus_tags)
 
     def fetch_batch(batch):
         return batch_fetch_gene_coordinates(batch)
@@ -199,6 +208,6 @@ def process_all_kegg_fasta(root_input_folder, root_output_folder):
 
 # Example usage
 input_root = "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta"
-output_root = "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta_updated"
+output_root = "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta_updated_fixed"
 
 process_all_kegg_fasta(input_root, output_root)
