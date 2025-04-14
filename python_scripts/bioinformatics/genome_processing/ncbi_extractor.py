@@ -11,7 +11,7 @@ Entrez.email = "alongonda@mail.tau.ac.il"
 Entrez.api_key = "13b51c448a0ba246af8a501b77f7dc0fe309"
 
 # Batch and speed settings
-NCBI_DELAY = 0.1
+NCBI_DELAY = 0.2
 BATCH_SIZE = 100
 MAX_WORKERS = 8  # concurrency
 

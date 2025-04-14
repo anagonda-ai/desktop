@@ -13,8 +13,7 @@ def merge_csv_files(csv_dir, output_csv_path):
                 file_path = os.path.join(root, file_name)
                 if os.path.isfile(file_path):
                     df = pd.read_csv(file_path)
-                    # Ensure 'id' column is treated as string
-                    df['gene_name'] = df['gene_name'].astype(str)
+                    df['pathway'] = file_name.split('_')[0]  # Extract pathway name from file name
                     dataframes.append(df)
                     print(f"Read CSV file: {file_path}")
 
@@ -22,25 +21,13 @@ def merge_csv_files(csv_dir, output_csv_path):
     # Concatenate all dataframes
     merged_df = pd.concat(dataframes, ignore_index=True)
     
-    # Ensure 'id' is string type before grouping
-    merged_df['gene_name'] = merged_df['gene_name'].astype(str)
-    
-    # Generate the suffix for each id
-    merged_df['suffix'] = merged_df.groupby('gene_name').cumcount()
-    
-    # Create the updated id with suffix
-    merged_df['gene_name'] = merged_df['gene_name'] + '.' + merged_df['suffix'].astype(str)
-    
-    # Drop the temporary suffix column
-    merged_df.drop(columns=['suffix'], inplace=True)
-    
     # Save the merged dataframe to the given path
     merged_df.to_csv(output_csv_path, index=False)
     print(f"Saved merged CSV to: {output_csv_path}")
 
 def main():
-    csv_dir = "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/organisms"
-    output_csv_path = "/groups/itay_mayrose/alongonda/datasets/full_genomes/annotations/ensembl_annotations.csv"
+    csv_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta_updated_fixed"
+    output_csv_path = os.path.join(csv_dir, "merged_pathways.csv")
     merge_csv_files(csv_dir, output_csv_path)
 
 if __name__ == "__main__":

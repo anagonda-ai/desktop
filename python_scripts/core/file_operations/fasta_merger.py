@@ -5,7 +5,12 @@ def merge_fasta_files(files, output_file):
     with open(output_file, 'w') as outfile:
         for file in files:
             with open(file, 'r') as infile:
-                outfile.write(infile.read())
+                for line in infile:
+                    if line.startswith(">"):
+                        filename = os.path.basename(file).replace(".fasta","")
+                        outfile.write(f"{line.strip()}|{filename}\n")
+                    else:
+                        outfile.write(line)
 
 def find_fasta_files(base_dir):
     fasta_files = []
@@ -17,18 +22,16 @@ def find_fasta_files(base_dir):
     return fasta_files
 
 def main():
-    if len(sys.argv) != 4:
-        print("Usage: python merge_fasta_files.py <fasta_paths.txt> <output_dir> <file_name>")
+    if len(sys.argv) != 3:
+        print("Usage: python merge_fasta_files.py <fasta_dir> <file_name>")
         sys.exit(1)
 
-    fasta_paths_file = sys.argv[1]
-    output_dir = sys.argv[2]
-    file_name = sys.argv[3]
+    fasta_paths_dir = sys.argv[1]
+    file_name = sys.argv[2]
 
-    with open(fasta_paths_file, 'r') as f:
-        files = [line.strip() for line in f if line.strip()]
+    files = find_fasta_files(fasta_paths_dir)
 
-    output_file = os.path.join(output_dir, f"{file_name}.fasta")
+    output_file = os.path.join(fasta_paths_dir, f"{file_name}.fasta")
     
     # Merge the found FASTA files into one big file
     merge_fasta_files(files, output_file)
