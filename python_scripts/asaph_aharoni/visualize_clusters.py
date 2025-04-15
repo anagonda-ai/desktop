@@ -10,7 +10,7 @@ from matplotlib.colors import to_rgb
 # Define file paths
 MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.csv"
 TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.nwk"
-COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/comparison_results.csv"
+COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/comparison_results.csv"
 
 # Load dataset organism mapping file
 if os.path.exists(MAPPING_FILE):
@@ -27,7 +27,7 @@ if os.path.exists(COMPARISON_FILE):
     
     # Extract only the relevant part of the directory to match mapping_dict
     def clean_directory_name(directory):
-        return directory.split("/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
+        return directory.split("/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/blast_results_chromosome_separated/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
     
     comparison_df['Cleaned_Name'] = comparison_df['Directory'].apply(clean_directory_name)
     
@@ -67,7 +67,8 @@ if comparison_df is not None:
     
     max_value = 200  # Define the cap for Index Difference
     # Replace values in Index Difference column
-    comparison_df['Index Difference'] = comparison_df['Index Difference'].apply(lambda x: min(x, max_value))
+    
+    comparison_df['Index Difference'] = comparison_df['Index Difference'].apply(lambda x: min(x, max_value) if x is not None else None)
     
     # Create the dictionary after applying the cap
     chromosome_cluster_length_genes = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Index Difference']))
@@ -79,7 +80,11 @@ def get_color(value, min_val, max_val, cmap_name="viridis"):
     """Returns a color from a matplotlib colormap based on normalized value."""
     norm = mcolors.Normalize(vmin=min_val, vmax=max_val)
     cmap = cm.get_cmap(cmap_name)
-    rgba = cmap(norm(value))
+    
+    if value is not None:
+        rgba = cmap(norm(value))
+    else:
+        rgba = (1, 1, 1, 0)  # Default to transparent white if value is None
     return mcolors.to_hex(rgba)
 
 def label_function_factory(data_dict,  cmap_name="viridis"):
@@ -230,75 +235,97 @@ def plot_tree_discrete(tree, data_dict, filename, cmap_name="viridis"):
 def normalize_metric_colors(data_dict, cmap_name="viridis"):
     """Normalize values to colors using a colormap."""
     values = list(data_dict.values())
-    norm = mcolors.Normalize(vmin=min(values), vmax=max(values))
+    
+    filtered_values = [v for v in values if v is not None]
+    
+    if not filtered_values:
+        norm = mcolors.Normalize(vmin=0, vmax=1)  # Default range if no valid values
+    else:
+        norm = mcolors.Normalize(vmin=min(filtered_values), vmax=max(filtered_values))
     cmap = cm.get_cmap(cmap_name)
-    return {k.replace("_", " "): cmap(norm(v)) for k, v in data_dict.items()}
+    
+    return {k.replace("_", " "): cmap(norm(v)) for k, v in data_dict.items() if v is not None}
 
 def plot_metric_column(ax, metric_dict, colormap, title, y_positions, leaf_names):
     """Draw a column with colored bars and values, using a strikethrough line for NaN values."""
     ax.set_xlim(0, 1)
     ax.set_xticks([])
-    ax.set_yticks([])
-    
-    # Set vertical limits to fully cover the tree height
-    ax.set_ylim(min(y_positions) - 1, max(y_positions) + 1)
-
+    ax.set_yticks(y_positions)
+    ax.set_yticklabels([])
+    ax.invert_yaxis()
     ax.set_title(title, fontsize=10)
 
     for i, name in enumerate(leaf_names):
-        y = y_positions[i]
         val = metric_dict.get(name, None)
         color = colormap.get(name, (1, 1, 1, 0))
-        ax.barh(y, 1, color=color, edgecolor='black', height=1.0)
+        ax.barh(y_positions[i], 1, color=color, edgecolor='none')
 
         if val is None or (isinstance(val, float) and np.isnan(val)):
             # Draw a horizontal line to indicate "deletion" (NaN)
-            ax.plot([0.1, 0.9], [y] * 2, color="black", linewidth=1.5)
+            ax.plot([0.1, 0.9], [y_positions[i]] * 2, color="black", linewidth=1.5)
         else:
             display_text = f"≥{val}" if val == 200 else str(val)
-            ax.text(0.5, y, display_text, ha='center', va='center', fontsize=7, color='black')
-
+            ax.text(0.5, y_positions[i], display_text, ha='center', va='center', fontsize=7, color='black')
 
 
 def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titles, cmap_name="viridis"):
-    """Creates a single tree plot with multiple value-annotated sidebars."""
+    """Creates a single tree plot with value-annotated sidebars aligned with leaves."""
     tree = Phylo.read(tree_file, "newick")
-    leaf_names = [leaf.name.replace("_", " ") for leaf in tree.get_terminals()]
-    num_leaves = len(leaf_names)
 
-    scale_factor = max(10, len(tree.get_terminals()) * 0.25)  # auto-scale height
-    fig = plt.figure(figsize=(18, scale_factor))
-    gs = gridspec.GridSpec(1, len(metrics) + 1, width_ratios=[3] + [0.5] * len(metrics), wspace=0.05)
-
-    # Clear internal node names (non-terminal)
+    # Clear internal node labels
     for clade in tree.get_nonterminals():
         clade.name = None
-        clade.confidence = None  # This hides the number shown on the branch
-    
-    # Tree
+        clade.confidence = None
+
+    # Get leaf names in the drawn order
+    fig = plt.figure(figsize=(18, len(tree.get_terminals()) * 0.2))
+    gs = gridspec.GridSpec(1, len(metrics) + 1, width_ratios=[3] + [0.5] * len(metrics), wspace=0.05)
+
+    # Plot tree and capture label Y positions
     ax_tree = fig.add_subplot(gs[0, 0])
-    Phylo.draw(tree, axes=ax_tree, do_show=False)
+    label_positions = {}
+
+    def custom_label_func(clade):
+        if clade.is_terminal():
+            label_positions[clade.name.replace("_", " ")] = len(label_positions)
+            return clade.name.replace("_", " ")
+        return None
+
+    Phylo.draw(tree, do_show=False, axes=ax_tree, label_func=custom_label_func)
     ax_tree.set_xticks([])
     ax_tree.set_yticks([])
-    
-    # Get y-positions of leaf labels
-    leaf_positions = {text.get_text(): text.get_position()[1] for text in ax_tree.texts if text.get_text()}
-    sorted_leaves = sorted(leaf_positions.items(), key=lambda x: x[1], reverse=True)
-    y_positions = [y for _, y in sorted_leaves]
 
-    # Metric columns
+    # Convert label positions to Y coords in plot order
+    leaf_names = sorted(label_positions, key=lambda name: label_positions[name])
+    y_positions = list(range(len(leaf_names)))
+
+    # Plot metric columns
     for i, (metric_dict, title) in enumerate(zip(metrics, metric_titles)):
         ax = fig.add_subplot(gs[0, i + 1])
-        color_map = normalize_metric_colors(metric_dict, cmap_name)
-        plot_metric_column(ax, metric_dict, color_map, title, y_positions, leaf_names)
+        cmap = normalize_metric_colors(metric_dict, cmap_name)
+        ax.set_xlim(0, 1)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(title, fontsize=10)
+        ax.invert_yaxis()
 
-    plt.savefig(output_path, dpi=300, bbox_inches='tight')
+        for y_idx, name in enumerate(leaf_names):
+            val = metric_dict.get(name, None)
+            color = cmap.get(name, (1, 1, 1, 0))
+            ax.barh(y_idx, 1, color=color, edgecolor='none')
+            if val is None or (isinstance(val, float) and np.isnan(val)):
+                ax.plot([0.1, 0.9], [y_idx] * 2, color="black", linewidth=1.5)
+            else:
+                display = f"≥{val}" if val == 200 else str(val)
+                ax.text(0.5, y_idx, display, ha="center", va="center", fontsize=7)
+
+    plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
-    plt.tight_layout()
     print(f"✅ Combined tree saved: {output_path}")
 
+
 # Save figures
-output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/summary_plots"
+output_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/summary_plots"
 os.makedirs(output_dir, exist_ok=True)
 
 # Load phylogenetic trees
