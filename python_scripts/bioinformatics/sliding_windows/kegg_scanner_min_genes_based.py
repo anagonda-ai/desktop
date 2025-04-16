@@ -22,7 +22,7 @@ def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.
     print(f"Running BLASTP for {genome_file} against KEGG database...")
     if not os.path.exists(blast_output):
         subprocess.run([
-            "blastp",
+            "blastp", 
             "-task", "blastp-fast",
             "-query", fasta_query,
             "-db", kegg_db,
