@@ -139,7 +139,7 @@ def process_csv_files(root_dir):
             'median_distance': sorted(all_distances)[len(all_distances) // 2]
         }
         stats_df = pd.DataFrame([stats])
-        output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output"
+        output_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798"
         os.makedirs(output_dir, exist_ok=True)
         stats_output_file = os.path.join(output_dir, "general_summary_statistics.csv")
         stats_df.to_csv(stats_output_file, index=False)
@@ -147,7 +147,7 @@ def process_csv_files(root_dir):
 
 if __name__ == "__main__":
     # Define input files
-    root_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated/best_hits_by_organism"
+    root_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/blast_results_chromosome_separated/best_hits_by_organism"
     
     # Process files
     process_csv_files(root_dir)

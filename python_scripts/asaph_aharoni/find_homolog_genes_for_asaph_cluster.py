@@ -20,15 +20,11 @@ blast_db_dir = "/groups/itay_mayrose/alongonda/datasets/generated_blast_dbs"
 os.makedirs(blast_db_dir, exist_ok=True)
 
 # Query FASTA files
-query_fastas = [
-    "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/HAAAP_Transporters.fasta",
-    "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/adcs.fasta",
-    "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/cs.fasta",
-    "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/pABA_transporter.fasta"
-]
+example_mgc = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798"
+query_fastas = [os.path.join(example_mgc, f) for f in os.listdir(example_mgc) if f.endswith(".fasta")]
 
 # Output directory for BLAST results
-blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated"
+blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/blast_results_chromosome_separated"
 os.makedirs(blast_results_dir, exist_ok=True)
 
 # Function to convert CSV to FASTA, skipping empty files
@@ -86,7 +82,7 @@ def run_blastp(query_fasta, csv_file, blast_db):
     output_file = os.path.join(blast_results_dir, f"{os.path.basename(query_fasta)}_{csv_file}_results.txt")
     cmd = f"blastp -query {query_fasta} -db {blast_db} -evalue 0.01 -qcov_hsp_perc 70 -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -max_target_seqs 50 -gapopen 11 -gapextend 1 -out {output_file}"
     try:
-        # subprocess.run(cmd, shell=True, check=True)
+        subprocess.run(cmd, shell=True, check=True)
         return (query_fasta, csv_file, output_file)
     except subprocess.CalledProcessError:
         return None
@@ -166,7 +162,7 @@ def save_best_hits(best_hits_by_organism, output_dir):
             for hit in hits:
                 f.write(",".join(map(str, hit)) + "\n")
 
-        # print(f"✅ Best hits saved for organism: {organism}")
+        print(f"✅ Best hits saved for organism: {organism}")
 
 # Main execution loop to parse and save best hits
 best_hits_by_organism = defaultdict(dict)

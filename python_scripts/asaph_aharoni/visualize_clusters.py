@@ -10,7 +10,7 @@ from matplotlib.colors import to_rgb
 # Define file paths
 MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.csv"
 TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.nwk"
-COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/comparison_results.csv"
+COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000671/comparison_results.csv"
 
 # Load dataset organism mapping file
 if os.path.exists(MAPPING_FILE):
@@ -27,7 +27,7 @@ if os.path.exists(COMPARISON_FILE):
     
     # Extract only the relevant part of the directory to match mapping_dict
     def clean_directory_name(directory):
-        return directory.split("/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/blast_results_chromosome_separated/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
+        return directory.split("/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000671/blast_results_chromosome_separated/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
     
     comparison_df['Cleaned_Name'] = comparison_df['Directory'].apply(clean_directory_name)
     
@@ -250,22 +250,26 @@ def plot_metric_column(ax, metric_dict, colormap, title, y_positions, leaf_names
     """Draw a column with colored bars and values, using a strikethrough line for NaN values."""
     ax.set_xlim(0, 1)
     ax.set_xticks([])
-    ax.set_yticks(y_positions)
-    ax.set_yticklabels([])
-    ax.invert_yaxis()
+    ax.set_yticks([])
+    
+    # Set vertical limits to fully cover the tree height
+    ax.set_ylim(min(y_positions) - 1, max(y_positions) + 1)
+
     ax.set_title(title, fontsize=10)
 
     for i, name in enumerate(leaf_names):
+        y = y_positions[i]
         val = metric_dict.get(name, None)
         color = colormap.get(name, (1, 1, 1, 0))
-        ax.barh(y_positions[i], 1, color=color, edgecolor='none')
+        ax.barh(y, 1, color=color, edgecolor='none', height=1.0)
 
         if val is None or (isinstance(val, float) and np.isnan(val)):
             # Draw a horizontal line to indicate "deletion" (NaN)
-            ax.plot([0.1, 0.9], [y_positions[i]] * 2, color="black", linewidth=1.5)
+            ax.plot([0.1, 0.9], [y] * 2, color="black", linewidth=1.5)
         else:
             display_text = f"≥{val}" if val == 200 else str(val)
-            ax.text(0.5, y_positions[i], display_text, ha='center', va='center', fontsize=7, color='black')
+            ax.text(0.5, y, display_text, ha='center', va='center', fontsize=7, color='black')
+
 
 
 def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titles, cmap_name="viridis"):
@@ -297,7 +301,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
 
     # Convert label positions to Y coords in plot order
     leaf_names = sorted(label_positions, key=lambda name: label_positions[name])
-    y_positions = list(range(len(leaf_names)))
+    y_positions = np.linspace(0, len(leaf_names) - 1, len(leaf_names))
 
     # Plot metric columns
     for i, (metric_dict, title) in enumerate(zip(metrics, metric_titles)):
@@ -307,6 +311,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(title, fontsize=10)
+        ax.set_ylim(len(leaf_names) - 0.5, -0.5)
         ax.invert_yaxis()
 
         for y_idx, name in enumerate(leaf_names):
@@ -325,7 +330,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
 
 
 # Save figures
-output_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/summary_plots"
+output_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000671/summary_plots"
 os.makedirs(output_dir, exist_ok=True)
 
 # Load phylogenetic trees
@@ -339,8 +344,8 @@ plot_combined_tree_with_metrics(
     metric_titles=["Genes in the Genome", "Single-Chr Genes", "Cluster Length (Genes)"],
     cmap_name="viridis"
 )
-plot_tree_discrete(MultiChromosomeGenesTree, gene_counts, os.path.join(output_dir, "NumberOfHitsInGenome.png"))
-plot_tree_discrete(MaxChromosomeGenesTree, chromosome_lines, os.path.join(output_dir, "SingleChromosomeGenes.png"))
-plot_tree(ClusterLengthGenesTree, chromosome_cluster_length_genes, os.path.join(output_dir, "ClusterLengthGenes.png"))
+# plot_tree_discrete(MultiChromosomeGenesTree, gene_counts, os.path.join(output_dir, "NumberOfHitsInGenome.png"))
+# plot_tree_discrete(MaxChromosomeGenesTree, chromosome_lines, os.path.join(output_dir, "SingleChromosomeGenes.png"))
+# plot_tree(ClusterLengthGenesTree, chromosome_cluster_length_genes, os.path.join(output_dir, "ClusterLengthGenes.png"))
 
 print("✅ Phylogenetic trees saved successfully with separate metrics and scaled colors.")

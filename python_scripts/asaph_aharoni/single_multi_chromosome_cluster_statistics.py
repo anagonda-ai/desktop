@@ -114,8 +114,8 @@ def plot_results(results, output_dir, chunk_size=50):
     print(f"Plots saved in: {sub_dir}")
 
 if __name__ == "__main__":
-    root_directory = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated/best_hits_by_organism"  # Replace with the actual root directory
-    output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output"  # Replace with the actual output directory
+    root_directory = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/blast_results_chromosome_separated/best_hits_by_organism"  # Replace with the actual root directory
+    output_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798"  # Replace with the actual output directory
     output_filename = "comparison_results.csv"  # Output file name
     output_file = os.path.join(output_dir, output_filename)
 
