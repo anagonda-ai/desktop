@@ -9,13 +9,16 @@ from matplotlib.colors import to_rgb
 
 # Define file paths
 MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.csv"
-TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.nwk"
-COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000671/comparison_results.csv"
+TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/species.nwk"
+COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/comparison_results.csv"
 
 # Load dataset organism mapping file
 if os.path.exists(MAPPING_FILE):
     mapping_df = pd.read_csv(MAPPING_FILE)
-    mapping_dict = dict(zip(mapping_df['Original Filename'], mapping_df['Organism']))
+    mapping_df['Dataset ID'] = pd.to_numeric(mapping_df['Dataset ID'], errors='coerce')  # Ensure numeric for sorting
+    # Keep the latest dataset per organism (highest Dataset ID)
+    latest_df = mapping_df.loc[mapping_df.groupby("Organism")["Dataset ID"].idxmax()]
+    mapping_dict = dict(zip(latest_df['Original Filename'], latest_df['Organism']))
 else:
     mapping_df = None
     mapping_dict = {}
@@ -27,7 +30,7 @@ if os.path.exists(COMPARISON_FILE):
     
     # Extract only the relevant part of the directory to match mapping_dict
     def clean_directory_name(directory):
-        return directory.split("/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000671/blast_results_chromosome_separated/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
+        return directory.split("/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
     
     comparison_df['Cleaned_Name'] = comparison_df['Directory'].apply(clean_directory_name)
     
@@ -41,8 +44,8 @@ if os.path.exists(COMPARISON_FILE):
                 index_diff = int(chrom_df['row_index'].iloc[-1]) - int(chrom_df['row_index'].iloc[0]) + 1
                 return length, index_diff
         return None, None
-
-    print(comparison_df)
+    
+    # Apply the function to calculate the largest chromosome length and index difference
     comparison_df[['Largest Chromosome Length', 'Index Difference']] = pd.DataFrame(
         comparison_df.apply(calculate_largest_chromosome_length, axis=1).tolist()
     )
@@ -79,7 +82,7 @@ else:
 def get_color(value, min_val, max_val, cmap_name="viridis"):
     """Returns a color from a matplotlib colormap based on normalized value."""
     norm = mcolors.Normalize(vmin=min_val, vmax=max_val)
-    cmap = cm.get_cmap(cmap_name)
+    cmap = plt.colormaps[cmap_name]
     
     if value is not None:
         rgba = cmap(norm(value))
@@ -130,7 +133,7 @@ def plot_tree(tree, data_dict, filename, cmap_name="viridis"):
     Phylo.draw(tree, axes=ax, do_show=False)
 
     # Create colorbar
-    sm = cm.ScalarMappable(cmap=cm.get_cmap(cmap_name), norm=mcolors.Normalize(vmin=min_val, vmax=max_val))
+    sm = cm.ScalarMappable(cmap=plt.colormaps[cmap_name], norm=mcolors.Normalize(vmin=min_val, vmax=max_val))
     sm.set_array([])  # Empty array for color bar
     cbar = plt.colorbar(sm, ax=ax, orientation="vertical", fraction=0.02, pad=0.04)
     cbar.set_label(f"Value")
@@ -242,7 +245,7 @@ def normalize_metric_colors(data_dict, cmap_name="viridis"):
         norm = mcolors.Normalize(vmin=0, vmax=1)  # Default range if no valid values
     else:
         norm = mcolors.Normalize(vmin=min(filtered_values), vmax=max(filtered_values))
-    cmap = cm.get_cmap(cmap_name)
+    cmap = plt.colormaps[cmap_name]
     
     return {k.replace("_", " "): cmap(norm(v)) for k, v in data_dict.items() if v is not None}
 
@@ -330,7 +333,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
 
 
 # Save figures
-output_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000671/summary_plots"
+output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/summary_plots"
 os.makedirs(output_dir, exist_ok=True)
 
 # Load phylogenetic trees
@@ -344,8 +347,8 @@ plot_combined_tree_with_metrics(
     metric_titles=["Genes in the Genome", "Single-Chr Genes", "Cluster Length (Genes)"],
     cmap_name="viridis"
 )
-# plot_tree_discrete(MultiChromosomeGenesTree, gene_counts, os.path.join(output_dir, "NumberOfHitsInGenome.png"))
-# plot_tree_discrete(MaxChromosomeGenesTree, chromosome_lines, os.path.join(output_dir, "SingleChromosomeGenes.png"))
-# plot_tree(ClusterLengthGenesTree, chromosome_cluster_length_genes, os.path.join(output_dir, "ClusterLengthGenes.png"))
+plot_tree_discrete(MultiChromosomeGenesTree, gene_counts, os.path.join(output_dir, "NumberOfHitsInGenome.png"))
+plot_tree_discrete(MaxChromosomeGenesTree, chromosome_lines, os.path.join(output_dir, "SingleChromosomeGenes.png"))
+plot_tree(ClusterLengthGenesTree, chromosome_cluster_length_genes, os.path.join(output_dir, "ClusterLengthGenes.png"))
 
 print("✅ Phylogenetic trees saved successfully with separate metrics and scaled colors.")

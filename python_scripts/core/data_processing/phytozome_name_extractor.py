@@ -8,8 +8,8 @@ def extract_dataset_id(filename):
     Extracts the dataset ID from a filename.
     The dataset ID is the numeric part before "_v" or right before ".gene_transformed_filtered".
     """
-    match = re.search(r'_(\d+)(?:_v\d+|\.)', filename)
-    return match.group(1) if match else None
+    match = re.search(r'_\d{3}_', filename)
+    return match.group(0).strip('_') if match else None
 
 def get_organism_name(dataset_id):
     """Retrieves the organism name from Phytozome using the correct API."""

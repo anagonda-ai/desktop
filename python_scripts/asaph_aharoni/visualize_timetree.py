@@ -33,7 +33,9 @@ with Pool(processes=cpu_count()) as pool:
     results = pool.map(get_taxid, species_list)
 
 # **Filter out failed lookups**
-taxid_dict = {taxid: species for taxid, species in results if taxid}
+filtered_results = [result for result in results if result is not None]
+# **Create a dictionary of TaxIDs and species names**
+taxid_dict = {taxid: species for taxid, species in filtered_results if taxid}
 
 print(f"\n✅ Retrieved {len(taxid_dict)} valid NCBI TaxIDs.")
 
@@ -110,6 +112,7 @@ tree.write(outfile=tree_path, format=1)
 print("\n✅ NCBI Taxonomic Tree saved as 'ncbi_species_tree_named.nwk'")
 
 # **Step 7: Load and visualize tree**
+tree_path = os.path.join(output_dir, "species.nwk")
 tree = Phylo.read(tree_path, "newick")
 
 # **Step 9: Scale branch lengths by divergence times**
