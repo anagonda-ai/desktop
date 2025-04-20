@@ -303,7 +303,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
     ax_tree.set_yticks([])
 
     # Convert label positions to Y coords in plot order
-    leaf_names = sorted(label_positions, key=lambda name: label_positions[name])
+    leaf_names = sorted(label_positions, key=lambda name: label_positions[name], reverse=True)
     y_positions = np.linspace(0, len(leaf_names) - 1, len(leaf_names))
 
     # Plot metric columns
