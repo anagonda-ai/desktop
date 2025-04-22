@@ -8,7 +8,7 @@ def merge_fasta_files(files, output_file):
                 for line in infile:
                     if line.startswith(">"):
                         filename = os.path.basename(file).replace(".fasta","")
-                        outfile.write(f"{line.strip()}|{filename}\n")
+                        outfile.write(f"{line.strip()}${filename}\n")
                     else:
                         outfile.write(line)
 

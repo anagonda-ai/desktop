@@ -1,10 +1,11 @@
 import os
 import requests
+import csv
 from time import sleep
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Directory to store the data
-root_folder = "/groups/itay_mayrose/alongonda/datasets/KEGG"
+root_folder = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations"
 os.makedirs(root_folder, exist_ok=True)
 
 # Define the User-Agent header
@@ -33,23 +34,26 @@ print(f"Found {len(plants)} plant organisms in KEGG.")
 # Function to fetch nucleotide sequences for multiple genes at once
 def fetch_nucleotide_sequences(gene_batch):
     try:
-        gene_query = "+".join(gene_batch)  # Batch multiple genes in one request
+        gene_query = "+".join(gene_batch)
         url = f"https://rest.kegg.jp/get/{gene_query}/ntseq"
         response = requests.get(url, headers=headers).text.strip()
 
-        gene_sequences = {}
+        gene_info = {}
         if response.startswith(">"):
-            genes_data = response.split("\n>")
-            for entry in genes_data:
+            entries = response.split("\n>")
+            for entry in entries:
                 lines = entry.split("\n")
-                gene_id = lines[0].split()[0].replace(">", "").strip()
+                header = lines[0].replace(">", "").strip()
+                gene_id = header.split()[0]  # e.g., ath:AT1G18640
+                annotation = " ".join(header.split()[1:])  # everything after the gene ID
                 sequence = "".join(lines[1:])
-                gene_sequences[gene_id] = sequence
+                gene_info[gene_id] = (annotation, sequence)
 
-        return gene_sequences  # Dictionary of gene -> sequence
+        return gene_info  # Dictionary: gene_id -> (annotation, sequence)
     except Exception as e:
         print(f"Error fetching nucleotide sequences: {e}")
-        return {gene: "N/A" for gene in gene_batch}  # Return empty for failed requests
+        return {gene: ("N/A", "N/A") for gene in gene_batch}
+
 
 # Function to process a single pathway
 def process_pathway(org_folder, org_code, pathway_line):
@@ -77,10 +81,11 @@ def process_pathway(org_folder, org_code, pathway_line):
         return  # Skip empty pathways
 
     # Create a file for the pathway
-    pathway_file = os.path.join(org_folder, f"{pathway_id}.txt")
-    with open(pathway_file, "w") as f:
-        f.write(f"# Pathway: {pathway_id} - {pathway_name}\n\n")
-        f.write("# Gene_ID\tNucleotide_Sequence\n")
+    pathway_file = os.path.join(org_folder, f"{pathway_id}.csv")
+    # Create CSV file with header
+    with open(pathway_file, "w", newline="") as f:
+        writer = csv.writer(f)
+        writer.writerow(["Gene_ID", "Annotation", "Nucleotide_Sequence"])
 
     # Process genes in batches
     with ThreadPoolExecutor() as executor:
@@ -90,10 +95,12 @@ def process_pathway(org_folder, org_code, pathway_line):
             batch_futures.append(executor.submit(fetch_nucleotide_sequences, gene_batch))
 
         for future in as_completed(batch_futures):
-            gene_sequences = future.result()
-            with open(pathway_file, "a") as f:
-                for gene, nt_seq in gene_sequences.items():
-                    f.write(f"{gene}\t{nt_seq}\n")
+            gene_info = future.result()
+            with open(pathway_file, "a", newline="") as f:
+                writer = csv.writer(f)
+                for gene, (annotation, nt_seq) in gene_info.items():
+                    writer.writerow([gene, annotation, nt_seq])
+
 
             sleep(0.35)  # Respect KEGG rate limit (~3 requests/sec)
 

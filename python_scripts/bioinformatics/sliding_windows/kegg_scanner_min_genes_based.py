@@ -8,7 +8,7 @@ from Bio.Blast import NCBIXML
 
 # --- KEGG Annotation Functions ---
 
-def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.0, evalue_threshold=1e-3):
+def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.0, evalue_threshold=1e-3, coverage_threshold=70.0):
     df = pd.read_csv(genome_file)
     fasta_query = os.path.join(temp_dir, os.path.basename(genome_file).replace('.csv', '.fasta'))
 
@@ -36,32 +36,45 @@ def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.
 
     # Parse BLAST results
     id_to_pathway = {}
+    id_to_annotation = {}
     if os.path.exists(blast_output):
         print(f"Parsing BLAST results for {blast_output}...")
         with open(blast_output) as result_handle:
             blast_records = NCBIXML.parse(result_handle)
             for record in blast_records:
                 query_id = record.query
-                best_identity = 0
+                query_length = record.query_length
+                best_score = 0
                 best_pathway = None
+                best_annotation = None
+                
                 for alignment in record.alignments:
                     header = alignment.hit_id
                     if '|' in header:
-                        _, pathway_part = header.split('|')
+                        gene_id_part, annotation_part, pathway_part,  = header.split('$')
                         pathway_id = pathway_part.strip()
+                        annotation = annotation_part.strip()
                     else:
                         pathway_id = None
+                        annotation = None
+                    
                     for hsp in alignment.hsps:
+                        coverage = (hsp.align_length / query_length) * 100
                         identity = (hsp.identities / hsp.align_length) * 100
-                        if identity > best_identity:
-                            best_identity = identity
+                        bit_score = hsp.bits
+
+                        if coverage >= coverage_threshold and identity >= identity_threshold and bit_score > best_score:
+                            best_score = bit_score
                             best_pathway = pathway_id
-                if best_identity >= identity_threshold and best_pathway:
+                            best_annotation = annotation
+
+                if best_pathway:
                     id_to_pathway[query_id] = best_pathway
+                    id_to_annotation[query_id] = best_annotation
 
         # Annotate the dataframe
     df['pathway'] = df['id'].map(id_to_pathway)
-    print(df[df["pathway"].notna()])
+    df['annotation'] = df['id'].map(id_to_annotation)
     return df
 
 
@@ -156,12 +169,15 @@ def process_annotated_file(annotated_file, output_file, file_lock, window_size, 
             if len(window) >= min_genes:
                 window_df = pd.DataFrame(window)
                 genes_and_pathways = {row['id']: [row['pathway']] for idx, row in window_df.iterrows()}
+                genes_and_annotations = {row['id']: [row['annotation']] for idx, row in window_df.iterrows()}
                 pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
+                metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
                 if pathway:
                     group = {
                         'pathway': pathway,
                         'genes': ','.join(window_df['id']),
                         'metabolic_genes': ','.join(metabolic_genes),
+                        'metabolic_genes_annotations': ','.join(metabolic_annotations),
                         'start': window_df['start'].min(),
                         'end': window_df['end'].max(),
                         'source_file': annotated_file
@@ -189,10 +205,11 @@ def main():
         "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
         "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
     ]
-    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_fasta/merged_pathways_db"
-    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_scanner_min_genes_based"
-    temp_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/blast_temp"
-    annotated_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/annotated_genomes"
+    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_fasta/merged_pathways/merged_pathways_db"
+    head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output"
+    output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based")
+    temp_dir = os.path.join(head_output_dir, "blast_temp_annotated")
+    annotated_dir = os.path.join(head_output_dir, "annotated_genomes")
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
