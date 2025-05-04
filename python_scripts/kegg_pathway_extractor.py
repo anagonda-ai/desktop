@@ -5,7 +5,7 @@ from time import sleep
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Directory to store the data
-root_folder = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations"
+root_folder = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_test2"
 os.makedirs(root_folder, exist_ok=True)
 
 # Define the User-Agent header
@@ -14,7 +14,7 @@ headers = {
 }
 
 # KEGG API limit: ~3 requests per second
-BATCH_SIZE = 20  # Number of genes per batch request
+BATCH_SIZE = 10  # Number of genes per batch request
 
 # Fetch the list of all KEGG organisms
 print("Fetching KEGG organism list...")
@@ -28,26 +28,50 @@ for line in organisms_data:
     if len(parts) >= 4 and "Plants" in parts[3]:
         org_code, org_name = parts[1], parts[2]
         plants[org_code] = org_name
+        
+# Export the plants dictionary to a CSV file
+plants_csv_file = os.path.join(root_folder, "plants_list.csv")
+with open(plants_csv_file, "w", newline="") as f:
+    writer = csv.writer(f)
+    writer.writerow(["Organism_Code", "Organism_Name"])
+    for org_code, org_name in plants.items():
+        writer.writerow([org_code, org_name])
 
 print(f"Found {len(plants)} plant organisms in KEGG.")
+
+def parse_kegg_entry(entry_text):
+    parsed = {}
+    current_key = None
+    for line in entry_text.splitlines():
+        if not line.strip():
+            continue
+        if line[:12].strip():  # New field
+            current_key = line[:12].strip()
+            value = line[12:].strip() if not current_key == "AASEQ" else "" 
+            parsed[current_key] = value
+        else:  # Continuation of previous field
+            if current_key:
+                parsed[current_key] += line[12:].strip()
+
+    return parsed
 
 # Function to fetch nucleotide sequences for multiple genes at once
 def fetch_nucleotide_sequences(gene_batch):
     try:
         gene_query = "+".join(gene_batch)
-        url = f"https://rest.kegg.jp/get/{gene_query}/ntseq"
+        url = f"https://rest.kegg.jp/get/{gene_query}"
         response = requests.get(url, headers=headers).text.strip()
 
         gene_info = {}
-        if response.startswith(">"):
-            entries = response.split("\n>")
+        if response.startswith("ENTRY"):
+            entries = response.split("///")[:BATCH_SIZE]
             for entry in entries:
-                lines = entry.split("\n")
-                header = lines[0].replace(">", "").strip()
-                gene_id = header.split()[0]  # e.g., ath:AT1G18640
-                annotation = " ".join(header.split()[1:])  # everything after the gene ID
-                sequence = "".join(lines[1:])
-                gene_info[gene_id] = (annotation, sequence)
+                parsed = parse_kegg_entry(entry)
+                ORTHOLOGY = parsed.get("ORTHOLOGY", "")
+                ENTRY = parsed.get("ENTRY", "").split(" ")[0]
+                POSITION = parsed.get("POSITION", "")
+                AASEQ = parsed.get("AASEQ", "")
+                gene_info[ENTRY] = (ORTHOLOGY, AASEQ, POSITION)
 
         return gene_info  # Dictionary: gene_id -> (annotation, sequence)
     except Exception as e:
@@ -59,7 +83,10 @@ def fetch_nucleotide_sequences(gene_batch):
 def process_pathway(org_folder, org_code, pathway_line):
     if not pathway_line or "\t" not in pathway_line:
         return  # Skip invalid lines
-
+    if "metabol" not in pathway_line.lower():
+        print(f"  ⚠️ Skipping non-metabolic pathway: {pathway_line}")
+        return  # Skip non-metabolic pathways
+    
     pathway_id, pathway_name = pathway_line.split("\t")
 
     # Extract only the pathway ID
@@ -85,7 +112,7 @@ def process_pathway(org_folder, org_code, pathway_line):
     # Create CSV file with header
     with open(pathway_file, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow(["Gene_ID", "Annotation", "Nucleotide_Sequence"])
+        writer.writerow(["Gene_ID", "Annotation", "Nucleotide_Sequence", "Location"])
 
     # Process genes in batches
     with ThreadPoolExecutor() as executor:
@@ -98,8 +125,8 @@ def process_pathway(org_folder, org_code, pathway_line):
             gene_info = future.result()
             with open(pathway_file, "a", newline="") as f:
                 writer = csv.writer(f)
-                for gene, (annotation, nt_seq) in gene_info.items():
-                    writer.writerow([gene, annotation, nt_seq])
+                for gene, (annotation, nt_seq, location) in gene_info.items():
+                    writer.writerow([gene, annotation, nt_seq, location])
 
 
             sleep(0.35)  # Respect KEGG rate limit (~3 requests/sec)

@@ -5,8 +5,8 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 
 # Input files
-CSV_FILE = "/groups/itay_mayrose/alongonda/Plant_MGC/unique_min_genes_only_metabolic_genes_input_test/unique_potential_groups_w10.csv"
-OUTPUT_DIR = "/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+CSV_FILE = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/potential_groups_w10.csv"
+OUTPUT_DIR = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
 
 # Create output directory
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -39,7 +39,7 @@ def read_csv(file_path):
 def load_sequences(source_file):
     """Load metabolic gene sequences into a dictionary from the source file."""
     df = pd.read_csv(source_file)
-    return dict(zip(df["metabolic_gene"], df["sequence"]))
+    return dict(zip(df["id"], df["sequence"]))
 
 def process_entry(entry):
     """Process an entry and return the FASTA content instead of writing directly."""

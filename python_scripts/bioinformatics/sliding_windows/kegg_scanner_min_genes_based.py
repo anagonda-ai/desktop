@@ -1,26 +1,27 @@
+import re
 from threading import Lock
 import os
 import pandas as pd
 import subprocess
-from concurrent.futures import ThreadPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from tqdm import tqdm
 from Bio.Blast import NCBIXML
 
 # --- KEGG Annotation Functions ---
 
-def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.0, evalue_threshold=1e-3, coverage_threshold=70.0):
+def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.0, evalue_threshold=1e-3, coverage_threshold=90.0):
     df = pd.read_csv(genome_file)
     fasta_query = os.path.join(temp_dir, os.path.basename(genome_file).replace('.csv', '.fasta'))
-
-    # Save genome sequences to temporary FASTA
-    with open(fasta_query, "w") as f:
-        for idx, row in df.iterrows():
-            f.write(f">{row['id']}\n{row['sequence']}\n")
+    query_organism_name = os.path.basename(genome_file).split("_filtered")[0].replace("_"," ")
 
     # Run BLASTP
     blast_output = os.path.join(temp_dir, f"blast_result_{os.path.basename(genome_file)}.xml")
     print(f"Running BLASTP for {genome_file} against KEGG database...")
     if not os.path.exists(blast_output):
+        # Save genome sequences to temporary FASTA
+        with open(fasta_query, "w") as f:
+            for idx, row in df.iterrows():
+                f.write(f">{row['id']}\n{row['sequence']}\n")
         subprocess.run([
             "blastp", 
             "-task", "blastp-fast",
@@ -49,21 +50,26 @@ def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.
                 best_annotation = None
                 
                 for alignment in record.alignments:
-                    header = alignment.hit_id
-                    if '|' in header:
-                        gene_id_part, annotation_part, pathway_part,  = header.split('$')
+                    header = alignment.hit_def
+                    if '$' in header:
+                        gene_id_part, annotation_part, pathway_part = header.split('$')
                         pathway_id = pathway_part.strip()
                         annotation = annotation_part.strip()
+                        target_organism = re.sub(r'\d', '', pathway_part.strip())
+                        plants_list = pd.read_csv("/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_test2/plants_list.csv")
+                        organism_name = plants_list[plants_list["Organism_Code"]==target_organism]["Organism_Name"].iloc[0].lower()
+                        
                     else:
                         pathway_id = None
                         annotation = None
+                        organism_name = None
                     
                     for hsp in alignment.hsps:
                         coverage = (hsp.align_length / query_length) * 100
                         identity = (hsp.identities / hsp.align_length) * 100
                         bit_score = hsp.bits
 
-                        if coverage >= coverage_threshold and identity >= identity_threshold and bit_score > best_score:
+                        if query_organism_name in organism_name and coverage >= coverage_threshold and identity >= identity_threshold and bit_score > best_score:
                             best_score = bit_score
                             best_pathway = pathway_id
                             best_annotation = annotation
@@ -84,6 +90,7 @@ def annotate_genomes_once(genome_dirs, kegg_db, temp_dir, annotated_dir, max_wor
 
     genome_files = []
     for genome_dir in genome_dirs:
+        print(f"Searching for genome files in {genome_dir}...", flush=True)
         for file in os.listdir(genome_dir):
             if file.endswith('.csv'):
                 genome_files.append(os.path.join(genome_dir, file))
@@ -91,6 +98,7 @@ def annotate_genomes_once(genome_dirs, kegg_db, temp_dir, annotated_dir, max_wor
     print(f"Found {len(genome_files)} genome files to annotate.")
 
     def annotate_single_file(genome_file):
+        print(f"Processing file: {genome_file}", flush=True)
         filename = os.path.basename(genome_file).replace('.csv', '_annotated.csv')
         output_path = os.path.join(annotated_dir, filename)
 
@@ -152,6 +160,7 @@ def process_annotated_file(annotated_file, output_file, file_lock, window_size, 
     df["index"] = df.index
     filtered_df = df[df["pathway"].notna()]
     chromosomes = filtered_df['chromosome'].unique()
+    prev_matches = set()
 
     for chromosome in chromosomes:
         chromosome_data = filtered_df[filtered_df['chromosome'] == chromosome]
@@ -172,7 +181,8 @@ def process_annotated_file(annotated_file, output_file, file_lock, window_size, 
                 genes_and_annotations = {row['id']: [row['annotation']] for idx, row in window_df.iterrows()}
                 pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
                 metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
-                if pathway:
+                if pathway and not tuple(metabolic_genes) in prev_matches:
+                    prev_matches.add(tuple(metabolic_genes))
                     group = {
                         'pathway': pathway,
                         'genes': ','.join(window_df['id']),
@@ -200,16 +210,18 @@ def create_output_subdir(output_dir, min_genes):
 
 
 def main():
+    full_genome_dir = "/groups/itay_mayrose/alongonda/datasets/full_genomes"
+    # Define genome directories
     genome_dirs = [
-        "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
-        "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
-        "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
+        os.path.join(full_genome_dir, "ensembl/processed_annotations_test_no_chloroplast_with_sequences"),
+        os.path.join(full_genome_dir, "phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"),
+        os.path.join(full_genome_dir, "plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences")
     ]
-    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_fasta/merged_pathways/merged_pathways_db"
+    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_test2_fasta/merged_metabolic_pathways/merged_metabolic_pathways_db"
     head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output"
-    output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based")
-    temp_dir = os.path.join(head_output_dir, "blast_temp_annotated")
-    annotated_dir = os.path.join(head_output_dir, "annotated_genomes")
+    output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
+    temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
+    annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
 
     if not os.path.exists(output_dir):
         os.makedirs(output_dir)
@@ -226,8 +238,9 @@ def main():
 
     # Stage 2: Sliding window clustering
     annotated_files = [os.path.join(annotated_dir, f) for f in os.listdir(annotated_dir) if f.endswith('_annotated.csv')]
+    print(annotated_files)
 
-    for window_size in range(5, 21):
+    for window_size in [10]:
         for min_genes in [3]:
             min_genes_subdir = create_output_subdir(output_dir, min_genes)
             output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")

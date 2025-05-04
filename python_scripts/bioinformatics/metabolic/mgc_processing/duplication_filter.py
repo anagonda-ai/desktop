@@ -57,8 +57,8 @@ def check_identity(mgc_directory, candidate_directory, output_file):
     return unmatched_candidates
 
 def main():
-    mgc_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/csv_files"
-    candidate_directory = "/groups/itay_mayrose/alongonda/datasets/plantcyc/pmn_mgc_potential/mgc_candidates_process/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    mgc_directory = "/groups/itay_mayrose/alongonda/datasets/MIBIG/csv_files"
+    candidate_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     output_file = os.path.join(candidate_directory, "comparison_results.txt")
     
     # Check the identity of the candidates

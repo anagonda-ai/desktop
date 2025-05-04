@@ -10,9 +10,8 @@ def csv_to_fasta(csv_file, fasta_file):
         for row in reader:
             header = f">{row['Gene_ID']}${row['Annotation']}"
             # Convert nucleotide sequence to protein sequence
-            nucleotide_sequence = Seq(row['Nucleotide_Sequence'])
-            sequence = str(nucleotide_sequence.translate())
-            outfile.write(f"{header}\n{sequence}\n")
+            nucleotide_sequence = row['Nucleotide_Sequence']
+            outfile.write(f"{header}\n{nucleotide_sequence}\n")
 
 def process_file(csv_file, input_dir, output_dir):
     relative_path = os.path.relpath(os.path.dirname(csv_file), input_dir)
@@ -34,6 +33,6 @@ def process_directory(input_dir, output_dir):
 
 if __name__ == "__main__":
     
-    input_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations"
-    output_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_fasta"
+    input_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_test2"
+    output_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_test2_fasta"
     process_directory(input_dir, output_dir)

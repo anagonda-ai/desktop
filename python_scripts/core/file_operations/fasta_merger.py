@@ -22,12 +22,10 @@ def find_fasta_files(base_dir):
     return fasta_files
 
 def main():
-    if len(sys.argv) != 3:
-        print("Usage: python merge_fasta_files.py <fasta_dir> <file_name>")
-        sys.exit(1)
 
-    fasta_paths_dir = sys.argv[1]
-    file_name = sys.argv[2]
+
+    fasta_paths_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_test2_fasta"
+    file_name = "merged_metabolic_pathways"
 
     files = find_fasta_files(fasta_paths_dir)
 
