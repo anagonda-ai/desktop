@@ -33,6 +33,6 @@ def process_directory(input_dir, output_dir):
 
 if __name__ == "__main__":
     
-    input_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_test2"
-    output_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_test2_fasta"
+    input_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG/origin"
+    output_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG/fasta"
     process_directory(input_dir, output_dir)

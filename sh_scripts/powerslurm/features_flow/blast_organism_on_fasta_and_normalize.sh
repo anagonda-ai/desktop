@@ -30,7 +30,7 @@ mkdir -p "$OUT_DIR"
 OUT="$OUT_DIR/blast_output.txt"
 
 
-blastp -query "$INPUT_FASTA" -db "$DB" -out "$OUT" -outfmt 6 -evalue 1e-5 -num_threads $(nproc)
+srun blastp -query "$INPUT_FASTA" -db "$DB" -out "$OUT" -outfmt 6 -evalue 1e-5 -num_threads $(nproc)
 
 # Check if the BLAST run was successful
 if [ $? -eq 0 ]; then
@@ -54,7 +54,7 @@ if [ $? -eq 0 ]; then
         python3 /groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/sequence_analysis/blast_utils/score_filter.py "$NORMALIZED_FILE"
 
         # Remove the intermediate files
-        rm "$$OUT" "$$CSV_OUT" "$$NORMALIZED_FILE"
+        rm "$OUT" "$CSV_OUT" "$NORMALIZED_FILE"
         
         # Check if the filtering script ran successfully
         if [ $? -eq 0 ]; then
