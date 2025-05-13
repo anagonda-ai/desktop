@@ -1,5 +1,6 @@
 import os
 import csv
+from pathlib import Path
 from Bio import SeqIO
 import networkx as nx
 import subprocess
@@ -94,6 +95,12 @@ def prepare_fasta(file_path, temp_dir):
     
 def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
     db_name = os.path.join(db_dir, os.path.basename(target_fasta).replace(".fasta", ""))
+    help_file_path = Path(os.path.join(output_dir, "sbatch_output_paths.txt"))
+    
+    if not help_file_path.exists():
+        help_file_path.touch()  # Create the empty file
+        print(f"Created file: {help_file_path}")
+
     output_path = os.path.join(
         output_dir,
         f"{os.path.basename(query_fasta).replace('.fasta','')}_vs_{os.path.basename(target_fasta).replace('.fasta','')}.txt"
@@ -102,15 +109,15 @@ def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
     # Make BLAST DB if not exists
     if not os.path.exists(f"{db_name}.pin"):
         subprocess.run(["makeblastdb", "-in", target_fasta, "-dbtype", "prot", "-out", db_name], check=True)
-
-    blastp_cline = NcbiblastpCommandline(
-        query=query_fasta,
-        db=db_name,
-        evalue=EVALUE_THRESHOLD,
-        outfmt="6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
-        out=output_path
-    )
-    stdout, stderr = blastp_cline()
+        
+    if not os.path.exists(output_path):
+        with open(help_file_path, 'r') as help_file:
+            if output_path not in help_file.read():
+                
+                subprocess.run(["sbatch", "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/blast_with_params.sh", query_fasta, db_name, output_path], check=True)
+                # Log the output path to a help file
+                with open(help_file_path, 'a') as help_file_append:
+                    help_file_append.write(f"{output_path}\n")
     return output_path
 
 def parse_and_filter_blast(blast_path):
@@ -171,9 +178,11 @@ def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
 
 def blast_all_vs_all_parallel(merged_list, output_root):
     blast_output_dir = os.path.join(output_root, "blast_all_vs_all")
+    blast_output_dir_results = os.path.join(blast_output_dir, "results")
     blast_db_dir = os.path.join(blast_output_dir, "blast_dbs")
     temp_dir = os.path.join(blast_output_dir, "temp_fastas")
     os.makedirs(blast_output_dir, exist_ok=True)
+    os.makedirs(blast_output_dir_results, exist_ok=True)
     os.makedirs(blast_db_dir, exist_ok=True)
     os.makedirs(temp_dir, exist_ok=True)
 
@@ -195,7 +204,7 @@ def blast_all_vs_all_parallel(merged_list, output_root):
     results = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=NUM_THREADS) as executor:
         future_to_blast = {
-            executor.submit(run_single_blast, q, t, blast_db_dir, blast_output_dir): (q, t)
+            executor.submit(run_single_blast, q, t, blast_db_dir, blast_output_dir_results): (q, t)
             for q, t in tasks
         }
         for future in concurrent.futures.as_completed(future_to_blast):
@@ -209,7 +218,7 @@ def blast_all_vs_all_parallel(merged_list, output_root):
     dedup_list = group_and_filter_redundant_files(results, fasta_map, blast_output_dir)
 
 def main():
-    mgc_directory = "/groups/itay_mayrose/alongonda/datasets/MIBIG/csv_files"
+    mgc_directory = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
     candidate_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     output_file = os.path.join(candidate_directory, "comparison_results.txt")
     
