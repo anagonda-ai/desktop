@@ -1,6 +1,7 @@
 import os
 import csv
 from pathlib import Path
+from time import time
 from Bio import SeqIO
 import networkx as nx
 import subprocess
@@ -10,10 +11,10 @@ from networkx import Graph
 from networkx.algorithms.matching import max_weight_matching
 import pandas as pd
 
-EVALUE_THRESHOLD = 1e-5
+EVALUE_THRESHOLD = 0.001
 IDENTITY_THRESHOLD = 70.0
 COVERAGE_THRESHOLD = 70.0
-NUM_THREADS = 8
+NUM_THREADS = 26
 
 def read_sequences_from_csv(file_path):
     sequences = set()
@@ -44,6 +45,8 @@ def check_identity(mgc_directory, candidate_directory, output_file):
     with open(output_file, 'w') as out_file:
         for fasta_filename in os.listdir(candidate_directory):
             if fasta_filename.endswith(".fasta") or fasta_filename.endswith(".fa"):
+                if fasta_filename.endswith("merged_mgc_candidartes.fasta"):
+                    continue
                 fasta_path = os.path.join(candidate_directory, fasta_filename)
                 candidate_sequences = read_sequences_from_fasta(fasta_path)
                 all_match_found = False
@@ -111,13 +114,19 @@ def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
         subprocess.run(["makeblastdb", "-in", target_fasta, "-dbtype", "prot", "-out", db_name], check=True)
         
     if not os.path.exists(output_path):
-        with open(help_file_path, 'r') as help_file:
-            if output_path not in help_file.read():
-                
-                subprocess.run(["sbatch", "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/blast_with_params.sh", query_fasta, db_name, output_path], check=True)
-                # Log the output path to a help file
-                with open(help_file_path, 'a') as help_file_append:
-                    help_file_append.write(f"{output_path}\n")
+        print(f"Running BLAST for {query_fasta} against {target_fasta}")
+        # Run BLAST
+        blastp_cline = NcbiblastpCommandline(
+            query=query_fasta,
+            db=db_name,
+            evalue=EVALUE_THRESHOLD,
+            outfmt="6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
+            out=output_path
+        )
+        stdout, stderr = blastp_cline()
+        print(f"BLAST completed: {output_path}")
+    else:
+        print(f"BLAST output already exists: {output_path}")
     return output_path
 
 def parse_and_filter_blast(blast_path):

@@ -19,7 +19,7 @@ def find_fasta_files(input_file):
     return fasta_files
 
 def main():
-    input_file = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/merged_list.txt"
+    input_file = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/blast_all_vs_all/deduplicated_file_list.txt"
     output_file_name = "merged_mgc_candidartes"
 
     files = find_fasta_files(input_file)

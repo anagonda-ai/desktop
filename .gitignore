@@ -12,3 +12,6 @@ foldseek/
 
 # Ignore arabidopsis directory
 arabidopsis/
+
+# Ignore alphafold_pdbs directory
+alphafold_pdbs/

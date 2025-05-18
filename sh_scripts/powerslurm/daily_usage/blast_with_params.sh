@@ -18,4 +18,5 @@ DB=$2
 BLAST_OUTPUT=$3
 
 
-blastp -task blastp-fast -query "$QUERY_FASTA" -db "$DB" -out "$BLAST_OUTPUT" -outfmt 5 -evalue 0.001 -num_threads $(nproc) -max_target_seqs 5
+
+blastp -query "$QUERY_FASTA" -db "$DB" -out "$BLAST_OUTPUT" -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore" -evalue 0.001 -num_threads $(nproc) -max_target_seqs 5
