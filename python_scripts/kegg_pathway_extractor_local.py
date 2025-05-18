@@ -5,7 +5,7 @@ from time import sleep
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Setup
-root_folder = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules"
+root_folder = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic_local"
 os.makedirs(root_folder, exist_ok=True)
 
 headers = {
@@ -51,6 +51,25 @@ def parse_kegg_entry(entry_text):
                 parsed[current_key] += line[12:].strip()
     return parsed
 
+# Check if a module is metabolic by querying its metadata
+module_class_cache = {}
+
+def is_metabolic_module(module_id):
+    general_module_id = module_id.split("_")[1]
+    if general_module_id in module_class_cache:
+        return module_class_cache[general_module_id]
+    try:
+        url = f"https://rest.kegg.jp/get/{general_module_id}"
+        response = requests.get(url, headers=headers).text
+        is_metabolic = any("metabol" in line for line in response.splitlines() if line.startswith("CLASS"))
+        module_class_cache[general_module_id] = is_metabolic
+        sleep(SLEEP_TIME)  # throttle per KEGG rules
+        return is_metabolic
+    except Exception as e:
+        print(f"⚠️ Failed to fetch module {module_id}: {e}")
+        module_class_cache[module_id] = False
+        return False
+
 # Batch gene fetch
 def fetch_gene_info(gene_batch, org_code):
     try:
@@ -70,7 +89,7 @@ def fetch_gene_info(gene_batch, org_code):
                 )
         return gene_info
     except Exception as e:
-        print(f"Error: {e}")
+        print(f"Error fetching gene info: {e}")
         return {g: ("N/A", "N/A", "N/A") for g in gene_batch}
 
 # Process one organism
@@ -86,7 +105,7 @@ def process_organism(org_code, org_name):
     module_url = f"https://rest.kegg.jp/link/module/{org_code}"
     module_data = requests.get(module_url, headers=headers).text.strip().split("\n")
 
-    # Build dict: module → list of genes
+    # Build dict: module → list of genes (only metabolic)
     module_dict = {}
     for line in module_data:
         if "\t" not in line:
@@ -94,7 +113,9 @@ def process_organism(org_code, org_name):
         gene, module = line.split("\t")
         gene_id = gene.split(":")[1]
         module_id = module.split(":")[1]
-        module_dict.setdefault(module_id, []).append(gene_id)
+
+        if is_metabolic_module(module_id):
+            module_dict.setdefault(module_id, []).append(gene_id)
 
     for module_id, genes in module_dict.items():
         module_file = os.path.join(org_folder, f"{module_id}.csv")
@@ -122,4 +143,4 @@ def process_organism(org_code, org_name):
 for code, name in plants.items():
     process_organism(code, name)
 
-print("✅ All module-based KEGG data collected.")
+print("✅ All metabolic module-based KEGG data collected.")
