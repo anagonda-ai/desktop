@@ -114,7 +114,7 @@ def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
         subprocess.run(["makeblastdb", "-in", target_fasta, "-dbtype", "prot", "-out", db_name], check=True)
         
     if not os.path.exists(output_path):
-        print(f"Running BLAST for {query_fasta} against {target_fasta}")
+        print(f"Running BLAST for {os.path.basename(query_fasta)} against {os.path.basename(target_fasta)}")
         # Run BLAST
         blastp_cline = NcbiblastpCommandline(
             query=query_fasta,
@@ -123,7 +123,15 @@ def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
             outfmt="6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
             out=output_path
         )
-        stdout, stderr = blastp_cline()
+        command_str = str(blastp_cline)
+        try:
+            result = subprocess.run(command_str, shell=True, check=True, capture_output=True, text=True)
+        except subprocess.CalledProcessError as e:
+            print(f"❌ BLAST failed for {query_fasta} vs {target_fasta}:")
+            print(f"Command: {command_str}")
+            print(f"Stdout: {e.stdout}")
+            print(f"Stderr: {e.stderr}")
+            raise
         print(f"BLAST completed: {output_path}")
     else:
         print(f"BLAST output already exists: {output_path}")
@@ -228,7 +236,7 @@ def blast_all_vs_all_parallel(merged_list, output_root):
 
 def main():
     mgc_directory = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
-    candidate_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    candidate_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     output_file = os.path.join(candidate_directory, "comparison_results.txt")
     
     # Check the identity of the candidates

@@ -1,4 +1,5 @@
 import os
+import glob
 
 def merge_fasta_files(files, output_file):
     with open(output_file, 'w') as outfile:
@@ -11,24 +12,23 @@ def merge_fasta_files(files, output_file):
                     else:
                         outfile.write(line)
 
-def find_fasta_files(input_file):
-    fasta_files = []
-    with open(input_file, 'r') as f:
-        fasta_files = [file.strip() for file in f.readlines()]
-
-    return fasta_files
-
 def main():
-    input_file = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/blast_all_vs_all/deduplicated_file_list.txt"
-    output_file_name = "merged_mgc_candidartes"
+    search_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta"
+    # Recursively find all .fasta files in a directory and its subdirectories using os.walk
+    fasta_files = []
+    for root, dirs, files in os.walk(search_dir):
+        for file in files:
+            if file.endswith(".fasta"):
+                fasta_files.append(os.path.join(root, file))
+                
+                
+                
+    output_file_name = "merged_metabolic_pathways"
 
-    files = find_fasta_files(input_file)
-
-    output_dir = os.path.dirname(input_file)
-    output_file = os.path.join(output_dir, f"{output_file_name}.fasta")
+    output_file = os.path.join(search_dir, f"{output_file_name}.fasta")
     
     # Merge the found FASTA files into one big file
-    merge_fasta_files(files, output_file)
+    merge_fasta_files(fasta_files, output_file)
     print(f"Merged FASTA file written to: {output_file}")
 
 if __name__ == '__main__':

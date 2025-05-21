@@ -55,7 +55,7 @@ def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.
                         gene_id_part, annotation_part, pathway_part = header.split('$')
                         pathway_id = pathway_part.strip()
                         annotation = annotation_part.strip()
-                        target_organism = re.sub(r'\d', '', pathway_part.strip())
+                        target_organism = re.sub(r'\d', '', pathway_part.strip()).split('_')[0]
                         plants_list = pd.read_csv("/groups/itay_mayrose/alongonda/datasets/KEGG/origin/plants_list.csv")
                         organism_name = plants_list[plants_list["Organism_Code"]==target_organism]["Organism_Name"].iloc[0].lower()
                         
@@ -217,8 +217,8 @@ def main():
         os.path.join(full_genome_dir, "phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"),
         os.path.join(full_genome_dir, "plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences")
     ]
-    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG/fasta/merged_metabolic_pathways/merged_metabolic_pathways_db"
-    head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output"
+    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta/merged_metabolic_pathways/merged_metabolic_pathways"
+    head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")

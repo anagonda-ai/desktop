@@ -8,10 +8,11 @@ def csv_to_fasta(csv_file, fasta_file):
     with open(csv_file, 'r') as infile, open(fasta_file, 'w') as outfile:
         reader = csv.DictReader(infile)
         for row in reader:
-            header = f">{row['Gene_ID']}${row['Annotation']}"
+            first_part = row['Locus_Tag'] if row['Locus_Tag'] else row['Protein_ID'] if row['Protein_ID'] else row['Gene']
+            header = f">{first_part} | {os.path.basename(csv_file).replace('.csv', '')} | {row['Start']} | {row['End']}"
             # Convert nucleotide sequence to protein sequence
-            nucleotide_sequence = row['Nucleotide_Sequence']
-            outfile.write(f"{header}\n{nucleotide_sequence}\n")
+            protein_sequence = row['Translation']
+            outfile.write(f"{header}\n{protein_sequence}\n")
 
 def process_file(csv_file, input_dir, output_dir):
     relative_path = os.path.relpath(os.path.dirname(csv_file), input_dir)
@@ -33,6 +34,6 @@ def process_directory(input_dir, output_dir):
 
 if __name__ == "__main__":
     
-    input_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG/origin"
-    output_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG/fasta"
+    input_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
+    output_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/fasta_files"
     process_directory(input_dir, output_dir)
