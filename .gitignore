@@ -15,3 +15,6 @@ arabidopsis/
 
 # Ignore alphafold_pdbs directory
 alphafold_pdbs/
+
+# Large output files
+python_scripts/bioinformatics/protein_global_alignment/graph_output_mwp.csv
