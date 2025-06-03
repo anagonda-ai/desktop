@@ -1,3 +1,4 @@
+import os
 import requests
 import subprocess
 from pathlib import Path
@@ -15,7 +16,7 @@ UNIPROT_SEARCH_API = "https://rest.uniprot.org/uniprotkb/search?query={}&fields=
 ALPHAFOLD_PDB_URL = "https://alphafold.ebi.ac.uk/files/AF-{}-F1-model_v4.pdb"
 
 SOURCE_1 = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/fasta_files"
-SOURCE_2 = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+SOURCE_2 = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/"
 
 def extract_orf_names_from_fasta(fasta_file):
     orf_data = []
@@ -92,7 +93,8 @@ def predict_structure_with_colabfold(orf_name, sequence, output_dir):
         return f"[!] ColabFold error for {orf_name}: {e}"
 
 def main(fasta_list_path, output_root="alphafold_pdbs"):
-    output_root = Path(output_root)
+    output_dir = os.path.dirname(fasta_list_path)
+    output_root = Path(output_dir)
     output_root.mkdir(exist_ok=True)
     orf_to_fasta = {}
     sequences = {}
@@ -136,5 +138,5 @@ def main(fasta_list_path, output_root="alphafold_pdbs"):
                 print(colab_result)
 
 if __name__ == "__main__":
-    fasta_list_file = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/blast_all_vs_all/deduplicated_file_list.txt"
+    fasta_list_file = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/blast_all_vs_all/deduplicated_file_list.txt"
     main(fasta_list_file)

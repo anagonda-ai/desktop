@@ -9,7 +9,7 @@ from Bio.Blast import NCBIXML
 
 # --- KEGG Annotation Functions ---
 
-def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.0, evalue_threshold=1e-3, coverage_threshold=90.0):
+def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=90.0, evalue_threshold=1e-3, coverage_threshold=90.0):
     df = pd.read_csv(genome_file)
     fasta_query = os.path.join(temp_dir, os.path.basename(genome_file).replace('.csv', '.fasta'))
     query_organism_name = os.path.basename(genome_file).split("_filtered")[0].replace("_"," ")
@@ -52,24 +52,24 @@ def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=70.
                 for alignment in record.alignments:
                     header = alignment.hit_def
                     if '$' in header:
-                        gene_id_part, annotation_part, pathway_part = header.split('$')
+                        annotation_part, pathway_part = header.split('$')
                         pathway_id = pathway_part.strip()
-                        annotation = annotation_part.strip()
-                        target_organism = re.sub(r'\d', '', pathway_part.strip()).split('_')[0]
-                        plants_list = pd.read_csv("/groups/itay_mayrose/alongonda/datasets/KEGG/origin/plants_list.csv")
-                        organism_name = plants_list[plants_list["Organism_Code"]==target_organism]["Organism_Name"].iloc[0].lower()
+                        annotation = annotation_part.split(" | ")[0].strip()
+                        # target_organism = re.sub(r'\d', '', pathway_part.strip()).split('_')[0]
+                        # plants_list = pd.read_csv("/groups/itay_mayrose/alongonda/datasets/KEGG/origin/plants_list.csv")
+                        # organism_name = plants_list[plants_list["Organism_Code"]==target_organism]["Organism_Name"].iloc[0].lower()
                         
                     else:
                         pathway_id = None
                         annotation = None
-                        organism_name = None
+                        # organism_name = None
                     
                     for hsp in alignment.hsps:
                         coverage = (hsp.align_length / query_length) * 100
                         identity = (hsp.identities / hsp.align_length) * 100
                         bit_score = hsp.bits
 
-                        if query_organism_name in organism_name and coverage >= coverage_threshold and identity >= identity_threshold and bit_score > best_score:
+                        if coverage >= coverage_threshold and identity >= identity_threshold and bit_score > best_score:
                             best_score = bit_score
                             best_pathway = pathway_id
                             best_annotation = annotation
@@ -202,6 +202,34 @@ def process_annotated_file(annotated_file, output_file, file_lock, window_size, 
     return total_matches
 
 
+def merge_annotated_mibig(annotated_dir, annotated_files):    
+    megred_dir = os.path.join(annotated_dir, "merged_annotation")
+    os.makedirs(megred_dir, exist_ok=True)
+    
+    output_path = os.path.join(megred_dir, "merged_annotation_id_eq_annotation.csv")
+    
+    # List to store filtered DataFrames
+    filtered_dfs = []
+
+    for annotated_file in annotated_files:
+        try:
+            df = pd.read_csv(annotated_file)
+            df = df[df["annotation"].notna() & (df["annotation"] != "")]
+            df["source_file"] = annotated_file  # Add source file column
+            filtered_dfs.append(df)
+        except Exception as e:
+            print(f"❌ Failed to process {annotated_file}: {e}")
+
+    # Merge and export
+    if filtered_dfs:
+        merged_df = pd.concat(filtered_dfs, ignore_index=True)
+        merged_df.to_csv(output_path, index=False)
+        print(f"✅ Merged filtered data saved to: {output_path}")
+    else:
+        print("⚠️ No matching rows found across files.")
+
+
+
 def create_output_subdir(output_dir, min_genes):
     subdir = os.path.join(output_dir, f"min_genes_{min_genes}")
     if not os.path.exists(subdir):
@@ -217,9 +245,9 @@ def main():
         os.path.join(full_genome_dir, "phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"),
         os.path.join(full_genome_dir, "plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences")
     ]
-    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta/merged_metabolic_pathways/merged_metabolic_pathways"
-    head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output"
-    output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
+    kegg_db = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/fasta_files/merged_metabolic_pathways/merged_metabolic_pathways_blastdb"
+    head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output"
+    output_dir = os.path.join(head_output_dir, "mibig_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
 
@@ -239,33 +267,35 @@ def main():
     # Stage 2: Sliding window clustering
     annotated_files = [os.path.join(annotated_dir, f) for f in os.listdir(annotated_dir) if f.endswith('_annotated.csv')]
     print(annotated_files)
+    
+    merge_annotated_mibig(annotated_dir, annotated_files)
 
-    for window_size in [10]:
-        for min_genes in [3]:
-            min_genes_subdir = create_output_subdir(output_dir, min_genes)
-            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
-            if os.path.exists(output_file):
-                os.remove(output_file)
-            file_lock = Lock()
-            total_matches = 0
-            with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    futures = [
-                        executor.submit(
-                            process_annotated_file,
-                            annotated_file,
-                            output_file,
-                            file_lock,
-                            window_size,
-                            min_genes
-                        )
-                        for annotated_file in annotated_files
-                    ]
-                    for future in as_completed(futures):
-                        total_matches += future.result()
-                        pbar.update(1)
-            print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
-            print(f"Results saved to: {output_file}")
+    # for window_size in [10]:
+    #     for min_genes in [3]:
+    #         min_genes_subdir = create_output_subdir(output_dir, min_genes)
+    #         output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
+    #         if os.path.exists(output_file):
+    #             os.remove(output_file)
+    #         file_lock = Lock()
+    #         total_matches = 0
+    #         with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
+    #             with ThreadPoolExecutor(max_workers=max_workers) as executor:
+    #                 futures = [
+    #                     executor.submit(
+    #                         process_annotated_file,
+    #                         annotated_file,
+    #                         output_file,
+    #                         file_lock,
+    #                         window_size,
+    #                         min_genes
+    #                     )
+    #                     for annotated_file in annotated_files
+    #                 ]
+    #                 for future in as_completed(futures):
+    #                     total_matches += future.result()
+    #                     pbar.update(1)
+    #         print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
+    #         print(f"Results saved to: {output_file}")
 
 
 if __name__ == "__main__":

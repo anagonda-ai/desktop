@@ -13,7 +13,7 @@ def merge_fasta_files(files, output_file):
                         outfile.write(line)
 
 def main():
-    search_dir = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta"
+    search_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/fasta_files"
     # Recursively find all .fasta files in a directory and its subdirectories using os.walk
     fasta_files = []
     for root, dirs, files in os.walk(search_dir):

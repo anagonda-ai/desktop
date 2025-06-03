@@ -31,8 +31,6 @@ class BlastHit:
     identity: float
     coverage: float
     combined_score: float
-    source_organism: str
-    query_organism: str
 
     def to_dict(self):
         return self.__dict__
@@ -41,40 +39,22 @@ class BlastPipeline:
     def __init__(self):
         self.start_time = time.time()
         self._setup_directories()
-        self._load_mgc_mapping()
         
     def _setup_directories(self):
         """Create necessary directories if they don't exist"""
         for dir_path in [OUTPUT_BASE, OUTPUT_DIR]:
             Path(dir_path).mkdir(parents=True, exist_ok=True)
-            
-    def _load_mgc_mapping(self):
-        """Load MGC to organism mapping with validation"""
-        self.mgc_to_organism = {}
-        if os.path.exists(MGC_TO_ORGANISM_FILE):
-            try:
-                df_org = pd.read_csv(MGC_TO_ORGANISM_FILE)
-                if not all(col in df_org.columns for col in ["MGC", "Organism"]):
-                    raise ValueError("Required columns 'MGC' and 'Organism' not found")
-                self.mgc_to_organism = dict(zip(df_org["MGC"], df_org["Organism"]))
-                logger.info(f"Loaded {len(self.mgc_to_organism)} MGC to organism mappings")
-            except Exception as e:
-                logger.error(f"Failed to load MGC mapping: {str(e)}")
-                raise
-        else:
-            logger.error(f"Organism file not found: {MGC_TO_ORGANISM_FILE}")
-            raise FileNotFoundError(f"Missing required file: {MGC_TO_ORGANISM_FILE}")
 
 # === CONFIG ===
 GENOME_CSV_DIRS = [
-    "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
+    "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_full_data",
     "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
-    "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
+    "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes"
 ]
 MIBIG_QUERY_FASTA = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/fasta_files/merged_metabolic_pathways/merged_metabolic_pathways.fasta"
 MGC_TO_ORGANISM_FILE = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/gbk_files/organisms.csv"
 
-OUTPUT_BASE = "/groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation"
+OUTPUT_BASE = "/groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation_with_chloroplast"
 
 MERGED_FASTA = os.path.join(OUTPUT_BASE, "merged_genomes.fasta")
 BLAST_DB = os.path.join(OUTPUT_BASE, "merged_genomes_blastdb")
@@ -164,7 +144,6 @@ def run_blast():
 def extract_best_hit(record):
     query_id = record.query
     query_mgc_id = query_id.split("|")[1].strip() if "|" in query_id else query_id
-    query_organism = mgc_to_organism.get(query_mgc_id, "Unknown").lower()
     query_len = record.query_length
     
     # Initialize best hit tracking with sophisticated scoring
@@ -176,28 +155,35 @@ def extract_best_hit(record):
     for alignment in record.alignments:
         hit_id = alignment.hit_def
         try:
-            gene_id, filename, index = hit_id.split("|")
+            gene_id, filepath, index = hit_id.split("|")
+            # Get the complete path by finding the matching file in GENOME_CSV_DIRS
+            complete_filepath = None
+            for dir_path in GENOME_CSV_DIRS:
+                potential_path = os.path.join(dir_path, filepath)
+                if os.path.exists(potential_path):
+                    complete_filepath = potential_path
+                    break
+            if complete_filepath is None:
+                continue  # Skip if we can't find the complete path
         except ValueError:
             continue  # malformed ID
 
         for hsp in alignment.hsps:
             identity = (hsp.identities / hsp.align_length) * 100
             coverage = (hsp.align_length / query_len) * 100
-            source_organism = filename.replace("_"," ").replace("filtered.csv", "").lower().strip()
             
             # Sophisticated scoring system
             # Weight factors for different aspects (can be tuned)
             bit_weight = 0.4
             identity_weight = 0.3
             coverage_weight = 0.3
-            organism_bonus = 1.5 if source_organism in query_organism else 1.0
             
             # Combined score calculation
             combined_score = (
                 (hsp.bits * bit_weight) +
                 (identity * identity_weight) +
                 (coverage * coverage_weight)
-            ) * organism_bonus
+            )
 
             # Update best hit if this is better
             if combined_score > best_score['combined_score']:
@@ -205,18 +191,35 @@ def extract_best_hit(record):
                 best_score['data'] = {
                     "mibig_gene": query_id,
                     "matched_gene": gene_id,
-                    "source_file": filename,
+                    "source_file": complete_filepath,  # Store complete path instead of just filename
                     "index_in_file": int(index),
                     "bit_score": hsp.bits,
                     "identity": identity,
                     "coverage": coverage,
-                    "combined_score": combined_score,
-                    "source_organism": source_organism,
-                    "query_organism": query_organism
+                    "combined_score": combined_score
                 }
 
     return best_score['data']
 
+def get_best_source_file(group, original_gene_count):
+    """
+    Get the best source file by:
+    1. First selecting files with maximum number of matches
+    2. Among those, choose the one with best combined score
+    """
+    source_stats = group.groupby('source_file').agg({
+        'combined_score': ['count', 'sum', 'mean']
+    })
+    source_stats.columns = ['match_count', 'total_score', 'avg_score']
+    
+    # Get the maximum number of matches
+    max_matches = source_stats['match_count'].max()
+    
+    # Filter to only sources with maximum matches
+    best_match_sources = source_stats[source_stats['match_count'] == max_matches]
+    
+    # Among those with max matches, choose the one with highest average score
+    return best_match_sources['avg_score'].idxmax()
 
 def parse_blast_results():
     logger.info("Starting BLAST results parsing")
@@ -250,17 +253,38 @@ def parse_blast_results():
     if failed_records:
         logger.warning(f"Failed to process {failed_records} records")
 
-    # Convert to DataFrame and validate
+    # Convert to DataFrame
     final_output = pd.DataFrame([hit.to_dict() for hit in best_hits])
     
-    # Ensure we have unique MGCs
-    final_output.sort_values('combined_score', ascending=False, inplace=True)
-    final_output.drop_duplicates(subset=['mibig_gene'], keep='first', inplace=True)
-    
-    # Extract MGC ID with validation
+    # Extract MGC ID
     final_output["mgc_id"] = final_output["mibig_gene"].str.extract(r"\|\s*(BGC\d+)\s*\|")
-    if final_output["mgc_id"].isnull().any():
-        logger.warning("Some records have invalid MGC IDs")
+    
+    # Count original number of genes per MGC before filtering
+    original_gene_counts = final_output.groupby('mgc_id')['mibig_gene'].nunique()
+    
+    # Store all original genes per MGC before any filtering
+    all_mgc_genes = {mgc: set(group['mibig_gene'].unique()) 
+                     for mgc, group in final_output.groupby('mgc_id')}
+    
+    # For each MGC, determine the best source file
+    mgc_best_sources = {}
+    mgc_max_matches = {}  # Store the maximum matches found for each MGC
+    
+    for mgc_id, group in final_output.groupby("mgc_id"):
+        # First find the maximum number of matches across all source files
+        source_counts = group.groupby('source_file').size()
+        max_matches = source_counts.max()
+        mgc_max_matches[mgc_id] = max_matches
+        
+        # Then get the best source among those with max matches
+        best_source = get_best_source_file(group, original_gene_counts[mgc_id])
+        mgc_best_sources[mgc_id] = best_source
+        
+    # Filter final_output to only keep rows from the best source file for each MGC
+    final_output = final_output.apply(
+        lambda row: row if row['source_file'] == mgc_best_sources[row['mgc_id']] else None, 
+        axis=1
+    ).dropna()
     
     # Save results
     final_output.to_csv(FINAL_OUTPUT, index=False)
@@ -271,6 +295,45 @@ def parse_blast_results():
         output_path = os.path.join(OUTPUT_DIR, f"{mgc_id}.csv")
         group.drop(columns=["mgc_id"]).to_csv(output_path, index=False)
         logger.debug(f"Saved individual MGC file: {output_path}")
+    
+    # Save a summary of best source files with statistics
+    mgc_stats = []
+    for mgc_id, group in final_output.groupby("mgc_id"):
+        source_file = mgc_best_sources[mgc_id]
+        
+        # Get all original genes for this MGC (from before filtering)
+        original_genes = all_mgc_genes[mgc_id]
+        # Get matched genes in the best source
+        matched_genes = set(group['mibig_gene'].unique())
+        # Find missing genes
+        missing_genes = original_genes - matched_genes
+        
+        stats = {
+            'mgc_id': mgc_id,
+            'original_gene_count': original_gene_counts[mgc_id],
+            'best_source_file': source_file,
+            'num_matches': len(group),
+            'max_matches_found': mgc_max_matches[mgc_id],
+            'completeness': len(group) / original_gene_counts[mgc_id],
+            'total_score': group['combined_score'].sum(),
+            'avg_score': group['combined_score'].mean(),
+            'max_score': group['combined_score'].max(),
+            'missing_genes': '; '.join(sorted(missing_genes)) if missing_genes else 'None'
+        }
+        mgc_stats.append(stats)
+    
+    stats_df = pd.DataFrame(mgc_stats)
+    # Reorder columns
+    stats_df = stats_df[['mgc_id', 'original_gene_count', 'best_source_file', 'num_matches', 'max_matches_found', 
+                         'completeness', 'total_score', 'avg_score', 'max_score', 'missing_genes']]
+    stats_df.to_csv(os.path.join(OUTPUT_BASE, "mgc_best_sources_stats.csv"), index=False)
+    logger.info("Saved best source files summary with statistics")
+    
+    # Also save a separate file with just the missing genes for easier analysis
+    missing_genes_df = stats_df[['mgc_id', 'missing_genes']]
+    missing_genes_df = missing_genes_df[missing_genes_df['missing_genes'] != 'None']
+    missing_genes_df.to_csv(os.path.join(OUTPUT_BASE, "missing_genes.csv"), index=False)
+    logger.info("Saved missing genes summary")
     
     # Log completion statistics
     elapsed_time = time.time() - pipeline.start_time

@@ -97,45 +97,59 @@ def prepare_fasta(file_path, temp_dir):
         return None
     
 def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
-    db_name = os.path.join(db_dir, os.path.basename(target_fasta).replace(".fasta", ""))
-    help_file_path = Path(os.path.join(output_dir, "sbatch_output_paths.txt"))
-    
-    if not help_file_path.exists():
-        help_file_path.touch()  # Create the empty file
-        print(f"Created file: {help_file_path}")
+    from pathlib import Path
+    import shutil
 
-    output_path = os.path.join(
-        output_dir,
-        f"{os.path.basename(query_fasta).replace('.fasta','')}_vs_{os.path.basename(target_fasta).replace('.fasta','')}.txt"
+    def extract_id(fasta_path):
+        return os.path.splitext(os.path.basename(fasta_path))[0].split('_')[-1] if '_' in os.path.basename(fasta_path) else os.path.splitext(os.path.basename(fasta_path))[0].split('BGC')[-1]
+
+    query_id = extract_id(query_fasta)
+    bucket = int(query_id) // 100
+    bucket_dir = os.path.join(output_dir, f"bucket_{bucket}")
+    os.makedirs(bucket_dir, exist_ok=True)
+
+    output_path = os.path.join(bucket_dir, f"{os.path.basename(query_fasta)}_vs_{os.path.basename(target_fasta)}.txt")
+    db_name = os.path.join(db_dir, os.path.basename(target_fasta).replace(".fasta", ""))
+    temp_output = f"{output_path}.tmp"
+
+    if os.path.exists(output_path):
+        print(f"BLAST output already exists: {output_path}")
+        return output_path
+
+    print(f"Running BLAST for {os.path.basename(query_fasta)} against {os.path.basename(target_fasta)}")
+
+    if os.path.getsize(query_fasta) == 0 or os.path.getsize(target_fasta) == 0:
+        print(f"⚠️ Skipping BLAST: One of the FASTA files is empty: {query_fasta}, {target_fasta}")
+        return None
+
+    if not os.path.exists(f"{db_name}.pin"):
+        result = subprocess.run(["makeblastdb", "-in", target_fasta, "-dbtype", "prot", "-out", db_name], capture_output=True, text=True)
+        if result.returncode != 0 or not os.path.exists(f"{db_name}.pin"):
+            print(f"❌ makeblastdb failed for {target_fasta}: {result.stderr}")
+            return None
+
+    blastp_cline = NcbiblastpCommandline(
+        query=query_fasta,
+        db=db_name,
+        evalue=EVALUE_THRESHOLD,
+        outfmt="6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
+        out=output_path
     )
 
-    # Make BLAST DB if not exists
-    if not os.path.exists(f"{db_name}.pin"):
-        subprocess.run(["makeblastdb", "-in", target_fasta, "-dbtype", "prot", "-out", db_name], check=True)
-        
-    if not os.path.exists(output_path):
-        print(f"Running BLAST for {os.path.basename(query_fasta)} against {os.path.basename(target_fasta)}")
-        # Run BLAST
-        blastp_cline = NcbiblastpCommandline(
-            query=query_fasta,
-            db=db_name,
-            evalue=EVALUE_THRESHOLD,
-            outfmt="6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
-            out=output_path
-        )
-        command_str = str(blastp_cline)
-        try:
-            result = subprocess.run(command_str, shell=True, check=True, capture_output=True, text=True)
-        except subprocess.CalledProcessError as e:
-            print(f"❌ BLAST failed for {query_fasta} vs {target_fasta}:")
-            print(f"Command: {command_str}")
-            print(f"Stdout: {e.stdout}")
-            print(f"Stderr: {e.stderr}")
-            raise
-        print(f"BLAST completed: {output_path}")
-    else:
-        print(f"BLAST output already exists: {output_path}")
+    try:
+        stdout, stderr = blastp_cline()
+    except subprocess.CalledProcessError as e:
+        print(f"❌ BLAST failed for {query_fasta} vs {target_fasta}")
+        print(f"Command: {blastp_cline}")
+        print(f"Stdout: {e.stdout}")
+        print(f"Stderr: {e.stderr}")
+        if os.path.exists(output_path):
+            os.remove(output_path)
+        return None
+
+    print(f"BLAST completed: {output_path}")
     return output_path
+
 
 def parse_and_filter_blast(blast_path):
     results = []
@@ -195,7 +209,7 @@ def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
 
 def blast_all_vs_all_parallel(merged_list, output_root):
     blast_output_dir = os.path.join(output_root, "blast_all_vs_all")
-    blast_output_dir_results = os.path.join(blast_output_dir, "results")
+    blast_output_dir_results = os.path.join(blast_output_dir, "results_fixed")
     blast_db_dir = os.path.join(blast_output_dir, "blast_dbs")
     temp_dir = os.path.join(blast_output_dir, "temp_fastas")
     os.makedirs(blast_output_dir, exist_ok=True)
@@ -239,21 +253,26 @@ def main():
     candidate_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     output_file = os.path.join(candidate_directory, "comparison_results.txt")
     
-    # Check the identity of the candidates
-    unmatched_candidates = check_identity(mgc_directory, candidate_directory, output_file)
-    
-    # Get the MGC filepaths
-    mgc_filepaths = os.listdir(mgc_directory)
-    # Prepend the full path to MGC filepaths
-    mgc_filepaths = [os.path.join(mgc_directory, filename) for filename in mgc_filepaths]
-    
-    # Merge the unmatched candidates with the MGC filepaths
-    merged_list = unmatched_candidates + mgc_filepaths
-    
-    # Write the merged list to a file
-    with open(os.path.join(candidate_directory, "merged_list.txt"), 'w') as merged_file:
-        for item in merged_list:
-            merged_file.write(f"{item}\n")
+    if not os.path.exists(os.path.join(candidate_directory, "merged_list.txt")):
+        # Check the identity of the candidates
+        unmatched_candidates = check_identity(mgc_directory, candidate_directory, output_file)
+        
+        # Get the MGC filepaths
+        mgc_filepaths = os.listdir(mgc_directory)
+        # Prepend the full path to MGC filepaths
+        mgc_filepaths = [os.path.join(mgc_directory, filename) for filename in mgc_filepaths]
+        
+        # Merge the unmatched candidates with the MGC filepaths
+        merged_list = unmatched_candidates + mgc_filepaths
+        
+        # Write the merged list to a file
+        with open(os.path.join(candidate_directory, "merged_list.txt"), 'w') as merged_file:
+            for item in merged_list:
+                merged_file.write(f"{item}\n")
+    else:
+        with open(os.path.join(candidate_directory, "merged_list.txt"), 'r') as merged_file:
+            merged_list = [line.strip() for line in merged_file.readlines()]
+        print(f"⚠️ Merged list already exists: {os.path.join(candidate_directory, 'merged_list.txt')}")
             
     blast_all_vs_all_parallel(merged_list, candidate_directory)
 

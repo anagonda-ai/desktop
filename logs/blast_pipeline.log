@@ -1,0 +1,1489 @@
+2025-06-01 15:59:41,142 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 15:59:41,179 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 15:59:43,016 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,021 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,024 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,024 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,026 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,028 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,029 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,030 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,074 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,075 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,076 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,077 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,079 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,080 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,081 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,083 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,083 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,084 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,085 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,086 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,087 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,088 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,090 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,091 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,092 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,093 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,095 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,096 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,098 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,099 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,100 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,101 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,103 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,104 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,105 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,107 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,109 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,111 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,111 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,112 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,113 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,114 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,117 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,117 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,119 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,120 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,121 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,122 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,123 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,124 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,125 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,126 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,127 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,128 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,129 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,130 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,132 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,133 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,134 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,134 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,135 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,137 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,138 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,139 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,139 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,140 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,140 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,141 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,141 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,142 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,142 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,143 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,143 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,144 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,144 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,144 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,145 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,145 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,146 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,146 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,146 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,147 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,147 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,147 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,148 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,149 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,149 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,150 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,150 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,151 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,151 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,151 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,152 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,152 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,153 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,153 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,154 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,155 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,155 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,156 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,156 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,157 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,157 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,158 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,158 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,158 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,159 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,159 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,159 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,160 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,160 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,161 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,161 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,161 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,162 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,162 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,163 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,163 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,164 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,164 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,165 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,165 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,165 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,166 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,166 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,167 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,167 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,168 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,168 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,169 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,169 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,169 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,170 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,170 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,170 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,171 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,171 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,174 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,174 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,174 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,175 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,175 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,175 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,176 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,176 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,177 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,177 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,177 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,178 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,178 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,179 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,179 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,180 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,181 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,181 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,182 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,182 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,183 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,183 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,183 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,184 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,184 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,185 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,185 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,186 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,186 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,186 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,187 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,187 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,188 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,188 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,188 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,189 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,189 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,190 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,191 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,191 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,192 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,192 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,192 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,193 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,194 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,194 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,195 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,195 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,196 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,196 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,197 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,197 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,198 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,198 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,198 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,199 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,199 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,200 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,200 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,201 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,201 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,202 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,202 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,203 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,203 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,204 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,204 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,204 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,205 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,205 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,206 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,206 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,206 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,207 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,207 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,208 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,208 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,209 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,209 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,210 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,210 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,210 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,211 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,211 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,212 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,212 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,213 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,213 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,214 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,214 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,214 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,215 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,215 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,216 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,216 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,217 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,218 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,218 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,218 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,219 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,219 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,220 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,220 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,220 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,221 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,221 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,222 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,222 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,223 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,223 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,223 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,224 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,224 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,224 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,225 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,225 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,225 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,226 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,227 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,227 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,228 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,228 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,229 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,229 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,230 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,230 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,231 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,231 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,232 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,232 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,233 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,233 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,234 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,234 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,235 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,235 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,236 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,236 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,237 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,237 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,238 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,238 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,239 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,239 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,240 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,240 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,241 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,241 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,241 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,242 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,242 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,242 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,243 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,243 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,244 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,244 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,244 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,245 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,245 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,246 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,246 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,246 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,247 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,247 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,247 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,248 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,248 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,249 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,249 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,249 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,250 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,250 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,251 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,251 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,251 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,252 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,252 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,252 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,253 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,253 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,253 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,254 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,254 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,255 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,255 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,255 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,256 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,256 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,256 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,257 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,257 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,257 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,258 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,258 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,259 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,259 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,260 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,260 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,261 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,261 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,262 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,262 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,262 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,263 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,264 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,264 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,265 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,265 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,266 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,266 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,266 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,267 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,268 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,268 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,268 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,269 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,269 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,270 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,270 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,271 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,271 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,272 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,272 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,273 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,273 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,274 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,274 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,275 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,275 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,276 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,276 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,276 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,277 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,277 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,278 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,278 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,279 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,279 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,279 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,280 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,280 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,281 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,281 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,281 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,282 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,283 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,283 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,283 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,284 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,284 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,285 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,285 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,285 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,287 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,287 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,287 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,287 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,288 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,288 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,289 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,289 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,289 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,290 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,290 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,291 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,291 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,291 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,292 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,292 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,292 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,293 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,293 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,294 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,294 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,294 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,295 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,295 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 15:59:43,407 - BlastPipeline - ERROR - Error during hit processing: No valid hits found in BLAST results
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 168, in _error_handling
+    yield
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 456, in process_hits
+    raise ValueError("No valid hits found in BLAST results")
+ValueError: No valid hits found in BLAST results
+2025-06-01 15:59:43,411 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 15:59:43,411 - BlastPipeline - ERROR - Critical error in pipeline
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 429, in parse_blast_results
+    final_output = process_hits(best_hits, pipeline)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 456, in process_hits
+    raise ValueError("No valid hits found in BLAST results")
+ValueError: No valid hits found in BLAST results
+2025-06-01 15:59:43,414 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 16:22:43,125 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 16:22:43,135 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 16:22:43,151 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 16:22:43,151 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-01 16:22:43,421 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,423 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,424 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,425 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,429 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,431 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,432 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,433 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,433 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,433 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,434 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,435 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,436 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,437 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,437 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,439 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,440 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,440 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,442 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,442 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,444 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,446 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,446 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,448 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,448 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,449 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,450 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,452 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,453 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,454 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,455 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,456 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,457 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,457 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,459 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,460 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,461 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,461 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,462 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,463 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,464 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,464 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,466 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,469 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,470 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,471 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,474 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,474 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,476 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,477 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,479 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,481 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,483 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,484 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,485 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,487 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,488 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,489 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,489 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,490 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,491 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,492 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,494 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,495 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,496 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,497 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,497 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,498 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,500 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,500 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,502 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,503 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,503 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,503 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,504 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,504 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,504 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,505 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,505 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,506 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,506 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,507 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,507 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,508 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,508 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,509 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,509 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,510 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,510 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,511 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,511 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,512 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,512 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,513 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,513 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,514 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,514 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,515 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,515 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,516 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,516 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,517 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,517 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,518 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,519 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,519 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,520 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,520 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,521 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,521 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,521 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,522 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,522 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,522 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,523 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,523 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,524 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,524 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,524 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,525 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,525 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,526 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,526 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,526 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,527 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,527 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,527 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,528 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,528 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,529 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,529 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,530 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,530 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,530 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,531 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,531 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,532 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,532 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,532 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,533 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,533 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,533 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,534 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,534 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,535 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,535 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,535 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,536 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,536 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,537 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,537 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,537 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,538 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,538 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,539 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,539 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,539 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,540 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,540 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,541 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,541 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,542 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,542 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,542 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,543 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,543 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,543 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,544 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,544 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,545 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,545 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,546 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,546 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,546 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,547 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,547 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,548 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,548 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,548 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,549 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,549 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,550 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,550 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,551 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,551 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,552 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,552 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,553 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,553 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,554 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,554 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,555 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,555 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,556 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,556 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,557 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,557 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,558 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,558 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,558 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,559 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,559 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,560 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,560 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,561 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,561 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,561 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,562 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,562 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,563 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,563 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,564 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,564 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,564 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,565 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,565 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,566 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,566 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,566 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,567 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,567 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,568 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,568 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,569 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,569 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,570 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,570 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,571 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,571 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,572 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,572 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,572 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,573 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,573 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,574 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,574 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,574 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,575 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,575 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,576 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,576 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,576 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,577 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,577 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,578 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,578 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,578 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,579 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,579 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,580 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,580 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,580 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,581 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,581 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,582 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,582 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,582 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,583 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,583 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,583 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,584 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,585 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,585 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,586 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,586 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,586 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,587 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,587 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,588 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,588 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,588 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,589 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,589 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,590 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,590 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,591 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,591 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,592 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,593 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,593 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,593 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,594 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,594 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,595 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,595 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,595 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,596 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,596 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,596 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,597 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,597 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,598 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,598 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,598 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,599 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,599 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,599 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,600 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,600 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,601 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,601 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,601 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,602 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,602 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,603 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,603 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,603 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,604 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,604 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,604 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,605 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,605 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,605 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,606 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,606 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,607 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,607 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,607 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,608 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,608 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,609 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,609 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,609 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,610 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,610 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,610 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,611 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,611 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,612 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,612 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,612 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,613 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,613 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,614 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,614 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,614 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,615 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,615 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,616 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,616 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,617 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,617 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,618 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,618 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,618 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,619 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,619 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,620 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,620 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,620 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,621 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,621 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,622 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,622 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,622 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,623 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,623 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,624 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,624 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,624 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,625 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,625 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,626 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,626 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,627 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,627 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,628 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,628 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,629 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,629 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,630 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,631 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,631 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,631 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,632 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,632 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,632 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,633 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,633 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,633 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,634 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,634 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,634 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,635 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,635 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,636 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,636 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,637 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,637 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,637 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,638 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,638 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,639 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,639 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,639 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,640 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,640 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,640 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,641 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,641 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,642 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,642 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,642 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,643 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,643 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,644 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,644 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,645 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,645 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,645 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,646 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,646 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,646 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,647 - BlastPipeline - ERROR - Failed to process record: name 'pipeline' is not defined
+2025-06-01 16:22:43,666 - BlastPipeline - WARNING - No valid hits found in BLAST results
+2025-06-01 16:22:43,673 - BlastPipeline - ERROR - Failed to save results: [Errno 21] Is a directory: '/groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation'
+2025-06-01 16:22:43,673 - BlastPipeline - ERROR - Details of the error:
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 482, in process_hits
+    final_output.to_csv(output_base, index=False)
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/util/_decorators.py", line 333, in wrapper
+    return func(*args, **kwargs)
+           ^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/generic.py", line 3967, in to_csv
+    return DataFrameRenderer(formatter).to_csv(
+           ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/io/formats/format.py", line 1014, in to_csv
+    csv_formatter.save()
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/io/formats/csvs.py", line 251, in save
+    with get_handle(
+         ^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/io/common.py", line 873, in get_handle
+    handle = open(
+             ^^^^^
+IsADirectoryError: [Errno 21] Is a directory: '/groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation'
+2025-06-01 16:22:43,801 - BlastPipeline - ERROR - Critical error in pipeline
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 432, in parse_blast_results
+    perf_summary = pipeline.performance.get_summary()
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 145, in get_summary
+    'avg_cpu_percent': sum(self.stats['cpu_percent']) / len(self.stats['cpu_percent']),
+                       ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+ZeroDivisionError: division by zero
+2025-06-01 16:22:43,804 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 16:35:31,138 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 16:35:31,149 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 16:35:31,163 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 16:35:31,163 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-01 16:35:31,540 - BlastPipeline - INFO - Saved results file with 373 entries to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/blast_results.csv
+2025-06-01 16:35:31,765 - BlastPipeline - INFO - Performance metrics saved to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/performance_metrics.json
+2025-06-01 16:35:31,765 - BlastPipeline - INFO - Pipeline completed in 0.62 seconds
+2025-06-01 16:35:31,766 - BlastPipeline - INFO - Average CPU usage: 70.8%
+2025-06-01 16:35:31,766 - BlastPipeline - INFO - Peak memory usage: 0.0%
+2025-06-01 16:49:23,670 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 16:54:04,726 - BlastPipeline - INFO - 🛠️  Building BLAST DB...
+2025-06-01 17:01:33,132 - BlastPipeline - INFO - ✅ BLAST DB created successfully
+2025-06-01 17:01:33,133 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 17:01:33,146 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 17:01:33,147 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 17:01:33,147 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-01 17:01:33,526 - BlastPipeline - INFO - Saved results file with 373 entries to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/merged_annotation_id_eq_annotation.csv
+2025-06-01 17:01:33,679 - BlastPipeline - INFO - Performance metrics saved to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/performance_metrics.json
+2025-06-01 17:01:33,679 - BlastPipeline - INFO - Pipeline completed in 0.54 seconds
+2025-06-01 17:01:33,679 - BlastPipeline - INFO - Average CPU usage: 80.7%
+2025-06-01 17:01:33,680 - BlastPipeline - INFO - Peak memory usage: 0.0%
+2025-06-01 17:01:33,695 - BlastPipeline - ERROR - Failed to process distances: name 'DISTANCES_OUTPUT' is not defined
+2025-06-01 17:01:33,695 - BlastPipeline - ERROR - Details of the error:
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 514, in load_final_output_and_save_distances_to_csv
+    save_distances_to_csv(mgc_distances, DISTANCES_OUTPUT)
+                                         ^^^^^^^^^^^^^^^^
+NameError: name 'DISTANCES_OUTPUT' is not defined
+2025-06-01 17:04:15,270 - BlastPipeline - INFO - 🛠️  Building BLAST DB...
+2025-06-01 17:11:46,154 - BlastPipeline - INFO - ✅ BLAST DB created successfully
+2025-06-01 17:11:46,155 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 17:11:46,163 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 17:11:46,165 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 17:11:46,165 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-01 17:11:46,528 - BlastPipeline - INFO - Saved results file with 373 entries to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/merged_annotation_id_eq_annotation.csv
+2025-06-01 17:11:46,649 - BlastPipeline - INFO - Performance metrics saved to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/performance_metrics.json
+2025-06-01 17:11:46,649 - BlastPipeline - INFO - Pipeline completed in 0.49 seconds
+2025-06-01 17:11:46,650 - BlastPipeline - INFO - Average CPU usage: 64.1%
+2025-06-01 17:11:46,650 - BlastPipeline - INFO - Peak memory usage: 0.0%
+2025-06-01 17:11:46,672 - BlastPipeline - INFO - Successfully processed distances for 42 MGCs
+2025-06-01 17:32:51,754 - BlastPipeline - INFO - 🛠️  Building BLAST DB...
+2025-06-01 17:43:17,258 - BlastPipeline - INFO - ✅ BLAST DB created successfully
+2025-06-01 17:43:17,259 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 17:43:17,270 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 17:43:17,271 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 17:43:17,271 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-01 17:43:17,711 - BlastPipeline - INFO - Saved results file with 256 entries to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/merged_annotation_id_eq_annotation.csv
+2025-06-01 17:43:17,785 - BlastPipeline - INFO - Performance metrics saved to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/performance_metrics.json
+2025-06-01 17:43:17,785 - BlastPipeline - INFO - Pipeline completed in 0.52 seconds
+2025-06-01 17:43:17,786 - BlastPipeline - INFO - Average CPU usage: 70.7%
+2025-06-01 17:43:17,786 - BlastPipeline - INFO - Peak memory usage: 0.0%
+2025-06-01 17:43:17,801 - BlastPipeline - INFO - Successfully processed distances for 23 MGCs
+2025-06-01 17:43:52,793 - BlastPipeline - INFO - 🛠️  Building BLAST DB...
+2025-06-01 17:54:10,357 - BlastPipeline - INFO - ✅ BLAST DB created successfully
+2025-06-01 17:54:10,358 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 17:54:10,372 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 17:54:10,373 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 17:54:10,374 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-01 17:54:10,752 - BlastPipeline - INFO - Saved results file with 256 entries to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/merged_annotation_id_eq_annotation.csv
+2025-06-01 17:54:10,845 - BlastPipeline - INFO - Performance metrics saved to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/performance_metrics.json
+2025-06-01 17:54:10,845 - BlastPipeline - INFO - Pipeline completed in 0.48 seconds
+2025-06-01 17:54:10,845 - BlastPipeline - INFO - Average CPU usage: 68.4%
+2025-06-01 17:54:10,846 - BlastPipeline - INFO - Peak memory usage: 0.0%
+2025-06-01 17:54:10,860 - BlastPipeline - INFO - Successfully processed distances for 23 MGCs
+2025-06-01 17:57:50,184 - BlastPipeline - INFO - 🛠️  Building BLAST DB...
+2025-06-01 18:09:35,152 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 18:09:35,166 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 18:09:35,168 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 18:09:35,168 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-01 18:09:35,527 - BlastPipeline - INFO - Saved results file with 256 entries to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/merged_annotation_id_eq_annotation.csv
+2025-06-01 18:09:35,614 - BlastPipeline - INFO - Performance metrics saved to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/performance_metrics.json
+2025-06-01 18:09:35,614 - BlastPipeline - INFO - Pipeline completed in 0.46 seconds
+2025-06-01 18:09:35,614 - BlastPipeline - INFO - Average CPU usage: 70.4%
+2025-06-01 18:09:35,615 - BlastPipeline - INFO - Peak memory usage: 0.0%
+2025-06-01 18:09:35,624 - BlastPipeline - INFO - Loaded 256 hits from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/merged_annotation_id_eq_annotation.csv
+2025-06-01 18:09:36,024 - BlastPipeline - INFO - Successfully processed distances for 23 MGCs
+2025-06-01 18:25:57,322 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-01 18:25:57,333 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-01 18:25:57,334 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-01 18:25:57,334 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-01 18:25:57,681 - BlastPipeline - INFO - Saved results file with 256 entries to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/merged_annotation_id_eq_annotation.csv
+2025-06-01 18:25:57,755 - BlastPipeline - INFO - Performance metrics saved to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/performance_metrics.json
+2025-06-01 18:25:57,755 - BlastPipeline - INFO - Pipeline completed in 0.43 seconds
+2025-06-01 18:25:57,756 - BlastPipeline - INFO - Average CPU usage: 67.8%
+2025-06-01 18:25:57,756 - BlastPipeline - INFO - Peak memory usage: 0.0%
+2025-06-03 08:23:48,147 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-03 08:23:48,156 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 08:23:48,472 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 08:23:48,477 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,477 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,478 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,480 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000669
+2025-06-03 08:23:48,481 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,481 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,482 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,483 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,484 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,484 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,486 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000670
+2025-06-03 08:23:48,486 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,486 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,487 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,488 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,488 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,490 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000671
+2025-06-03 08:23:48,490 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,490 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,491 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,492 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,493 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,494 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,494 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,495 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,496 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,497 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,497 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,498 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,499 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000672
+2025-06-03 08:23:48,499 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,500 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,500 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,501 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,502 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,502 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,503 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,503 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,504 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,504 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,505 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,505 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,506 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,506 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,507 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,507 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,508 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,508 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,509 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,509 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,510 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,510 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,511 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,511 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,511 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,512 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,512 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,513 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,513 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,514 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,514 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,515 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,515 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,515 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,516 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,516 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,517 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,517 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,518 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,518 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,519 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,519 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,521 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0001313
+2025-06-03 08:23:48,521 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,521 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,522 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,522 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,523 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,523 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,524 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,524 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,525 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,525 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,526 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,526 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,527 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,527 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,528 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,528 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,528 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,529 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,529 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,530 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,530 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,530 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,531 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,532 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0001314
+2025-06-03 08:23:48,532 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,533 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,533 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,533 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,534 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,535 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,535 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,536 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,536 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,536 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,537 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,537 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,538 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,538 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,539 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,539 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,540 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,540 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,541 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,542 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,543 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,543 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,544 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,545 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,545 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,546 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,546 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,547 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,547 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,548 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,549 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,549 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,549 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,550 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,550 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,551 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,551 - BlastPipeline - WARNING - Failed to compare organisms Manihot esculenta and manihot esculenta: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,552 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0001318
+2025-06-03 08:23:48,552 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,552 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,553 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,553 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,554 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,554 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,554 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,555 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,556 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,557 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0001322
+2025-06-03 08:23:48,557 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,557 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,558 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,558 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,559 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,559 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,559 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,560 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,560 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,561 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,561 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,561 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,563 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0001756
+2025-06-03 08:23:48,563 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,563 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,564 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,564 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,565 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,565 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,565 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,566 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,567 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,567 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,568 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,568 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,569 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,569 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,570 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,570 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,570 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,571 - BlastPipeline - WARNING - Failed to compare organisms Papaver somniferum and papaver somniferum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,573 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0001799
+2025-06-03 08:23:48,573 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,573 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,574 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,574 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,575 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,575 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,576 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,576 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,577 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,578 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,579 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002390
+2025-06-03 08:23:48,579 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,579 - BlastPipeline - WARNING - Failed to compare organisms Zea mays and zea mays: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,581 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002391
+2025-06-03 08:23:48,581 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,581 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,582 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,582 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,583 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,583 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,584 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,584 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,584 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,585 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,585 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,586 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,587 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,587 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,588 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,588 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,589 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,589 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,591 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002392
+2025-06-03 08:23:48,591 - BlastPipeline - WARNING - Failed to compare organisms Hordeum vulgare and hordeum vulgare: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,592 - BlastPipeline - WARNING - Failed to compare organisms Hordeum vulgare and hordeum vulgare: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,593 - BlastPipeline - WARNING - Failed to compare organisms Hordeum vulgare and hordeum vulgare: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,594 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002395
+2025-06-03 08:23:48,594 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,597 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,599 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,601 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002397
+2025-06-03 08:23:48,601 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,601 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,602 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,603 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002398
+2025-06-03 08:23:48,603 - BlastPipeline - WARNING - Failed to compare organisms Brassica oleracea and brassica oleracea: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,604 - BlastPipeline - WARNING - Failed to compare organisms Brassica oleracea and brassica oleracea: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,604 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002400
+2025-06-03 08:23:48,605 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,605 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,605 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,606 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,606 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,607 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,608 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,608 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,609 - BlastPipeline - WARNING - Failed to compare organisms Arabidopsis thaliana and arabidopsis thaliana: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,610 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002401
+2025-06-03 08:23:48,610 - BlastPipeline - WARNING - Failed to compare organisms Hordeum vulgare and hordeum vulgare: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,611 - BlastPipeline - WARNING - Failed to compare organisms Hordeum vulgare and hordeum vulgare: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,611 - BlastPipeline - WARNING - Failed to compare organisms Hordeum vulgare and hordeum vulgare: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,613 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002403
+2025-06-03 08:23:48,613 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,613 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,614 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,614 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,616 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002404
+2025-06-03 08:23:48,616 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,616 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,616 - BlastPipeline - WARNING - Failed to compare organisms Solanum lycopersicum and solanum lycopersicum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,618 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002405
+2025-06-03 08:23:48,618 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,619 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,619 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,620 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,620 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,621 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,621 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,622 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,622 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,623 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,623 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,624 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,624 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,624 - BlastPipeline - WARNING - Failed to compare organisms Oryza sativa Japonica Group and oryza sativa: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,626 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002406
+2025-06-03 08:23:48,626 - BlastPipeline - WARNING - Failed to compare organisms Hordeum vulgare and hordeum vulgare: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,627 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002721
+2025-06-03 08:23:48,628 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,628 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,628 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,629 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,629 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,629 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,630 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,630 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,631 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,631 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,632 - BlastPipeline - WARNING - Failed to compare organisms Solanum tuberosum and solanum tuberosum: unhashable type: 'TaxonomyService'
+2025-06-03 08:23:48,633 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002722
+2025-06-03 08:23:48,634 - BlastPipeline - ERROR - Error during hit processing: 'mgc_id'
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 388, in _error_handling
+    'performance': self.performance.stats,
+    ^^^^^
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 835, in process_hits
+    final_output.sort_values(['mgc_id', 'bit_score'], ascending=[True, False], inplace=True)
+                                     ^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/frame.py", line 4102, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/indexes/range.py", line 417, in get_loc
+    raise KeyError(key)
+KeyError: 'mgc_id'
+2025-06-03 08:23:48,695 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:23:48,696 - BlastPipeline - ERROR - Critical error in pipeline
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 1071, in parse_blast_results
+    logger.info(f"Pipeline completed in {perf_summary['runtime']:.2f} seconds")
+               ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 835, in process_hits
+    final_output.sort_values(['mgc_id', 'bit_score'], ascending=[True, False], inplace=True)
+                                     ^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/frame.py", line 4102, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/indexes/range.py", line 417, in get_loc
+    raise KeyError(key)
+KeyError: 'mgc_id'
+2025-06-03 08:23:48,699 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:34:38,287 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-03 08:34:38,292 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 08:34:38,306 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:34:38,307 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-03 08:34:38,611 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 08:34:38,867 - BlastPipeline - INFO - Loaded 90 Plaza organism mappings
+2025-06-03 08:34:38,872 - BlastPipeline - ERROR - Error processing MGC BGC0000669: division by zero
+2025-06-03 08:34:38,874 - BlastPipeline - ERROR - Error processing MGC BGC0000670: division by zero
+2025-06-03 08:34:38,875 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000671
+2025-06-03 08:34:38,876 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000672
+2025-06-03 08:34:38,878 - BlastPipeline - ERROR - Error processing MGC BGC0001313: division by zero
+2025-06-03 08:34:38,879 - BlastPipeline - ERROR - Error processing MGC BGC0001314: division by zero
+2025-06-03 08:34:38,881 - BlastPipeline - ERROR - Error processing MGC BGC0001318: division by zero
+2025-06-03 08:34:38,882 - BlastPipeline - ERROR - Error processing MGC BGC0001322: division by zero
+2025-06-03 08:34:38,883 - BlastPipeline - ERROR - Error processing MGC BGC0001756: division by zero
+2025-06-03 08:34:38,884 - BlastPipeline - ERROR - Error processing MGC BGC0001799: division by zero
+2025-06-03 08:34:38,885 - BlastPipeline - ERROR - Error processing MGC BGC0002390: division by zero
+2025-06-03 08:34:38,886 - BlastPipeline - ERROR - Error processing MGC BGC0002391: division by zero
+2025-06-03 08:34:38,888 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002392
+2025-06-03 08:34:38,889 - BlastPipeline - ERROR - Error processing MGC BGC0002395: division by zero
+2025-06-03 08:34:38,890 - BlastPipeline - ERROR - Error processing MGC BGC0002397: division by zero
+2025-06-03 08:34:38,891 - BlastPipeline - ERROR - Error processing MGC BGC0002398: division by zero
+2025-06-03 08:34:38,892 - BlastPipeline - ERROR - Error processing MGC BGC0002400: division by zero
+2025-06-03 08:34:38,893 - BlastPipeline - ERROR - Error processing MGC BGC0002401: division by zero
+2025-06-03 08:34:38,894 - BlastPipeline - ERROR - Error processing MGC BGC0002403: division by zero
+2025-06-03 08:34:38,895 - BlastPipeline - ERROR - Error processing MGC BGC0002404: division by zero
+2025-06-03 08:34:38,896 - BlastPipeline - ERROR - Error processing MGC BGC0002405: division by zero
+2025-06-03 08:34:38,898 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002406
+2025-06-03 08:34:38,899 - BlastPipeline - ERROR - Error processing MGC BGC0002721: division by zero
+2025-06-03 08:34:38,900 - BlastPipeline - ERROR - Error processing MGC BGC0002722: division by zero
+2025-06-03 08:34:38,901 - BlastPipeline - ERROR - Error during hit processing: 'mgc_id'
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 414, in _error_handling
+    yield
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 862, in process_hits
+    final_output['mgc_confidence'] = final_output['mgc_id'].map(
+                                     ~~~~~~~~~~~~^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/frame.py", line 4102, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/indexes/range.py", line 417, in get_loc
+    raise KeyError(key)
+KeyError: 'mgc_id'
+2025-06-03 08:34:38,909 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:34:38,909 - BlastPipeline - ERROR - Critical error in pipeline
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 1098, in parse_blast_results
+    final_output = process_hits(best_hits, pipeline)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 862, in process_hits
+    final_output['mgc_confidence'] = final_output['mgc_id'].map(
+                                     ~~~~~~~~~~~~^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/frame.py", line 4102, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/indexes/range.py", line 417, in get_loc
+    raise KeyError(key)
+KeyError: 'mgc_id'
+2025-06-03 08:34:38,911 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:43:46,550 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-03 08:43:46,557 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 08:43:46,599 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:43:46,600 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-03 08:43:46,903 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 08:43:46,969 - BlastPipeline - INFO - Loaded 90 Plaza organism mappings
+2025-06-03 08:43:46,974 - BlastPipeline - ERROR - Error processing MGC BGC0000669: division by zero
+2025-06-03 08:43:46,975 - BlastPipeline - ERROR - Error processing MGC BGC0000670: division by zero
+2025-06-03 08:43:46,977 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000671
+2025-06-03 08:43:46,978 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000672
+2025-06-03 08:43:46,980 - BlastPipeline - ERROR - Error processing MGC BGC0001313: division by zero
+2025-06-03 08:43:46,981 - BlastPipeline - ERROR - Error processing MGC BGC0001314: division by zero
+2025-06-03 08:43:46,983 - BlastPipeline - ERROR - Error processing MGC BGC0001318: division by zero
+2025-06-03 08:43:46,984 - BlastPipeline - ERROR - Error processing MGC BGC0001322: division by zero
+2025-06-03 08:43:46,985 - BlastPipeline - ERROR - Error processing MGC BGC0001756: division by zero
+2025-06-03 08:43:46,987 - BlastPipeline - ERROR - Error processing MGC BGC0001799: division by zero
+2025-06-03 08:43:46,988 - BlastPipeline - ERROR - Error processing MGC BGC0002390: division by zero
+2025-06-03 08:43:46,989 - BlastPipeline - ERROR - Error processing MGC BGC0002391: division by zero
+2025-06-03 08:43:46,991 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002392
+2025-06-03 08:43:46,992 - BlastPipeline - ERROR - Error processing MGC BGC0002395: division by zero
+2025-06-03 08:43:46,993 - BlastPipeline - ERROR - Error processing MGC BGC0002397: division by zero
+2025-06-03 08:43:46,994 - BlastPipeline - ERROR - Error processing MGC BGC0002398: division by zero
+2025-06-03 08:43:46,995 - BlastPipeline - ERROR - Error processing MGC BGC0002400: division by zero
+2025-06-03 08:43:46,996 - BlastPipeline - ERROR - Error processing MGC BGC0002401: division by zero
+2025-06-03 08:43:46,997 - BlastPipeline - ERROR - Error processing MGC BGC0002403: division by zero
+2025-06-03 08:43:46,998 - BlastPipeline - ERROR - Error processing MGC BGC0002404: division by zero
+2025-06-03 08:43:47,000 - BlastPipeline - ERROR - Error processing MGC BGC0002405: division by zero
+2025-06-03 08:43:47,001 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002406
+2025-06-03 08:43:47,002 - BlastPipeline - ERROR - Error processing MGC BGC0002721: division by zero
+2025-06-03 08:43:47,003 - BlastPipeline - ERROR - Error processing MGC BGC0002722: division by zero
+2025-06-03 08:43:47,004 - BlastPipeline - ERROR - Error during hit processing: 'mgc_id'
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 414, in _error_handling
+    yield
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 862, in process_hits
+    final_output['mgc_confidence'] = final_output['mgc_id'].map(
+                                     ~~~~~~~~~~~~^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/frame.py", line 4102, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/indexes/range.py", line 417, in get_loc
+    raise KeyError(key)
+KeyError: 'mgc_id'
+2025-06-03 08:43:47,012 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:43:47,013 - BlastPipeline - ERROR - Critical error in pipeline
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 1098, in parse_blast_results
+    final_output = process_hits(best_hits, pipeline)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 862, in process_hits
+    final_output['mgc_confidence'] = final_output['mgc_id'].map(
+                                     ~~~~~~~~~~~~^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/frame.py", line 4102, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/indexes/range.py", line 417, in get_loc
+    raise KeyError(key)
+KeyError: 'mgc_id'
+2025-06-03 08:43:47,015 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:57:05,539 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-03 08:57:05,544 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 08:57:05,554 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:57:05,554 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-03 08:57:05,859 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 08:57:05,926 - BlastPipeline - INFO - Loaded 90 Plaza organism mappings
+2025-06-03 08:57:05,932 - BlastPipeline - ERROR - Error processing MGC BGC0000669: division by zero
+2025-06-03 08:57:05,933 - BlastPipeline - ERROR - Error processing MGC BGC0000670: division by zero
+2025-06-03 08:57:05,936 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000671
+2025-06-03 08:57:05,938 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000672
+2025-06-03 08:57:05,939 - BlastPipeline - ERROR - Error processing MGC BGC0001313: division by zero
+2025-06-03 08:57:05,941 - BlastPipeline - ERROR - Error processing MGC BGC0001314: division by zero
+2025-06-03 08:57:05,942 - BlastPipeline - ERROR - Error processing MGC BGC0001318: division by zero
+2025-06-03 08:57:05,944 - BlastPipeline - ERROR - Error processing MGC BGC0001322: division by zero
+2025-06-03 08:57:05,945 - BlastPipeline - ERROR - Error processing MGC BGC0001756: division by zero
+2025-06-03 08:57:05,946 - BlastPipeline - ERROR - Error processing MGC BGC0001799: division by zero
+2025-06-03 08:57:05,947 - BlastPipeline - ERROR - Error processing MGC BGC0002390: division by zero
+2025-06-03 08:57:05,948 - BlastPipeline - ERROR - Error processing MGC BGC0002391: division by zero
+2025-06-03 08:57:05,950 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002392
+2025-06-03 08:57:05,951 - BlastPipeline - ERROR - Error processing MGC BGC0002395: division by zero
+2025-06-03 08:57:05,952 - BlastPipeline - ERROR - Error processing MGC BGC0002397: division by zero
+2025-06-03 08:57:05,953 - BlastPipeline - ERROR - Error processing MGC BGC0002398: division by zero
+2025-06-03 08:57:05,954 - BlastPipeline - ERROR - Error processing MGC BGC0002400: division by zero
+2025-06-03 08:57:05,955 - BlastPipeline - ERROR - Error processing MGC BGC0002401: division by zero
+2025-06-03 08:57:05,957 - BlastPipeline - ERROR - Error processing MGC BGC0002403: division by zero
+2025-06-03 08:57:05,958 - BlastPipeline - ERROR - Error processing MGC BGC0002404: division by zero
+2025-06-03 08:57:05,959 - BlastPipeline - ERROR - Error processing MGC BGC0002405: division by zero
+2025-06-03 08:57:05,960 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002406
+2025-06-03 08:57:05,961 - BlastPipeline - ERROR - Error processing MGC BGC0002721: division by zero
+2025-06-03 08:57:05,962 - BlastPipeline - ERROR - Error processing MGC BGC0002722: division by zero
+2025-06-03 08:57:05,966 - BlastPipeline - ERROR - Error during hit processing: 'mgc_id'
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 414, in _error_handling
+    yield
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 863, in process_hits
+    final_output['mgc_confidence'] = final_output['mgc_id'].map(
+                                     ~~~~~~~~~~~~^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/frame.py", line 4102, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/indexes/range.py", line 417, in get_loc
+    raise KeyError(key)
+KeyError: 'mgc_id'
+2025-06-03 08:57:05,974 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 08:57:05,974 - BlastPipeline - ERROR - Critical error in pipeline
+Traceback (most recent call last):
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 1099, in parse_blast_results
+    final_output = process_hits(best_hits, pipeline)
+                   ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/desktop/python_scripts/blast_mibig_vs_all_genomes_parallel.py", line 863, in process_hits
+    final_output['mgc_confidence'] = final_output['mgc_id'].map(
+                                     ~~~~~~~~~~~~^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/frame.py", line 4102, in __getitem__
+    indexer = self.columns.get_loc(key)
+              ^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/groups/itay_mayrose/alongonda/lib/python3.11/site-packages/pandas/core/indexes/range.py", line 417, in get_loc
+    raise KeyError(key)
+KeyError: 'mgc_id'
+2025-06-03 08:57:05,978 - BlastPipeline - INFO - Saved checkpoint to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 09:07:10,720 - BlastPipeline - INFO - Starting BLAST results parsing
+2025-06-03 09:07:10,726 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 09:07:10,738 - BlastPipeline - INFO - Restored checkpoint from /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/checkpoint.json
+2025-06-03 09:07:10,738 - BlastPipeline - INFO - Restored from previous checkpoint
+2025-06-03 09:07:11,033 - BlastPipeline - INFO - Loaded 38 MGC to organism mappings
+2025-06-03 09:07:11,112 - BlastPipeline - INFO - Loaded 90 Plaza organism mappings
+2025-06-03 09:07:11,118 - BlastPipeline - ERROR - Error processing MGC BGC0000669: division by zero
+2025-06-03 09:07:11,119 - BlastPipeline - ERROR - Error processing MGC BGC0000670: division by zero
+2025-06-03 09:07:11,121 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000671
+2025-06-03 09:07:11,122 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0000672
+2025-06-03 09:07:11,124 - BlastPipeline - ERROR - Error processing MGC BGC0001313: division by zero
+2025-06-03 09:07:11,125 - BlastPipeline - ERROR - Error processing MGC BGC0001314: division by zero
+2025-06-03 09:07:11,127 - BlastPipeline - ERROR - Error processing MGC BGC0001318: division by zero
+2025-06-03 09:07:11,128 - BlastPipeline - ERROR - Error processing MGC BGC0001322: division by zero
+2025-06-03 09:07:11,129 - BlastPipeline - ERROR - Error processing MGC BGC0001756: division by zero
+2025-06-03 09:07:11,131 - BlastPipeline - ERROR - Error processing MGC BGC0001799: division by zero
+2025-06-03 09:07:11,132 - BlastPipeline - ERROR - Error processing MGC BGC0002390: division by zero
+2025-06-03 09:07:11,133 - BlastPipeline - ERROR - Error processing MGC BGC0002391: division by zero
+2025-06-03 09:07:11,134 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002392
+2025-06-03 09:07:11,136 - BlastPipeline - ERROR - Error processing MGC BGC0002395: division by zero
+2025-06-03 09:07:11,137 - BlastPipeline - ERROR - Error processing MGC BGC0002397: division by zero
+2025-06-03 09:07:11,138 - BlastPipeline - ERROR - Error processing MGC BGC0002398: division by zero
+2025-06-03 09:07:11,139 - BlastPipeline - ERROR - Error processing MGC BGC0002400: division by zero
+2025-06-03 09:07:11,140 - BlastPipeline - ERROR - Error processing MGC BGC0002401: division by zero
+2025-06-03 09:07:11,141 - BlastPipeline - ERROR - Error processing MGC BGC0002403: division by zero
+2025-06-03 09:07:11,142 - BlastPipeline - ERROR - Error processing MGC BGC0002404: division by zero
+2025-06-03 09:07:11,143 - BlastPipeline - ERROR - Error processing MGC BGC0002405: division by zero
+2025-06-03 09:07:11,145 - BlastPipeline - WARNING - No good organism matches found for MGC BGC0002406
+2025-06-03 09:07:11,146 - BlastPipeline - ERROR - Error processing MGC BGC0002721: division by zero
+2025-06-03 09:07:11,147 - BlastPipeline - ERROR - Error processing MGC BGC0002722: division by zero
+2025-06-03 09:07:11,148 - BlastPipeline - WARNING - No valid hits found in the analysis
+2025-06-03 09:07:11,151 - BlastPipeline - INFO - Performance metrics saved to /groups/itay_mayrose/alongonda/Plant_MGC/mibig_metabolic_output/annotated_genomes_metabolic/merged_annotation/performance_metrics.json
+2025-06-03 09:07:11,151 - BlastPipeline - INFO - Pipeline completed in 0.43 seconds
+2025-06-03 09:07:11,152 - BlastPipeline - INFO - Average CPU usage: 72.9%
+2025-06-03 09:07:11,152 - BlastPipeline - INFO - Peak memory usage: 0.0%
