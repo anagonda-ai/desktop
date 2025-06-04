@@ -80,7 +80,12 @@ def predict_structure_with_colabfold(orf_name, sequence, output_dir):
         fasta_path.write_text(fasta_content)
 
         subprocess.run([
-            "colabfold_batch", str(fasta_path), str(pdb_out_dir), "--msa-mode", "single_sequence"
+            "colabfold_batch",
+            str(fasta_path),
+            str(pdb_out_dir),
+            "--msa-mode", "single_sequence",
+            "--disable-amber",
+            "--recycle-steps", "1",
         ], check=True)
 
         result_pdb = next(pdb_out_dir.glob("*.pdb"), None)
