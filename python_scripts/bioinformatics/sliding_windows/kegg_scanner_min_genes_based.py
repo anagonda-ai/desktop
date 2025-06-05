@@ -270,32 +270,32 @@ def main():
     
     merge_annotated_mibig(annotated_dir, annotated_files)
 
-    # for window_size in [10]:
-    #     for min_genes in [3]:
-    #         min_genes_subdir = create_output_subdir(output_dir, min_genes)
-    #         output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
-    #         if os.path.exists(output_file):
-    #             os.remove(output_file)
-    #         file_lock = Lock()
-    #         total_matches = 0
-    #         with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
-    #             with ThreadPoolExecutor(max_workers=max_workers) as executor:
-    #                 futures = [
-    #                     executor.submit(
-    #                         process_annotated_file,
-    #                         annotated_file,
-    #                         output_file,
-    #                         file_lock,
-    #                         window_size,
-    #                         min_genes
-    #                     )
-    #                     for annotated_file in annotated_files
-    #                 ]
-    #                 for future in as_completed(futures):
-    #                     total_matches += future.result()
-    #                     pbar.update(1)
-    #         print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
-    #         print(f"Results saved to: {output_file}")
+    for window_size in [10]:
+        for min_genes in [3]:
+            min_genes_subdir = create_output_subdir(output_dir, min_genes)
+            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
+            if os.path.exists(output_file):
+                os.remove(output_file)
+            file_lock = Lock()
+            total_matches = 0
+            with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
+                with ThreadPoolExecutor(max_workers=max_workers) as executor:
+                    futures = [
+                        executor.submit(
+                            process_annotated_file,
+                            annotated_file,
+                            output_file,
+                            file_lock,
+                            window_size,
+                            min_genes
+                        )
+                        for annotated_file in annotated_files
+                    ]
+                    for future in as_completed(futures):
+                        total_matches += future.result()
+                        pbar.update(1)
+            print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
+            print(f"Results saved to: {output_file}")
 
 
 if __name__ == "__main__":

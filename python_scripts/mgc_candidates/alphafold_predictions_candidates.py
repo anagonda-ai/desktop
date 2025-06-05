@@ -120,7 +120,7 @@ def predict_structure_with_colabfold(orf_name, sequence, output_dir):
 
 # ------------------------- Main Pipeline -------------------------
 
-def main(fasta_list_path, output_root="alphafold_pdbs"):
+def main(fasta_list_path):
     output_dir = os.path.dirname(fasta_list_path)
     output_root = Path(output_dir)
     output_root.mkdir(exist_ok=True)
