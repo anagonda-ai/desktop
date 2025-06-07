@@ -1,6 +1,9 @@
 import os
 import requests
 import subprocess
+from transformers import T5Tokenizer, T5EncoderModel
+import torch
+import numpy as np
 from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from Bio import SeqIO
@@ -92,23 +95,31 @@ def download_alphafold_pdb(uniprot_id, orf_name, subdir):
     except Exception as e:
         return f"[!] Error downloading {uniprot_id} ({orf_name}): {e}"
 
-def predict_structure_with_colabfold(orf_name, sequence, output_dir):
+def embed_protein_prott5(orf_name, sequence, output_dir):
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
-        fasta_path = output_dir / f"{orf_name}.fasta"
-        pdb_out_dir = output_dir / f"{orf_name}_colabfold"
+        out_path = output_dir / f"{orf_name}_protT5.npy"
+        if out_path.exists():
+            return f"[=] Embedding exists: {out_path.name}"
 
-        fasta_path.write_text(f">{orf_name}\n{sequence}\n")
+        # Load tokenizer and model (cached after first use)
+        tokenizer = T5Tokenizer.from_pretrained("Rostlab/prot_t5_xl_uniref50", do_lower_case=False)
+        model = T5EncoderModel.from_pretrained("Rostlab/prot_t5_xl_uniref50")
+        model = model.eval().cuda() if torch.cuda.is_available() else model.eval()
 
-        subprocess.run([
-            "sbatch",
-            "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/features_flow/colabfold_fixed.sh",
-            str(fasta_path),
-            str(pdb_out_dir)
-        ], check=True)
-        
+        # Prepare sequence
+        seq = " ".join(list(sequence))
+        tokens = tokenizer(seq, return_tensors='pt')
+        with torch.no_grad():
+            output = model(**tokens).last_hidden_state.squeeze(0)[1:-1]  # (L, 1024)
+
+        np.save(out_path, output.cpu().numpy())
+        return f"[✔] Embedded with ProtT5: {out_path.name}"
+
     except Exception as e:
-        return f"[!] ColabFold error for {orf_name}: {e}"
+        return f"[!] ProtT5 embedding error for {orf_name}: {e}"
+
+
 
 # ------------------------- Main Pipeline -------------------------
 
@@ -161,8 +172,9 @@ def main(fasta_list_path):
                 uid = result.split(":")[1].strip()
                 orf = [o for o, u in resolved_ids if u == uid][0]
                 subdir = output_root / orf_to_fasta[orf]
-                colab_result = predict_structure_with_colabfold(orf, sequences[orf], subdir)
-                print(colab_result)
+                embedding_result = embed_protein_prott5(orf, sequences[orf], subdir)
+                print(embedding_result)
+
 
 # ------------------------- Entry -------------------------
 
