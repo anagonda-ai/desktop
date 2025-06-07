@@ -57,6 +57,21 @@ def update_orf_cache(fasta_file, cache_dict):
                 new_entries[key] = str(record.seq)
     return new_entries
 
+def load_uniprot_cache(cache_file):
+    cache = {}
+    if cache_file.exists():
+        with open(cache_file) as f:
+            for line in f:
+                orf, uid = line.strip().split("\t")
+                cache[orf] = uid
+    return cache
+
+def save_uniprot_cache(cache_file, cache_dict):
+    with open(cache_file, "w") as f:
+        for orf, uid in cache_dict.items():
+            f.write(f"{orf}\t{uid}\n")
+
+
 # ------------------------- UniProt & AlphaFold -------------------------
 
 def resolve_uniprot_id(orf_name):
@@ -69,8 +84,10 @@ def resolve_uniprot_id(orf_name):
                 for entry in results:
                     xrefs = entry.get("uniProtKBCrossReferences", [])
                     if any(xref["database"] in ["Gramene", "EnsemblPlants", "Phytozome"] and orf_name in xref.get("id", "") for xref in xrefs):
+                        print(f"[✔] Found {orf_name} in UniProt: {entry['primaryAccession']}")
                         return orf_name, entry["primaryAccession"]
                 if results:
+                    print(f"[!] No relevant cross-references found for {orf_name}, using first result: {results[0]['primaryAccession']}")
                     return orf_name, results[0]["primaryAccession"]
                 break
             except Exception as e:
@@ -78,6 +95,7 @@ def resolve_uniprot_id(orf_name):
                 time.sleep(REQUEST_DELAY * 2)
             finally:
                 time.sleep(REQUEST_DELAY)
+    print(f"[!] Failed to resolve UniProt ID for {orf_name} after {MAX_RETRIES} attempts")
     return orf_name, None
 
 def download_alphafold_pdb(uniprot_id, orf_name, subdir):
@@ -148,12 +166,25 @@ def main(fasta_list_path):
 
     print(f"[*] Total unique ORF names: {len(orf_to_fasta)}")
 
-    with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(resolve_uniprot_id, orf): orf for orf in orf_to_fasta}
-        resolved = [f.result() for f in as_completed(futures)]
+    uniprot_cache_file = output_root / "uniprot_cache.tsv"
+    uniprot_cache = load_uniprot_cache(uniprot_cache_file)
 
-    resolved_ids = [(orf, uid) for orf, uid in resolved if uid]
-    print(f"[+] Resolved {len(resolved_ids)} UniProt IDs")
+    # Only resolve unknown ORFs
+    to_resolve = [orf for orf in orf_to_fasta if orf not in uniprot_cache]
+
+    print(f"[*] Resolving {len(to_resolve)} new ORFs from UniProt")
+
+    with ThreadPoolExecutor() as executor:
+        futures = {executor.submit(resolve_uniprot_id, orf): orf for orf in to_resolve}
+        for future in as_completed(futures):
+            orf, uid = future.result()
+            uniprot_cache[orf] = uid
+
+    save_uniprot_cache(uniprot_cache_file, uniprot_cache)
+
+    resolved_ids = [(orf, uid) for orf, uid in uniprot_cache.items()]
+    print(f"[+] Total UniProt IDs available: {len(resolved_ids)}")
+
 
     with ThreadPoolExecutor() as executor:
         futures = {
