@@ -101,20 +101,12 @@ def predict_structure_with_colabfold(orf_name, sequence, output_dir):
         fasta_path.write_text(f">{orf_name}\n{sequence}\n")
 
         subprocess.run([
-            "colabfold_batch",
+            "sbatch",
+            "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/features_flow/colabfold_fixed.sh",
             str(fasta_path),
-            str(pdb_out_dir),
-            "--msa-mode", "single_sequence",
-            "--num-relax", "0",
-            "--num-recycle", "1",
+            str(pdb_out_dir)
         ], check=True)
-
-        result_pdb = next(pdb_out_dir.glob("*.pdb"), None)
-        if result_pdb:
-            final_pdb = output_dir / f"{orf_name}_colabfold.pdb"
-            result_pdb.rename(final_pdb)
-            return f"[✔] Predicted with ColabFold: {final_pdb.name}"
-        return f"[✖] ColabFold ran but no PDB found for {orf_name}"
+        
     except Exception as e:
         return f"[!] ColabFold error for {orf_name}: {e}"
 
