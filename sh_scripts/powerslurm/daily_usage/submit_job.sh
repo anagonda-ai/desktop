@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=kegg_organism_download
+#SBATCH --job-name=colabfold_fixed
 #SBATCH --output=/groups/itay_mayrose/alongonda/desktop/example_jobs/out.OU
 #SBATCH --error=/groups/itay_mayrose/alongonda/desktop/example_jobs/error.ER
 #SBATCH --ntasks=1
@@ -8,5 +8,7 @@
 #SBATCH --partition=itaym
 #SBATCH --time=24:00:00
 
+conda deactivate
+conda activate colabfold_fixed
 
-python /groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/metabolic/mgc_processing/duplication_filter.py
+python /groups/itay_mayrose/alongonda/desktop/python_scripts/features/foldseek_matching/alphafold_predictions_candidates.py

@@ -54,6 +54,21 @@ def update_orf_cache(fasta_file, cache_dict):
                 new_entries[key] = str(record.seq)
     return new_entries
 
+def load_uniprot_cache(cache_file):
+    cache = {}
+    if cache_file.exists():
+        with open(cache_file) as f:
+            for line in f:
+                orf, uid = line.strip().split("\t")
+                cache[orf] = uid
+    return cache
+
+def save_uniprot_cache(cache_file, cache_dict):
+    with open(cache_file, "w") as f:
+        for orf, uid in cache_dict.items():
+            f.write(f"{orf}\t{uid}\n")
+
+
 # ------------------------- UniProt & AlphaFold -------------------------
 
 def resolve_uniprot_id(orf_name):
@@ -66,8 +81,10 @@ def resolve_uniprot_id(orf_name):
                 for entry in results:
                     xrefs = entry.get("uniProtKBCrossReferences", [])
                     if any(xref["database"] in ["Gramene", "EnsemblPlants", "Phytozome"] and orf_name in xref.get("id", "") for xref in xrefs):
+                        print(f"[✔] Found {orf_name} in UniProt: {entry['primaryAccession']}")
                         return orf_name, entry["primaryAccession"]
                 if results:
+                    print(f"[!] No relevant cross-references found for {orf_name}, using first result: {results[0]['primaryAccession']}")
                     return orf_name, results[0]["primaryAccession"]
                 break
             except Exception as e:
@@ -75,9 +92,12 @@ def resolve_uniprot_id(orf_name):
                 time.sleep(REQUEST_DELAY * 2)
             finally:
                 time.sleep(REQUEST_DELAY)
+    print(f"[!] Failed to resolve UniProt ID for {orf_name} after {MAX_RETRIES} attempts")
     return orf_name, None
 
 def download_alphafold_pdb(uniprot_id, orf_name, subdir):
+    if not uniprot_id:
+        return f"[✖] Not found on AlphaFold: {orf_name}"
     try:
         url = ALPHAFOLD_PDB_URL.format(uniprot_id)
         subdir.mkdir(parents=True, exist_ok=True)
@@ -88,7 +108,7 @@ def download_alphafold_pdb(uniprot_id, orf_name, subdir):
         if res.status_code == 200:
             out_path.write_text(res.text)
             return f"[✔] Downloaded: {out_path}"
-        return f"[✖] Not found on AlphaFold: {uniprot_id}"
+        return f"[✖] Not found on AlphaFold: {orf_name}"
     except Exception as e:
         return f"[!] Error downloading {uniprot_id} ({orf_name}): {e}"
 
@@ -100,6 +120,20 @@ def predict_structure_with_colabfold(orf_name, sequence, output_dir):
 
         fasta_path.write_text(f">{orf_name}\n{sequence}\n")
 
+        # Wait until there are fewer than 100 jobs running under 'alongonda'
+        while True:
+            result = subprocess.run(
+                ["squeue", "-u", "alongonda"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                text=True
+            )
+            num_jobs = len(result.stdout.strip().splitlines()) - 1  # subtract header
+            if num_jobs < 100:
+                break
+            print(f"[~] {num_jobs} jobs running for 'alongonda'. Waiting...")
+            time.sleep(60)
+            
         subprocess.run([
             "sbatch",
             "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/features_flow/colabfold_fixed.sh",
@@ -113,7 +147,7 @@ def predict_structure_with_colabfold(orf_name, sequence, output_dir):
 # ------------------------- Main Pipeline -------------------------
 
 def main(fasta_list_path):
-    output_dir = os.path.dirname(fasta_list_path)
+    output_dir = os.path.join(os.path.dirname(fasta_list_path), "mgc_pdb_files")
     output_root = Path(output_dir)
     output_root.mkdir(exist_ok=True)
 
@@ -137,12 +171,27 @@ def main(fasta_list_path):
 
     print(f"[*] Total unique ORF names: {len(orf_to_fasta)}")
 
-    with ThreadPoolExecutor() as executor:
-        futures = {executor.submit(resolve_uniprot_id, orf): orf for orf in orf_to_fasta}
-        resolved = [f.result() for f in as_completed(futures)]
+    uniprot_cache_file = output_root / "uniprot_cache.tsv"
+    uniprot_cache = load_uniprot_cache(uniprot_cache_file)
 
-    resolved_ids = [(orf, uid) for orf, uid in resolved if uid]
-    print(f"[+] Resolved {len(resolved_ids)} UniProt IDs")
+    # Only resolve unknown ORFs
+    to_resolve = [orf for orf in orf_to_fasta if orf not in uniprot_cache or uniprot_cache[orf] == 'None']
+
+    print(f"[*] Resolving {len(to_resolve)} new ORFs from UniProt")
+
+    uniprot_to_resolve = dict()
+    with ThreadPoolExecutor() as executor:
+        futures = {executor.submit(resolve_uniprot_id, orf): orf for orf in to_resolve}
+        for future in as_completed(futures):
+            orf, uid = future.result()
+            uniprot_cache[orf] = uid
+            uniprot_to_resolve[orf] = uid
+
+    save_uniprot_cache(uniprot_cache_file, uniprot_cache)
+
+    resolved_ids = [(orf, uid) for orf, uid in uniprot_to_resolve.items()]
+    print(f"[+] Total UniProt IDs available: {len(resolved_ids)}")
+
 
     with ThreadPoolExecutor() as executor:
         futures = {
@@ -158,8 +207,7 @@ def main(fasta_list_path):
             result = future.result()
             print(result)
             if result.startswith("[✖] Not found on AlphaFold:"):
-                uid = result.split(":")[1].strip()
-                orf = [o for o, u in resolved_ids if u == uid][0]
+                orf = result.split(":")[1].strip()
                 subdir = output_root / orf_to_fasta[orf]
                 colab_result = predict_structure_with_colabfold(orf, sequences[orf], subdir)
                 print(colab_result)
