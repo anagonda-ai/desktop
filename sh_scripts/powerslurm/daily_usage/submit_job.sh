@@ -8,7 +8,4 @@
 #SBATCH --partition=itaym
 #SBATCH --time=24:00:00
 
-conda deactivate
-conda activate colabfold_fixed
-
 python /groups/itay_mayrose/alongonda/desktop/python_scripts/features/foldseek_matching/alphafold_predictions_candidates.py

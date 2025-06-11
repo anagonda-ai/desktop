@@ -1,0 +1,16 @@
+name: colabfold_gpu
+channels:
+  - conda-forge
+  - bioconda
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - cudatoolkit=11.8
+  - openmm
+  - hmmer
+  - hhsuite
+  - cmake
+  - git
+  - pip:
+      - colabfold

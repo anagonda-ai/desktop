@@ -6,11 +6,22 @@ from matplotlib import gridspec, cm
 from Bio import Phylo
 import numpy as np
 from matplotlib.colors import to_rgb
+import ast
 
 # Define file paths
-MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/dataset_organism_mapping.csv"
-TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/species.nwk"
-COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/comparison_results.csv"
+MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/dataset_organism_mapping.csv"
+TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/species.nwk"
+COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/output_without_haaap/comparison_results.csv"
+
+def parse_dict(val):
+    if isinstance(val, dict):
+        return val
+    if isinstance(val, str):
+        try:
+            return ast.literal_eval(val)
+        except Exception:
+            return {}
+    return {}
 
 # Load dataset organism mapping file
 if os.path.exists(MAPPING_FILE):
@@ -30,7 +41,7 @@ if os.path.exists(COMPARISON_FILE):
     
     # Extract only the relevant part of the directory to match mapping_dict
     def clean_directory_name(directory):
-        return directory.split("/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
+        return directory.split("/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/blast_results_chromosome_separated_without_haaap/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
     
     comparison_df['Cleaned_Name'] = comparison_df['Directory'].apply(clean_directory_name)
     
@@ -67,8 +78,9 @@ if comparison_df is not None:
     gene_counts = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Cross Chromosome Lines']))
     chromosome_lines = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Lines']))
     chromosome_cluster_length = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Length']))
-    
-    max_value = 200  # Define the cap for Index Difference
+    chromosome_cluster_gene_existance = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['MGC Genes Existence'].apply(parse_dict)))
+
+    max_value = 100  # Define the cap for Index Difference
     # Replace values in Index Difference column
     
     comparison_df['Index Difference'] = comparison_df['Index Difference'].apply(lambda x: min(x, max_value) if x is not None else None)
@@ -76,7 +88,7 @@ if comparison_df is not None:
     # Create the dictionary after applying the cap
     chromosome_cluster_length_genes = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Index Difference']))
 else:
-    gene_counts = chromosome_lines = chromosome_cluster_length = chromosome_cluster_length_genes = {}
+    gene_counts = chromosome_lines = chromosome_cluster_length = chromosome_cluster_length_genes = chromosome_cluster_gene_existance = {}
 
 # Improved Color Function
 def get_color(value, min_val, max_val, cmap_name="viridis"):
@@ -270,12 +282,12 @@ def plot_metric_column(ax, metric_dict, colormap, title, y_positions, leaf_names
             # Draw a horizontal line to indicate "deletion" (NaN)
             ax.plot([0.1, 0.9], [y] * 2, color="black", linewidth=1.5)
         else:
-            display_text = f"≥{val}" if val == 200 else str(val)
+            display_text = f"≥{val}" if val >= 100 else str(val)
             ax.text(0.5, y, display_text, ha='center', va='center', fontsize=7, color='black')
 
 
 
-def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titles, cmap_name="viridis"):
+def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titles, chromosome_cluster_gene_existance, cmap_name="viridis"):
     """Creates a single tree plot with value-annotated sidebars aligned with leaves."""
     tree = Phylo.read(tree_file, "newick")
 
@@ -285,8 +297,15 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
         clade.confidence = None
 
     # Get leaf names in the drawn order
+    # First, collect all possible gene keys
+    all_gene_keys = set()
+    for v in chromosome_cluster_gene_existance.values():
+        if isinstance(v, dict):
+            all_gene_keys.update(v.keys())
+    all_gene_keys = sorted(all_gene_keys)
+    total_columns = 1 + len(metrics) + len(all_gene_keys)
     fig = plt.figure(figsize=(18, len(tree.get_terminals()) * 0.2))
-    gs = gridspec.GridSpec(1, len(metrics) + 1, width_ratios=[3] + [0.5] * len(metrics), wspace=0.05)
+    gs = gridspec.GridSpec(1, total_columns, width_ratios=[3] + [0.5] * (total_columns - 1), wspace=0.05)
 
     # Plot tree and capture label Y positions
     ax_tree = fig.add_subplot(gs[0, 0])
@@ -326,6 +345,35 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
             else:
                 display = f"≥{val}" if val == 200 else str(val)
                 ax.text(0.5, y_idx, display, ha="center", va="center", fontsize=7)
+    
+    # Add chromosome_cluster_gene_existance as a matrix metric column
+    # First, collect all possible gene keys
+    all_gene_keys = set()
+    for v in chromosome_cluster_gene_existance.values():
+        if isinstance(v, dict):
+            all_gene_keys.update(v.keys())
+    all_gene_keys = sorted(all_gene_keys)
+
+    # Add one column per gene key
+    for gene_idx, gene_key in enumerate(all_gene_keys):
+        ax = fig.add_subplot(gs[0, len(metrics) + 1 + gene_idx])
+        ax.set_xlim(0, 1)
+        ax.set_xticks([])
+        ax.set_yticks([])
+        ax.set_title(gene_key, fontsize=9)
+        ax.set_ylim(len(leaf_names) - 0.5, -0.5)
+        ax.invert_yaxis()
+        # Adjust the column width to match the header by setting aspect ratio
+        ax.set_aspect('auto')
+        for y_idx, name in enumerate(leaf_names):
+            gene_dict = chromosome_cluster_gene_existance.get(name, {})
+            val = gene_dict.get(gene_key, None) if isinstance(gene_dict, dict) else None
+            color = "#4daf4a" if val is True else "#e41a1c" if val is False else (1, 1, 1, 0)
+            ax.barh(y_idx, 1, color=color, edgecolor='none')
+            if val is None:
+                ax.plot([0.1, 0.9], [y_idx] * 2, color="black", linewidth=1.5)
+            else:
+                ax.text(0.5, y_idx, "✓" if val else "✗", ha="center", va="center", fontsize=10, color="white" if val is not None else "black")
 
     plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
@@ -333,18 +381,20 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
 
 
 # Save figures
-output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output/summary_plots"
+output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/output_without_haaap/summary_plots"
 os.makedirs(output_dir, exist_ok=True)
 
 # Load phylogenetic trees
 MultiChromosomeGenesTree = Phylo.read(TREE_FILE, "newick")
 MaxChromosomeGenesTree = Phylo.read(TREE_FILE, "newick")
 ClusterLengthGenesTree = Phylo.read(TREE_FILE, "newick")
+
 plot_combined_tree_with_metrics(
     tree_file=TREE_FILE,
     output_path=os.path.join(output_dir, "CombinedClusterMetrics.png"),
-    metrics=[gene_counts, chromosome_lines, chromosome_cluster_length_genes],
-    metric_titles=["Genes in the Genome", "Single-Chr Genes", "Cluster Length (Genes)"],
+    metrics=[gene_counts, chromosome_lines, chromosome_cluster_length_genes, chromosome_cluster_length],
+    metric_titles=["Genes in the Genome", "Single-Chr Genes", "Cluster Length (Genes)", "Cluster Length (BP)"],
+    chromosome_cluster_gene_existance=chromosome_cluster_gene_existance,
     cmap_name="viridis"
 )
 plot_tree_discrete(MultiChromosomeGenesTree, gene_counts, os.path.join(output_dir, "NumberOfHitsInGenome.png"))

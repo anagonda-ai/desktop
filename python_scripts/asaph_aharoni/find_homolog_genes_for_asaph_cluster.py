@@ -16,15 +16,15 @@ csv_dirs = [
 ]
 
 # Directory to store generated FASTA files and BLAST DBs
-blast_db_dir = "/groups/itay_mayrose/alongonda/datasets/generated_blast_dbs"
+blast_db_dir = "/groups/itay_mayrose/alongonda/datasets/generated_blast_dbs_without_haaap"
 os.makedirs(blast_db_dir, exist_ok=True)
 
 # Query FASTA files
-example_mgc = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798"
-query_fastas = [os.path.join(example_mgc, f) for f in os.listdir(example_mgc) if f.endswith(".fasta")]
+example_mgc = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni"
+query_fastas = [os.path.join(example_mgc, f) for f in os.listdir(example_mgc) if f.endswith(".fasta") and "HAAAP" not in f]
 
 # Output directory for BLAST results
-blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/blast_results_chromosome_separated"
+blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap"
 os.makedirs(blast_results_dir, exist_ok=True)
 
 # Function to convert CSV to FASTA, skipping empty files
@@ -63,7 +63,7 @@ def create_blast_db(fasta_file):
     db_name = fasta_file + "_blastdb"
     cmd = f"makeblastdb -in {fasta_file} -dbtype prot -out {db_name}"
     try:
-        # subprocess.run(cmd, shell=True, check=True)
+        subprocess.run(cmd, shell=True, check=True)
         return db_name
     except subprocess.CalledProcessError:
         return None
@@ -80,7 +80,7 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
 # Function to run BLASTP
 def run_blastp(query_fasta, csv_file, blast_db):
     output_file = os.path.join(blast_results_dir, f"{os.path.basename(query_fasta)}_{csv_file}_results.txt")
-    cmd = f"blastp -query {query_fasta} -db {blast_db} -evalue 0.01 -qcov_hsp_perc 70 -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -max_target_seqs 50 -gapopen 11 -gapextend 1 -out {output_file}"
+    cmd = f"blastp -query {query_fasta} -db {blast_db} -evalue 1e-5 -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -max_target_seqs 50 -gapopen 11 -gapextend 1 -out {output_file}"
     try:
         subprocess.run(cmd, shell=True, check=True)
         return (query_fasta, csv_file, output_file)

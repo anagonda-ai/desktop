@@ -12,6 +12,8 @@ API_SEMAPHORE = threading.Semaphore(3)
 REQUEST_DELAY = 0.4
 MAX_RETRIES = 3
 
+LENGTH_THRESHOLD = 250  # adjustable
+
 UNIPROT_SEARCH_API = "https://rest.uniprot.org/uniprotkb/search?query={}&fields=accession&format=json"
 ALPHAFOLD_PDB_URL = "https://alphafold.ebi.ac.uk/files/AF-{}-F1-model_v4.pdb"
 
@@ -112,11 +114,35 @@ def download_alphafold_pdb(uniprot_id, orf_name, subdir):
     except Exception as e:
         return f"[!] Error downloading {uniprot_id} ({orf_name}): {e}"
 
+def run_on_cpu(fasta_path, pdb_out_dir):
+    subprocess.run([
+        "sbatch",
+        "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/features_flow/colabfold_cpu.sh",
+        str(fasta_path),
+        str(pdb_out_dir)
+    ], check=True)
+    
+def run_on_gpu(fasta_path, pdb_out_dir):
+    subprocess.run([
+        "sbatch",
+        "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/features_flow/colabfold_gpu.sh",
+        str(fasta_path),
+        str(pdb_out_dir)
+    ], check=True)
+    
+def is_gpu_available(lines):
+    is_gpu = True
+    for line in lines:
+        if "gpu-gener" in line and "PD" in line:
+            print("[!] Found 'PD' in a row with 'gpu-gener' in squeue output.")
+            is_gpu = False
+    return is_gpu
+    
 def predict_structure_with_colabfold(orf_name, sequence, output_dir):
     try:
         output_dir.mkdir(parents=True, exist_ok=True)
         fasta_path = output_dir / f"{orf_name}.fasta"
-        pdb_out_dir = output_dir / f"{orf_name}_colabfold"
+        pdb_out_dir = output_dir / f"{orf_name}_alphafold"
 
         fasta_path.write_text(f">{orf_name}\n{sequence}\n")
 
@@ -128,19 +154,19 @@ def predict_structure_with_colabfold(orf_name, sequence, output_dir):
                 stderr=subprocess.PIPE,
                 text=True
             )
-            num_jobs = len(result.stdout.strip().splitlines()) - 1  # subtract header
+
+            lines = result.stdout.strip().splitlines()
+            num_jobs = len(lines) - 1  # subtract header
             if num_jobs < 100:
                 break
             print(f"[~] {num_jobs} jobs running for 'alongonda'. Waiting...")
             time.sleep(60)
-            
-        subprocess.run([
-            "sbatch",
-            "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/features_flow/colabfold_fixed.sh",
-            str(fasta_path),
-            str(pdb_out_dir)
-        ], check=True)
-        
+
+        if len(sequence) >= LENGTH_THRESHOLD and is_gpu_available(lines):
+            run_on_gpu(fasta_path, pdb_out_dir)
+        else:
+            run_on_cpu(fasta_path, pdb_out_dir)
+
     except Exception as e:
         return f"[!] ColabFold error for {orf_name}: {e}"
 
@@ -175,7 +201,7 @@ def main(fasta_list_path):
     uniprot_cache = load_uniprot_cache(uniprot_cache_file)
 
     # Only resolve unknown ORFs
-    to_resolve = [orf for orf in orf_to_fasta if orf not in uniprot_cache or uniprot_cache[orf] == 'None']
+    to_resolve = [orf for orf in orf_to_fasta if orf not in uniprot_cache]
 
     print(f"[*] Resolving {len(to_resolve)} new ORFs from UniProt")
 
@@ -192,7 +218,7 @@ def main(fasta_list_path):
     resolved_ids = [(orf, uid) for orf, uid in uniprot_to_resolve.items()]
     print(f"[+] Total UniProt IDs available: {len(resolved_ids)}")
 
-
+    orf_for_colabfold = dict()
     with ThreadPoolExecutor() as executor:
         futures = {
             executor.submit(
@@ -201,16 +227,35 @@ def main(fasta_list_path):
                 orf,
                 output_root / orf_to_fasta[orf]
             ): (orf, uid)
-            for orf, uid in resolved_ids
+            for orf, uid in uniprot_cache.items()
         }
+        print(f"[*] Downloading AlphaFold PDBs for {len(futures)} ORFs")
         for future in as_completed(futures):
             result = future.result()
             print(result)
             if result.startswith("[✖] Not found on AlphaFold:"):
                 orf = result.split(":")[1].strip()
                 subdir = output_root / orf_to_fasta[orf]
-                colab_result = predict_structure_with_colabfold(orf, sequences[orf], subdir)
-                print(colab_result)
+                orf_for_colabfold[orf] = (orf, sequences[orf], subdir)
+                print(f"[!] {orf} not found on AlphaFold, will run ColabFold")
+                
+    with ThreadPoolExecutor() as executor:
+        futures = {
+            executor.submit(
+                predict_structure_with_colabfold,
+                orf,
+                seq,
+                subdir
+            ): (orf, seq, subdir)
+            for orf, (orf, seq, subdir) in orf_for_colabfold.items()
+        }
+        print(f"[*] Running ColabFold for {len(futures)} ORFs")
+        for future in as_completed(futures):
+            orf, seq, subdir = future.result()
+            if orf:
+                print(f"[✔] ColabFold completed for {orf}")
+            else:
+                print(f"[!] ColabFold failed for {orf}")
 
 # ------------------------- Entry -------------------------
 

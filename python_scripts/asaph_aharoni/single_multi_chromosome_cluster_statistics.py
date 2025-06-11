@@ -2,26 +2,37 @@ import os
 import csv
 import matplotlib.pyplot as plt
 import numpy as np
+import pandas as pd
 
 def count_lines_in_csv(file_path):
     """Counts the number of lines in a CSV file efficiently, excluding the header."""
-    with open(file_path, 'r', encoding='utf-8') as f:
-        return sum(1 for _ in f) - 1  # Subtract 1 to exclude the header
+    df = pd.read_csv(file_path)
+    mgc_genes_existance_matrix = dict()
+    # Efficiently update mgc_genes_existance_matrix based on 'origin_file' column values
+    if 'origin_file' in df.columns:
+        origin_vals = df['origin_file'].dropna().astype(str).str.lower().unique()
+        mgc_genes_existance_matrix['adcs'] = any('adcs' == val for val in origin_vals)
+        mgc_genes_existance_matrix['cs'] = any('cs' == val for val in origin_vals)
+        mgc_genes_existance_matrix['HAAAP_Transporters'] = any('HAAAP_Transporters'.lower() == val for val in origin_vals)
+        mgc_genes_existance_matrix['pABA_transporter'] = any('pABA_transporter'.lower() == val for val in origin_vals)
+    return len(df), mgc_genes_existance_matrix
 
 def find_largest_chromosome_file(dir_path):
     """Finds the chromosome_*.csv file with the most lines in a given directory."""
     max_lines = 0
     largest_file = None
+    best_mgc_genes_existance_matrix = dict()
 
     for file in os.listdir(dir_path):
         if file.startswith("chromosome_") and file.endswith(".csv"):
             file_path = os.path.join(dir_path, file)
-            num_lines = count_lines_in_csv(file_path)
+            num_lines, current_mgc_genes_existance_matrix = count_lines_in_csv(file_path)
             if num_lines > max_lines:
                 max_lines = num_lines
                 largest_file = file
+                best_mgc_genes_existance_matrix = current_mgc_genes_existance_matrix
 
-    return max_lines, largest_file
+    return max_lines, largest_file, best_mgc_genes_existance_matrix
 
 def compare_csvs_in_each_dir(root_dir, output_file):
     """Traverses 'x' to find all 'potential_clusters_by_chromosome' directories and compare CSVs."""
@@ -30,24 +41,25 @@ def compare_csvs_in_each_dir(root_dir, output_file):
     for dirpath, dirnames, filenames in os.walk(root_dir):
         if os.path.basename(dirpath) == "potential_clusters_by_chromosome":
             # Find the largest chromosome_*.csv file
-            max_lines, largest_file = find_largest_chromosome_file(dirpath)
+            max_lines, largest_file, best_mgc_genes_existance_matrix = find_largest_chromosome_file(dirpath)
             
             # Find cross_chromosome_clusters.csv
             cross_chromosome_file = os.path.join(dirpath, "cross_chromosome_clusters.csv")
-            cross_lines = count_lines_in_csv(cross_chromosome_file) if os.path.exists(cross_chromosome_file) else 0
+            cross_lines, cross_mgc_genes_existance_matrix = count_lines_in_csv(cross_chromosome_file) if os.path.exists(cross_chromosome_file) else 0
             
             results.append([
                 dirpath,
                 largest_file if largest_file else "None",
                 max_lines,
                 cross_lines,
-                cross_lines - max_lines
+                cross_lines - max_lines,
+                best_mgc_genes_existance_matrix
             ])
 
     # Save results to a CSV file
     with open(output_file, mode="w", newline="", encoding="utf-8") as f:
         writer = csv.writer(f)
-        writer.writerow(["Directory", "Largest Chromosome File", "Largest Chromosome Lines", "Cross Chromosome Lines", "Difference"])
+        writer.writerow(["Directory", "Largest Chromosome File", "Largest Chromosome Lines", "Cross Chromosome Lines", "Difference", "MGC Genes Existence"])
         writer.writerows(results)
 
     print(f"Results saved to {output_file}")
@@ -114,8 +126,9 @@ def plot_results(results, output_dir, chunk_size=50):
     print(f"Plots saved in: {sub_dir}")
 
 if __name__ == "__main__":
-    root_directory = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798/blast_results_chromosome_separated/best_hits_by_organism"  # Replace with the actual root directory
-    output_dir = "/groups/itay_mayrose/alongonda/datasets/evolutionary_conservation_examples/MIBIG/BGC0000798"  # Replace with the actual output directory
+    root_directory = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/blast_results_chromosome_separated_without_haaap/best_hits_by_organism"  # Replace with the actual root directory
+    output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/output_without_haaap"  # Replace with the actual output directory
+    os.makedirs(output_dir, exist_ok=True)
     output_filename = "comparison_results.csv"  # Output file name
     output_file = os.path.join(output_dir, output_filename)
 
