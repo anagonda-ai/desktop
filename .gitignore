@@ -18,3 +18,10 @@ alphafold_pdbs/
 
 # Large output files
 python_scripts/bioinformatics/protein_global_alignment/graph_output_mwp.csv
+
+# Ignore example jobs directory
+example_jobs/
+
+# Ignore pycache data directory and files
+__pycache__/
+*.pyc
