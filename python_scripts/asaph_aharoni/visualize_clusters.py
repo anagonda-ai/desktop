@@ -77,8 +77,8 @@ else:
 if comparison_df is not None:
     gene_counts = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Cross Chromosome Lines']))
     chromosome_lines = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Lines']))
-    chromosome_cluster_length = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Length']))
-    chromosome_cluster_gene_existance = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['MGC Genes Existence'].apply(parse_dict)))
+    chromosome_cluster_length = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Length'] / 1000)) # Convert to Kbp
+    chromosome_cluster_gene_existance = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['MGC Genes Order'].apply(parse_dict)))
 
     max_value = 100  # Define the cap for Index Difference
     # Replace values in Index Difference column
@@ -368,12 +368,14 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
         for y_idx, name in enumerate(leaf_names):
             gene_dict = chromosome_cluster_gene_existance.get(name, {})
             val = gene_dict.get(gene_key, None) if isinstance(gene_dict, dict) else None
-            color = "#4daf4a" if val is True else "#e41a1c" if val is False else (1, 1, 1, 0)
+            # Adjust color mapping for gene order: 1=green, 2=yellow, 3=orange, 4=red, None=transparent
+            color_map = {1: "#4daf4a", 2: "#ffd92f", 3: "#ff7f00", 4: "#e41a1c"}
+            color = color_map.get(val, (1, 1, 1, 0))
             ax.barh(y_idx, 1, color=color, edgecolor='none')
             if val is None:
                 ax.plot([0.1, 0.9], [y_idx] * 2, color="black", linewidth=1.5)
             else:
-                ax.text(0.5, y_idx, "✓" if val else "✗", ha="center", va="center", fontsize=10, color="white" if val is not None else "black")
+                ax.text(0.5, y_idx, val if val else "✗", ha="center", va="center", fontsize=10, color="black")
 
     plt.savefig(output_path, dpi=300, bbox_inches="tight")
     plt.close()
@@ -393,7 +395,7 @@ plot_combined_tree_with_metrics(
     tree_file=TREE_FILE,
     output_path=os.path.join(output_dir, "CombinedClusterMetrics.png"),
     metrics=[gene_counts, chromosome_lines, chromosome_cluster_length_genes, chromosome_cluster_length],
-    metric_titles=["Genes in the Genome", "Single-Chr Genes", "Cluster Length (Genes)", "Cluster Length (BP)"],
+    metric_titles=["Genes in the Genome", "Single-Chr Genes", "Cluster Length (Genes)", "Cluster Length (Kbp)"],
     chromosome_cluster_gene_existance=chromosome_cluster_gene_existance,
     cmap_name="viridis"
 )
