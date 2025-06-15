@@ -142,13 +142,15 @@ def find_first_common_element(genes_and_pathways, min_genes):
         flattened = set(item.strip() for sublist in paths for item in sublist)
         gene_sets[gene] = flattened
 
-    gene_combinations = combinations(gene_sets.keys(), min_genes)
-    for selected_genes in gene_combinations:
-        selected_sets = [gene_sets[gene] for gene in selected_genes]
-        all_combinations = product(*selected_sets)
-        for combination in all_combinations:
-            if len(set(combination)) == 1:
-                return combination[0], list(selected_genes)
+    # Iterate from the largest possible group down to min_genes
+    for group_size in range(len(gene_sets.keys()), min_genes - 1, -1):
+        gene_combinations = combinations(gene_sets.keys(), group_size)
+        for selected_genes in gene_combinations:
+            selected_sets = [gene_sets[gene] for gene in selected_genes]
+            all_combinations = product(*selected_sets)
+            for combination in all_combinations:
+                if len(set(combination)) == 1:
+                    return combination[0], list(selected_genes)
     return None, []
 
 
@@ -229,12 +231,31 @@ def merge_annotated_mibig(annotated_dir, annotated_files):
         print("⚠️ No matching rows found across files.")
 
 
-
+# --- Output Directory Management ---
 def create_output_subdir(output_dir, min_genes):
     subdir = os.path.join(output_dir, f"min_genes_{min_genes}")
     if not os.path.exists(subdir):
         os.makedirs(subdir)
     return subdir
+
+# --- Result Filtering Functions ---
+def remove_subset_results(output_file):
+    if not os.path.exists(output_file):
+        print(f"File not found: {output_file}")
+        return
+    df = pd.read_csv(output_file)
+    # Parse metabolic_genes into sets
+    df['metabolic_genes_set'] = df['metabolic_genes'].apply(lambda x: set(x.split(',')))
+    to_remove = set()
+    for i, genes_i in enumerate(df['metabolic_genes_set']):
+        for j, genes_j in enumerate(df['metabolic_genes_set']):
+            if i != j and genes_i < genes_j:
+                to_remove.add(i)
+                break
+    filtered_df = df.drop(list(to_remove)).drop(columns=['metabolic_genes_set'])
+    filtered_output_file = output_file.replace(".csv", "_filtered.csv")
+    filtered_df.to_csv(filtered_output_file, index=False)
+    print(f"Removed {len(to_remove)} subset results from {output_file} and saved to {filtered_output_file}")
 
 
 def main():
@@ -246,7 +267,7 @@ def main():
         os.path.join(full_genome_dir, "plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences")
     ]
     kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta/merged_metabolic_pathways/merged_metabolic_pathways"
-    head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w20_g3"
+    head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w10_g3"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
@@ -296,6 +317,8 @@ def main():
                         pbar.update(1)
             print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
             print(f"Results saved to: {output_file}")
+            remove_subset_results(output_file)
+            
 
 
 if __name__ == "__main__":

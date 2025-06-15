@@ -6,7 +6,7 @@ from tqdm import tqdm
 import logging
 from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
 from dataclasses import dataclass
-from typing import Optional, Dict, List
+from typing import List
 import time
 from pathlib import Path
 

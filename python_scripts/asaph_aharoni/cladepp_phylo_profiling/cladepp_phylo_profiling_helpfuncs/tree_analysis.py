@@ -1,15 +1,12 @@
-
 import pandas as pd
 from Bio import Phylo
 import numpy as np
 from itertools import combinations
 import os
+import matplotlib.pyplot as plt
+import seaborn as sns
 from cladepp_phylo_profiling_helpfuncs.cladepp_core import normalize_npp, build_profile_matrix
-from cladepp_phylo_profiling_helpfuncs.io_utils import load_selected_blast_results, load_mapping_if_exists  
-
-
-def normalize_name(name):
-    return name.lower().replace('.', '').replace('-', '').replace('_', '')
+from cladepp_phylo_profiling_helpfuncs.io_utils import load_selected_blast_results, load_mapping_if_exists
 
 def normalize_name(name):
     return name.strip().lower().replace(" ", "_").replace("-", "_").replace(".", "").replace("(", "").replace(")", "")
@@ -26,7 +23,6 @@ def match_tree_to_comparison(tree_tips, comparison_df, mapping_df):
             if norm_org_name in tree_names:
                 matched_rows.append((row.to_dict(), tree_names[norm_org_name]))
     return matched_rows
-
 
 def compute_anchor_corr_stats(submatrix):
     genes = submatrix.index
@@ -48,6 +44,14 @@ def compute_anchor_corr_stats(submatrix):
             "min_anchor_corr": np.nan
         }
 
+def plot_and_save_heatmap(matrix, title, filename):
+    plt.figure(figsize=(8, 6))
+    sns.heatmap(matrix, annot=True, cmap="coolwarm", center=0)
+    plt.title(title)
+    plt.tight_layout()
+    plt.savefig(filename)
+    plt.close()
+
 def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_prefix="clade_analysis", mapping_file=None):
     print(f"Loading tree from {tree_path}")
     tree = Phylo.read(tree_path, "newick")
@@ -66,6 +70,8 @@ def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_
 
     result_rows = []
     clade_id = 1
+    os.makedirs(f"{output_prefix}_clades", exist_ok=True)
+
     for clade in tree.get_nonterminals():
         tips = clade.get_terminals()
         tip_names = [t.name for t in tips if t.name in tree_name_map]
@@ -87,6 +93,16 @@ def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_
                 "tip_names": ",".join(tip_names[:5]) + "..." if len(tip_names) > 5 else ",".join(tip_names),
                 **corr_stats
             })
+
+            # Save matrix files
+            raw_path = f"{output_prefix}_clades/matrix_raw_clade_{clade_id}.csv"
+            npp_path = f"{output_prefix}_clades/matrix_npp_clade_{clade_id}.csv"
+            raw_matrix.to_csv(raw_path)
+            npp_matrix.to_csv(npp_path)
+
+            # Save heatmap
+            plot_and_save_heatmap(npp_matrix, f"Normalized Profile Clade {clade_id}", f"{output_prefix}_clades/heatmap_clade_{clade_id}.png")
+
         except Exception as e:
             print(f"Skipping clade {clade_id} due to error: {e}")
         clade_id += 1
@@ -94,22 +110,3 @@ def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_
     df = pd.DataFrame(result_rows)
     df.to_csv(f"{output_prefix}_summary.csv", index=False)
     print(f"Saved clade correlation summary to {output_prefix}_summary.csv")
-    
-if __name__ == "__main__":
-    import argparse
-
-    parser = argparse.ArgumentParser(description="Clade-wise anchor correlation analysis")
-    parser.add_argument("--tree-path", required=True, help="Path to Newick tree file")
-    parser.add_argument("--comparison_csv", required=True, help="Path to comparison_results.csv")
-    parser.add_argument("--anchor_genes", nargs="+", required=True, help="List of anchor gene labels (e.g. adcs cs pABA_transporter)")
-    parser.add_argument("--output_prefix", default="clade_analysis", help="Prefix for output files")
-
-    args = parser.parse_args()
-
-    analyze_tree_clades_dynamic(
-        tree_path=args.tree_path,
-        comparison_csv=args.comparison_csv,
-        anchor_genes=args.anchor_genes,
-        output_prefix=args.output_prefix
-    )
-# This script analyzes clades in a phylogenetic tree, computes anchor gene correlations, and saves the results.
