@@ -6,7 +6,7 @@ import os
 import matplotlib.pyplot as plt
 import seaborn as sns
 from cladepp_phylo_profiling_helpfuncs.cladepp_core import normalize_npp, build_profile_matrix
-from cladepp_phylo_profiling_helpfuncs.io_utils import load_selected_blast_results, load_mapping_if_exists
+from cladepp_phylo_profiling_helpfuncs.io_utils import load_selected_blast_results, load_mapping_if_exists  
 
 def normalize_name(name):
     return name.strip().lower().replace(" ", "_").replace("-", "_").replace(".", "").replace("(", "").replace(")", "")
@@ -27,29 +27,37 @@ def match_tree_to_comparison(tree_tips, comparison_df, mapping_df):
 def compute_anchor_corr_stats(submatrix):
     genes = submatrix.index
     anchor_corrs = []
+    corr_gene_pairs = []
     for g1, g2 in combinations(genes, 2):
-        anchor_corrs.append(submatrix.loc[g1].corr(submatrix.loc[g2]))
+        corr = submatrix.loc[g1].corr(submatrix.loc[g2])
+        anchor_corrs.append(corr)
+        if corr > 0.5:
+            corr_gene_pairs.append((g1, g2, corr))
     if anchor_corrs:
         return {
             "mean_anchor_corr": np.mean(anchor_corrs),
             "std_anchor_corr": np.std(anchor_corrs),
             "max_anchor_corr": np.max(anchor_corrs),
-            "min_anchor_corr": np.min(anchor_corrs)
+            "min_anchor_corr": np.min(anchor_corrs),
+            "high_corr_pairs": "; ".join(f"{g1}-{g2}:{corr:.2f}" for g1, g2, corr in corr_gene_pairs)
         }
     else:
         return {
             "mean_anchor_corr": np.nan,
             "std_anchor_corr": np.nan,
             "max_anchor_corr": np.nan,
-            "min_anchor_corr": np.nan
+            "min_anchor_corr": np.nan,
+            "high_corr_pairs": ""
         }
 
-def plot_and_save_heatmap(matrix, title, filename):
-    plt.figure(figsize=(8, 6))
-    sns.heatmap(matrix, annot=True, cmap="coolwarm", center=0)
-    plt.title(title)
+def save_clade_heatmap(npp_matrix, clade_id, tip_names, output_dir):
+    plt.figure(figsize=(5, 4))
+    corr_matrix = npp_matrix.T.corr()
+    sns.heatmap(corr_matrix, annot=True, cmap="coolwarm", vmin=-1, vmax=1)
+    plt.title(f"Clade {clade_id} (n={len(tip_names)}): {', '.join(tip_names[:3])}...")
+    os.makedirs(output_dir, exist_ok=True)
     plt.tight_layout()
-    plt.savefig(filename)
+    plt.savefig(os.path.join(output_dir, f"clade_{clade_id}_corr_heatmap.png"))
     plt.close()
 
 def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_prefix="clade_analysis", mapping_file=None):
@@ -67,10 +75,9 @@ def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_
     print(f"Matched {len(match_list)} entries from comparison table to tree")
 
     tree_name_map = {t[1]: t[0] for t in match_list}
-
     result_rows = []
     clade_id = 1
-    os.makedirs(f"{output_prefix}_clades", exist_ok=True)
+    heatmap_dir = f"{output_prefix}_clade_figures"
 
     for clade in tree.get_nonterminals():
         tips = clade.get_terminals()
@@ -94,14 +101,7 @@ def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_
                 **corr_stats
             })
 
-            # Save matrix files
-            raw_path = f"{output_prefix}_clades/matrix_raw_clade_{clade_id}.csv"
-            npp_path = f"{output_prefix}_clades/matrix_npp_clade_{clade_id}.csv"
-            raw_matrix.to_csv(raw_path)
-            npp_matrix.to_csv(npp_path)
-
-            # Save heatmap
-            plot_and_save_heatmap(npp_matrix, f"Normalized Profile Clade {clade_id}", f"{output_prefix}_clades/heatmap_clade_{clade_id}.png")
+            save_clade_heatmap(npp_matrix, clade_id, tip_names, heatmap_dir)
 
         except Exception as e:
             print(f"Skipping clade {clade_id} due to error: {e}")
