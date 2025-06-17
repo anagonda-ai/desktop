@@ -11,6 +11,7 @@ from networkx import Graph
 from networkx.algorithms.matching import max_weight_matching
 import pandas as pd
 
+# Constants for BLAST parameters
 EVALUE_THRESHOLD = 0.001
 IDENTITY_THRESHOLD = 70.0
 COVERAGE_THRESHOLD = 70.0
