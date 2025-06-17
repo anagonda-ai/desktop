@@ -15,7 +15,7 @@ import pandas as pd
 EVALUE_THRESHOLD = 0.001
 IDENTITY_THRESHOLD = 70.0
 COVERAGE_THRESHOLD = 70.0
-NUM_THREADS = 26
+NUM_THREADS = 30
 
 # Function to read sequences from a CSV file
 def read_sequences_from_csv(file_path):
