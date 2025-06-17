@@ -1,20 +1,23 @@
-import csv
 import os
 import pandas as pd
 from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 
 # Input files
-CSV_FILE = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/potential_groups_w10.csv"
-OUTPUT_DIR = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+CSV_FILE = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w10_g3/kegg_scanner_min_genes_based_metabolic/min_genes_3/potential_groups_w10_filtered.csv"
+OUTPUT_DIR = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w10_g3/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
 
 # Create output directory
 os.makedirs(OUTPUT_DIR, exist_ok=True)
+FINAL_OUTPUT_DIR = os.path.join(OUTPUT_DIR, "final_fasta_files")
+os.makedirs(FINAL_OUTPUT_DIR, exist_ok=True)
 
+# Function to parse gene IDs from a comma-separated string
 def parse_gene_ids(gene_id_field):
     """Parse gene IDs from a comma-separated string."""
     return gene_id_field.split(",")
 
+# Function to read the CSV file and parse the pathway-gene map
 def read_csv(file_path):
     """Read the CSV file and parse the pathway-gene map."""
     entries = []
@@ -36,11 +39,13 @@ def read_csv(file_path):
         mgc_candidate_id += 1
     return entries
 
+# Function to load sequences from the source file into a dictionary
 def load_sequences(source_file):
     """Load metabolic gene sequences into a dictionary from the source file."""
     df = pd.read_csv(source_file)
     return dict(zip(df["id"], df["sequence"]))
 
+# Function to process each entry and return the FASTA content
 def process_entry(entry):
     """Process an entry and return the FASTA content instead of writing directly."""
     gene_id = entry["metabolic_genes"]
@@ -62,6 +67,7 @@ def process_entry(entry):
     
     return mgc_candidate_id, f"{new_header}\n{sequence}\n"
 
+# Function to write FASTA files using multiprocessing
 def write_fasta_files(entries, output_dir):
     """Write FASTA files using multiprocessing and batch writing."""
     fasta_batches = defaultdict(list)
@@ -78,11 +84,13 @@ def write_fasta_files(entries, output_dir):
         fasta_filename = os.path.join(output_dir, f"{mgc_candidate_id}.fasta")
         with open(fasta_filename, "a") as fasta_file:
             fasta_file.writelines(contents)
-
+            
+# Main function to read the CSV and write FASTA files
 def main():
     entries = read_csv(CSV_FILE)
     write_fasta_files(entries, OUTPUT_DIR)
     print(f"FASTA files created in folder: {OUTPUT_DIR}")
 
+# Entry point for the script
 if __name__ == "__main__":
     main()

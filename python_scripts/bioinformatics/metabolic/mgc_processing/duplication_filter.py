@@ -1,7 +1,7 @@
 import os
 import csv
-from pathlib import Path
-from time import time
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 import networkx as nx
 import subprocess
@@ -16,6 +16,7 @@ IDENTITY_THRESHOLD = 70.0
 COVERAGE_THRESHOLD = 70.0
 NUM_THREADS = 26
 
+# Function to read sequences from a CSV file
 def read_sequences_from_csv(file_path):
     sequences = set()
     with open(file_path, mode='r') as file:
@@ -25,6 +26,7 @@ def read_sequences_from_csv(file_path):
             sequences.add(sequence)
     return sequences
 
+# Function to read sequences from a FASTA file
 def read_sequences_from_fasta(file_path):
     sequences = set()
     for record in SeqIO.parse(file_path, "fasta"):
@@ -32,6 +34,7 @@ def read_sequences_from_fasta(file_path):
         sequences.add(sequence)
     return sequences
 
+# Function to build a bipartite graph from candidate and MGC sequences
 def build_bipartite_graph(candidate_sequences, mgc_sequences):
     graph = Graph()
     for candidate_seq in candidate_sequences:
@@ -40,6 +43,7 @@ def build_bipartite_graph(candidate_sequences, mgc_sequences):
                 graph.add_edge(candidate_seq, mgc_seq, weight=1)
     return graph
 
+# Function to check identity between candidate sequences and MGC sequences
 def check_identity(mgc_directory, candidate_directory, output_file):
     unmatched_candidates = []
     with open(output_file, 'w') as out_file:
@@ -69,9 +73,7 @@ def check_identity(mgc_directory, candidate_directory, output_file):
                     unmatched_candidates.append(fasta_path)
     return unmatched_candidates
 
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-
+# Function to convert CSV to FASTA format
 def csv_to_fasta(csv_file, output_fasta):
     records = []
     with open(csv_file) as f:
@@ -85,7 +87,7 @@ def csv_to_fasta(csv_file, output_fasta):
     if records:
         SeqIO.write(records, output_fasta, "fasta")
 
-
+# Function to prepare FASTA files from CSV or existing FASTA files
 def prepare_fasta(file_path, temp_dir):
     if file_path.endswith(".fasta") or file_path.endswith(".fa"):
         return file_path
@@ -95,11 +97,11 @@ def prepare_fasta(file_path, temp_dir):
         return fasta_out
     else:
         return None
-    
-def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
-    from pathlib import Path
-    import shutil
 
+# Function to run a single BLAST search    
+def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
+    
+    # Extract the ID from the FASTA filename    
     def extract_id(fasta_path):
         return os.path.splitext(os.path.basename(fasta_path))[0].split('_')[-1] if '_' in os.path.basename(fasta_path) else os.path.splitext(os.path.basename(fasta_path))[0].split('BGC')[-1]
 
@@ -150,7 +152,7 @@ def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
     print(f"BLAST completed: {output_path}")
     return output_path
 
-
+# Function to parse and filter BLAST results
 def parse_and_filter_blast(blast_path):
     results = []
     with open(blast_path) as f:
@@ -175,6 +177,7 @@ def parse_and_filter_blast(blast_path):
                 })
     return results
 
+# Function to group and filter redundant files based on homologous hits
 def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
     file_graph = nx.Graph()
 
@@ -207,6 +210,7 @@ def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
     print(f"📄 Deduplicated file list saved to: {dedup_file}")
     return unique_representatives
 
+# Function to run all vs all BLAST in parallel
 def blast_all_vs_all_parallel(merged_list, output_root):
     blast_output_dir = os.path.join(output_root, "blast_all_vs_all")
     blast_output_dir_results = os.path.join(blast_output_dir, "results_fixed")
@@ -248,9 +252,10 @@ def blast_all_vs_all_parallel(merged_list, output_root):
     df.to_csv(os.path.join(blast_output_dir, "blast_summary.csv"), index=False)
     dedup_list = group_and_filter_redundant_files(results, fasta_map, blast_output_dir)
 
+# Write the deduplicated FASTA files to the output directory
 def main():
     mgc_directory = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
-    candidate_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    candidate_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w10_g3/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     output_file = os.path.join(candidate_directory, "comparison_results.txt")
     
     if not os.path.exists(os.path.join(candidate_directory, "merged_list.txt")):
@@ -276,5 +281,6 @@ def main():
             
     blast_all_vs_all_parallel(merged_list, candidate_directory)
 
+# Function to run the script
 if __name__ == "__main__":
     main()
