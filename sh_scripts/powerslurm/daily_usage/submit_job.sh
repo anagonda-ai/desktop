@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=colabfold_fixed
+#SBATCH --job-name=duplication_filter
 #SBATCH --output=/groups/itay_mayrose/alongonda/desktop/example_jobs/out.OU
 #SBATCH --error=/groups/itay_mayrose/alongonda/desktop/example_jobs/error.ER
 #SBATCH --ntasks=1
@@ -8,4 +8,4 @@
 #SBATCH --partition=itaym
 #SBATCH --time=3-24:00:00
 
-python /groups/itay_mayrose/alongonda/desktop/python_scripts/features/foldseek_matching/alphafold_predictions_candidates.py
+python /groups/itay_mayrose/alongonda/desktop/python_scripts/bioinformatics/metabolic/mgc_processing/duplication_filter.py

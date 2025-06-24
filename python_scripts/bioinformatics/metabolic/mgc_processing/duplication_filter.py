@@ -5,76 +5,32 @@ from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
 import networkx as nx
 import subprocess
-from Bio.Blast.Applications import NcbiblastpCommandline
-import concurrent.futures
-from networkx import Graph
 from networkx.algorithms.matching import max_weight_matching
 import pandas as pd
+import time
 
 # Constants for BLAST parameters
 EVALUE_THRESHOLD = 0.001
 IDENTITY_THRESHOLD = 70.0
 COVERAGE_THRESHOLD = 70.0
-NUM_THREADS = 30
+NUM_THREADS = 26
 
-# Function to read sequences from a CSV file
 def read_sequences_from_csv(file_path):
     sequences = set()
     with open(file_path, mode='r') as file:
         csv_reader = csv.DictReader(file)
         for row in csv_reader:
-            sequence = row['Translation'].replace('*', '')  # Remove '*' characters
+            sequence = row['Translation'].replace('*', '')
             sequences.add(sequence)
     return sequences
 
-# Function to read sequences from a FASTA file
 def read_sequences_from_fasta(file_path):
     sequences = set()
     for record in SeqIO.parse(file_path, "fasta"):
-        sequence = str(record.seq).replace('*', '')  # Remove '*' characters
+        sequence = str(record.seq).replace('*', '')
         sequences.add(sequence)
     return sequences
 
-# Function to build a bipartite graph from candidate and MGC sequences
-def build_bipartite_graph(candidate_sequences, mgc_sequences):
-    graph = Graph()
-    for candidate_seq in candidate_sequences:
-        for mgc_seq in mgc_sequences:
-            if candidate_seq in mgc_seq or mgc_seq in candidate_seq:
-                graph.add_edge(candidate_seq, mgc_seq, weight=1)
-    return graph
-
-# Function to check identity between candidate sequences and MGC sequences
-def check_identity(mgc_directory, candidate_directory, output_file):
-    unmatched_candidates = []
-    with open(output_file, 'w') as out_file:
-        for fasta_filename in os.listdir(candidate_directory):
-            if fasta_filename.endswith(".fasta") or fasta_filename.endswith(".fa"):
-                if fasta_filename.endswith("merged_mgc_candidartes.fasta"):
-                    continue
-                fasta_path = os.path.join(candidate_directory, fasta_filename)
-                candidate_sequences = read_sequences_from_fasta(fasta_path)
-                all_match_found = False
-                
-                for csv_filename in os.listdir(mgc_directory):
-                    if csv_filename.endswith(".csv"):
-                        csv_path = os.path.join(mgc_directory, csv_filename)
-                        mgc_sequences = read_sequences_from_csv(csv_path)
-                        
-                        graph = build_bipartite_graph(candidate_sequences, mgc_sequences)
-                        matching = max_weight_matching(graph, maxcardinality=True)
-                        
-                        if len(matching) == len(candidate_sequences):
-                            out_file.write(f"The candidate {fasta_path} is matched to {csv_path} cluster.\n")
-                            all_match_found = True
-                            break
-                
-                if not all_match_found:
-                    out_file.write(f"Not all sequences in {fasta_path} have matches in any MGC CSV file.\n")
-                    unmatched_candidates.append(fasta_path)
-    return unmatched_candidates
-
-# Function to convert CSV to FASTA format
 def csv_to_fasta(csv_file, output_fasta):
     records = []
     with open(csv_file) as f:
@@ -88,7 +44,6 @@ def csv_to_fasta(csv_file, output_fasta):
     if records:
         SeqIO.write(records, output_fasta, "fasta")
 
-# Function to prepare FASTA files from CSV or existing FASTA files
 def prepare_fasta(file_path, temp_dir):
     if file_path.endswith(".fasta") or file_path.endswith(".fa"):
         return file_path
@@ -99,61 +54,45 @@ def prepare_fasta(file_path, temp_dir):
     else:
         return None
 
-# Function to run a single BLAST search    
-def run_single_blast(query_fasta, target_fasta, db_dir, output_dir):
-    
-    # Extract the ID from the FASTA filename    
-    def extract_id(fasta_path):
-        return os.path.splitext(os.path.basename(fasta_path))[0].split('_')[-1] if '_' in os.path.basename(fasta_path) else os.path.splitext(os.path.basename(fasta_path))[0].split('BGC')[-1]
+def build_bipartite_graph(candidate_sequences, mgc_sequences):
+    graph = nx.Graph()
+    for candidate_seq in candidate_sequences:
+        for mgc_seq in mgc_sequences:
+            if candidate_seq in mgc_seq or mgc_seq in candidate_seq:
+                graph.add_edge(candidate_seq, mgc_seq, weight=1)
+    return graph
 
-    query_id = extract_id(query_fasta)
-    bucket = int(query_id) // 100
-    bucket_dir = os.path.join(output_dir, f"bucket_{bucket}")
-    os.makedirs(bucket_dir, exist_ok=True)
+def check_identity(mgc_directory, candidate_directory, output_file):
+    unmatched_candidates = []
+    with open(output_file, 'w') as out_file:
+        for fasta_filename in os.listdir(candidate_directory):
+            if not (fasta_filename.endswith(".fasta") or fasta_filename.endswith(".fa")):
+                continue
+            if "merged_mgc_candidartes.fasta" in fasta_filename:
+                continue
 
-    output_path = os.path.join(bucket_dir, f"{os.path.basename(query_fasta)}_vs_{os.path.basename(target_fasta)}.txt")
-    db_name = os.path.join(db_dir, os.path.basename(target_fasta).replace(".fasta", ""))
-    temp_output = f"{output_path}.tmp"
+            fasta_path = os.path.join(candidate_directory, fasta_filename)
+            candidate_sequences = read_sequences_from_fasta(fasta_path)
+            all_match_found = False
 
-    if os.path.exists(output_path):
-        print(f"BLAST output already exists: {output_path}")
-        return output_path
+            for csv_filename in os.listdir(mgc_directory):
+                if not csv_filename.endswith(".csv"):
+                    continue
+                csv_path = os.path.join(mgc_directory, csv_filename)
+                mgc_sequences = read_sequences_from_csv(csv_path)
+                graph = build_bipartite_graph(candidate_sequences, mgc_sequences)
+                matching = max_weight_matching(graph, maxcardinality=True)
 
-    print(f"Running BLAST for {os.path.basename(query_fasta)} against {os.path.basename(target_fasta)}")
+                if len(matching) == len(candidate_sequences):
+                    out_file.write(f"The candidate {fasta_path} is matched to {csv_path} cluster.\n")
+                    all_match_found = True
+                    break
 
-    if os.path.getsize(query_fasta) == 0 or os.path.getsize(target_fasta) == 0:
-        print(f"⚠️ Skipping BLAST: One of the FASTA files is empty: {query_fasta}, {target_fasta}")
-        return None
+            if not all_match_found:
+                out_file.write(f"Not all sequences in {fasta_path} have matches in any MGC CSV file.\n")
+                unmatched_candidates.append(fasta_path)
+    return unmatched_candidates
 
-    if not os.path.exists(f"{db_name}.pin"):
-        result = subprocess.run(["makeblastdb", "-in", target_fasta, "-dbtype", "prot", "-out", db_name], capture_output=True, text=True)
-        if result.returncode != 0 or not os.path.exists(f"{db_name}.pin"):
-            print(f"❌ makeblastdb failed for {target_fasta}: {result.stderr}")
-            return None
-
-    blastp_cline = NcbiblastpCommandline(
-        query=query_fasta,
-        db=db_name,
-        evalue=EVALUE_THRESHOLD,
-        outfmt="6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
-        out=output_path
-    )
-
-    try:
-        stdout, stderr = blastp_cline()
-    except subprocess.CalledProcessError as e:
-        print(f"❌ BLAST failed for {query_fasta} vs {target_fasta}")
-        print(f"Command: {blastp_cline}")
-        print(f"Stdout: {e.stdout}")
-        print(f"Stderr: {e.stderr}")
-        if os.path.exists(output_path):
-            os.remove(output_path)
-        return None
-
-    print(f"BLAST completed: {output_path}")
-    return output_path
-
-# Function to parse and filter BLAST results
 def parse_and_filter_blast(blast_path):
     results = []
     with open(blast_path) as f:
@@ -178,16 +117,12 @@ def parse_and_filter_blast(blast_path):
                 })
     return results
 
-# Function to group and filter redundant files based on homologous hits
 def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
     file_graph = nx.Graph()
-
-    # Initialize all files as nodes
     file_keys = {os.path.basename(v): k for k, v in fasta_map.items()}
     for f in file_keys.values():
         file_graph.add_node(f)
 
-    # Add edges between files with any homologous hits
     for row in results:
         blast_file = row["file"]
         q_base, _, t_base = blast_file.partition("_vs_")
@@ -196,7 +131,6 @@ def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
         if q_file and t_file:
             file_graph.add_edge(q_file, t_file)
 
-    # Group homologous files
     unique_representatives = []
     for component in nx.connected_components(file_graph):
         representative = sorted(component)[0]
@@ -211,77 +145,120 @@ def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
     print(f"📄 Deduplicated file list saved to: {dedup_file}")
     return unique_representatives
 
-# Function to run all vs all BLAST in parallel
-def blast_all_vs_all_parallel(merged_list, output_root):
-    blast_output_dir = os.path.join(output_root, "blast_all_vs_all")
-    blast_output_dir_results = os.path.join(blast_output_dir, "results_fixed")
-    blast_db_dir = os.path.join(blast_output_dir, "blast_dbs")
-    temp_dir = os.path.join(blast_output_dir, "temp_fastas")
-    os.makedirs(blast_output_dir, exist_ok=True)
-    os.makedirs(blast_output_dir_results, exist_ok=True)
-    os.makedirs(blast_db_dir, exist_ok=True)
-    os.makedirs(temp_dir, exist_ok=True)
+def postprocess(blast_output_dir, merged_list, temp_dir):
+    print("\n🧩 Running postprocessing...")
+    results_dir = os.path.join(blast_output_dir, "results_fixed")
+    results = []
 
-    # Convert all to FASTA and store map
     fasta_map = {}
     for file_path in merged_list:
         fasta = prepare_fasta(file_path, temp_dir)
         if fasta:
             fasta_map[file_path] = fasta
 
-    # Build all pairwise combinations
-    tasks = []
-    for q_path, q_fasta in fasta_map.items():
-        for t_path, t_fasta in fasta_map.items():
-            if q_path != t_path:
-                tasks.append((q_fasta, t_fasta))
+    for root, _, files in os.walk(results_dir):
+        for file in files:
+            if file.endswith(".txt"):
+                path = os.path.join(root, file)
+                filtered = parse_and_filter_blast(path)
+                results.extend(filtered)
 
-    # Run BLASTs concurrently
-    results = []
-    with concurrent.futures.ThreadPoolExecutor(max_workers=NUM_THREADS) as executor:
-        future_to_blast = {
-            executor.submit(run_single_blast, q, t, blast_db_dir, blast_output_dir_results): (q, t)
-            for q, t in tasks
-        }
-        for future in concurrent.futures.as_completed(future_to_blast):
-            blast_file = future.result()
-            filtered = parse_and_filter_blast(blast_file)
-            results.extend(filtered)
-
-    # Save all filtered hits into one summary file
     df = pd.DataFrame(results)
-    df.to_csv(os.path.join(blast_output_dir, "blast_summary.csv"), index=False)
-    dedup_list = group_and_filter_redundant_files(results, fasta_map, blast_output_dir)
+    summary_path = os.path.join(blast_output_dir, "blast_summary.csv")
+    df.to_csv(summary_path, index=False)
+    print(f"✅ Saved summary to {summary_path}")
+    group_and_filter_redundant_files(results, fasta_map, blast_output_dir)
 
-# Write the deduplicated FASTA files to the output directory
-def main():
-    mgc_directory = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
-    candidate_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w10_g3/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
-    output_file = os.path.join(candidate_directory, "comparison_results.txt")
+def blast_all_vs_all_slurm(merged_list, output_root):
+    slurm_script = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/blast_with_params.sh"
+    blast_output_dir = os.path.join(output_root, "blast_all_vs_all")
+    results_dir = os.path.join(blast_output_dir, "results_fixed")
+    blast_db_dir = os.path.join(blast_output_dir, "blast_dbs")
+    temp_dir = os.path.join(blast_output_dir, "temp_fastas")
+
+    os.makedirs(results_dir, exist_ok=True)
+    os.makedirs(blast_db_dir, exist_ok=True)
+    os.makedirs(temp_dir, exist_ok=True)
+
+    fasta_map = {}
+    for file_path in merged_list:
+        fasta = prepare_fasta(file_path, temp_dir)
+        if fasta:
+            fasta_map[file_path] = fasta
     
-    if not os.path.exists(os.path.join(candidate_directory, "merged_list.txt")):
-        # Check the identity of the candidates
-        unmatched_candidates = check_identity(mgc_directory, candidate_directory, output_file)
-        
-        # Get the MGC filepaths
-        mgc_filepaths = os.listdir(mgc_directory)
-        # Prepend the full path to MGC filepaths
-        mgc_filepaths = [os.path.join(mgc_directory, filename) for filename in mgc_filepaths]
-        
-        # Merge the unmatched candidates with the MGC filepaths
-        merged_list = unmatched_candidates + mgc_filepaths
-        
-        # Write the merged list to a file
-        with open(os.path.join(candidate_directory, "merged_list.txt"), 'w') as merged_file:
-            for item in merged_list:
-                merged_file.write(f"{item}\n")
-    else:
-        with open(os.path.join(candidate_directory, "merged_list.txt"), 'r') as merged_file:
-            merged_list = [line.strip() for line in merged_file.readlines()]
-        print(f"⚠️ Merged list already exists: {os.path.join(candidate_directory, 'merged_list.txt')}")
-            
-    blast_all_vs_all_parallel(merged_list, candidate_directory)
+    can_run = False
+    for q_path, q_fasta in fasta_map.items():
+        q_name = os.path.basename(q_fasta)
+        q_id = os.path.splitext(q_name)[0].split('_')[-1] if '_' in q_name else os.path.splitext(q_name)[0].split('BGC')[-1]
+        bucket = int(q_id) // 100
+        if bucket >= 32:
+            can_run = True
+        if not can_run:
+            continue
+        bucket_dir = os.path.join(results_dir, f"bucket_{bucket}")
+        os.makedirs(bucket_dir, exist_ok=True)
 
-# Function to run the script
+        t_list = [t for t_path, t in fasta_map.items() if t_path != q_path]
+        target_list_path = os.path.join(bucket_dir, f"{q_name}_targets.txt")
+        with open(target_list_path, 'w') as f:
+            for t in t_list:
+                f.write(f"{t}\n")
+
+        job_name = f"blast_{q_id}"
+        # Wait until there are fewer than 100 running jobs for user 'alongonda'
+
+        while True:
+            squeue_cmd = ["squeue", "-u", "alongonda"]
+            squeue_result = subprocess.run(squeue_cmd, capture_output=True, text=True)
+            running_jobs = len(squeue_result.stdout.strip().splitlines())
+            if running_jobs < 100:
+                break
+            print(f"⏳ Waiting: {running_jobs} jobs running for 'alongonda'. Sleeping 30s...")
+            time.sleep(30)
+        sbatch_cmd = [
+            "sbatch",
+            "--job-name", job_name,
+            "--output", os.path.join(bucket_dir, f"{q_name}.out"),
+            "--error", os.path.join(bucket_dir, f"{q_name}.err"),
+            slurm_script,
+            q_fasta,
+            target_list_path,
+            bucket_dir,
+            blast_db_dir
+        ]
+
+        result = subprocess.run(sbatch_cmd, capture_output=True, text=True)
+        if result.returncode == 0:
+            print(f"✅ Submitted SLURM job for {q_name}: {result.stdout.strip()}")
+        else:
+            print(f"❌ Failed to submit job for {q_name}: {result.stderr.strip()}")
+
+def main():
+    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w10_g3/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    mgc_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
+    merged_list_file = os.path.join(candidate_dir, "merged_list.txt")
+    blast_output_dir = os.path.join(candidate_dir, "blast_all_vs_all")
+    temp_dir = os.path.join(blast_output_dir, "temp_fastas")
+
+    if not os.path.exists(merged_list_file):
+        output_file = os.path.join(candidate_dir, "comparison_results.txt")
+        unmatched_candidates = check_identity(mgc_dir, candidate_dir, output_file)
+
+        mgc_files = [
+            os.path.join(mgc_dir, f) for f in os.listdir(mgc_dir)
+            if f.endswith(".csv")
+        ]
+        merged_list = unmatched_candidates + mgc_files
+
+        with open(merged_list_file, 'w') as f:
+            for path in merged_list:
+                f.write(f"{path}\n")
+    else:
+        with open(merged_list_file, 'r') as f:
+            merged_list = [line.strip() for line in f]
+
+    blast_all_vs_all_slurm(merged_list, candidate_dir)
+    postprocess(blast_output_dir, merged_list, temp_dir)
+
 if __name__ == "__main__":
     main()
