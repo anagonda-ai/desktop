@@ -142,7 +142,7 @@ def process_csv_files(root_dir):
             'median_distance': sorted(all_distances)[len(all_distances) // 2]
         }
         stats_df = pd.DataFrame([stats])
-        output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output_with_haaap"
+        output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output_without_haaap_stranded"
         os.makedirs(output_dir, exist_ok=True)
         stats_output_file = os.path.join(output_dir, "general_summary_statistics.csv")
         stats_df.to_csv(stats_output_file, index=False)
@@ -176,7 +176,8 @@ def _parse_blast_file(file_path):
                 chrom = sseqid_parts[1]
                 start = int(sseqid_parts[2])
                 end = int(sseqid_parts[3])
-                row_index = int(sseqid_parts[4])
+                strand = sseqid_parts[4]
+                row_index = int(sseqid_parts[5])
             else:
                 chrom = 'Unknown'
                 start = end = row_index = None
@@ -186,6 +187,7 @@ def _parse_blast_file(file_path):
                 'chromosome': chrom,
                 'start': start,
                 'end': end,
+                'strand': strand,
                 'row_index': row_index,
                 'qseqid': row[0],
                 'sseqid': row[1],
@@ -257,7 +259,7 @@ def _tightest_cluster_for_chromosome(args):
     print(f"[Organism {organism} | Chromosome {chrom}] No valid cluster found.")
     return None
 
-def compute_tightest_clusters_from_raw_blast(directory, output_dir, max_workers=8):
+def compute_tightest_clusters_from_raw_blast(directory, output_dir, max_workers=30):
     """
     State-of-the-art: Concurrently parse all *.csv_results.txt files and compute tightest clusters per chromosome.
     Uses ThreadPoolExecutor for I/O and ProcessPoolExecutor for computation.
@@ -308,13 +310,13 @@ def compute_tightest_clusters_from_raw_blast(directory, output_dir, max_workers=
 
 if __name__ == "__main__":
     # Define input files
-    root_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_with_haaap/best_hits_by_organism"
+    root_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap_stranded/best_hits_by_organism"
     
     # Process files
     process_csv_files(root_dir)
 
     # Call the new function
     compute_tightest_clusters_from_raw_blast(
-        '/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_with_haaap',
-        '/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/tightest_clusters_with_haaap'
+        '/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap_stranded',
+        '/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/tightest_clusters_without_haaap_stranded'
     )

@@ -11,12 +11,12 @@ import concurrent.futures
 # Directories containing CSV files
 csv_dirs = [
     # "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
-    "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences",
+    "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences_with_strand",
     # "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
 ]
 
 # Directory to store generated FASTA files and BLAST DBs
-blast_db_dir = "/groups/itay_mayrose/alongonda/datasets/generated_blast_dbs_without_haaap"
+blast_db_dir = "/groups/itay_mayrose/alongonda/datasets/generated_blast_dbs_without_haaap_stranded"
 os.makedirs(blast_db_dir, exist_ok=True)
 
 # Query FASTA files
@@ -24,7 +24,7 @@ example_mgc = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni"
 query_fastas = [os.path.join(example_mgc, f) for f in os.listdir(example_mgc) if f.endswith(".fasta") and "HAAAP" not in f]
 
 # Output directory for BLAST results
-blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap"
+blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap_stranded"
 os.makedirs(blast_results_dir, exist_ok=True)
 
 # Function to convert CSV to FASTA, skipping empty files
@@ -36,8 +36,8 @@ def csv_to_fasta(csv_path):
     with open(csv_path, 'r') as csv_in, open(fasta_path, 'w') as fasta_out:
         reader = csv.DictReader(csv_in, delimiter=',')
         for row_index, row in enumerate(reader, start=1):
-            if all(k in row for k in ['id', 'sequence', 'chromosome', 'start', 'end']) and row['sequence'].strip():
-                fasta_out.write(f">{row['id']}|{row['chromosome']}|{row['start']}|{row['end']}|{row_index}\n{row['sequence']}\n")
+            if all(k in row for k in ['id', 'sequence', 'chromosome', 'start', 'end', 'strand']) and row['sequence'].strip():
+                fasta_out.write(f">{row['id']}|{row['chromosome']}|{row['start']}|{row['end']}|{row['strand']}|{row_index}\n{row['sequence']}\n")
                 valid_entries += 1
 
     if valid_entries == 0:
@@ -120,7 +120,8 @@ def parse_blast_results(blast_file):
             chromosome = subject_info[1] if len(subject_info) > 1 else "Unknown" # This should be the chromosome
             start = int(subject_info[2]) if len(subject_info) > 1 else "Unknown" # Correct subject start position
             end = int(subject_info[3]) if len(subject_info) > 1 else "Unknown"  # Correct subject end position
-            row_index = int(subject_info[4]) if len(subject_info) > 1 else "Unknown"  # Correct subject end position
+            strand_value = subject_info[4] if len(subject_info) > 1 else "Unknown"  # Strand value
+            row_index = int(subject_info[5]) if len(subject_info) > 1 else "Unknown"  # Correct subject end position
             identity = float(cols[2])  # Percentage identity
             evalue = float(cols[10])  # E-value
             bit_score = float(cols[11])  # Bit score
@@ -128,7 +129,7 @@ def parse_blast_results(blast_file):
             # Extract organism name from BLAST filename
             organism_name = os.path.basename(blast_file).replace("_results.txt", "")
             dir_name = extract_organism_name(organism_name)
-            hit = [query_fasta, subject_gene, chromosome, start, end, identity, evalue, bit_score, row_index]
+            hit = [query_fasta, subject_gene, chromosome, start, end, strand_value, identity, evalue, bit_score, row_index]
 
             with lock:
                 # skip if row_index already used in this dir_name/chromosome
@@ -158,7 +159,7 @@ def save_best_hits(best_hits_by_organism, output_dir):
         os.makedirs(organism_dir, exist_ok=True)
         summary_file = os.path.join(organism_dir, organism)
         with open(summary_file, "w", encoding="utf-8") as f:
-            f.write("query_fasta,subject_gene,chromosome,start,end,identity,evalue,bit_score,row_index\n")
+            f.write("query_fasta,subject_gene,chromosome,start,end,strand_value,identity,evalue,bit_score,row_index\n")
             for hit in hits:
                 f.write(",".join(map(str, hit)) + "\n")
 
