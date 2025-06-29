@@ -3,7 +3,7 @@ from threading import Lock
 import os
 import pandas as pd
 import subprocess
-from concurrent.futures import ThreadPoolExecutor, ProcessPoolExecutor, as_completed
+from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 from Bio.Blast import NCBIXML
 
