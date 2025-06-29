@@ -1,4 +1,3 @@
-import re
 from threading import Lock
 import os
 import pandas as pd
@@ -12,7 +11,6 @@ from Bio.Blast import NCBIXML
 def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=90.0, evalue_threshold=1e-3, coverage_threshold=90.0):
     df = pd.read_csv(genome_file)
     fasta_query = os.path.join(temp_dir, os.path.basename(genome_file).replace('.csv', '.fasta'))
-    query_organism_name = os.path.basename(genome_file).split("_filtered")[0].replace("_"," ")
 
     # Run BLASTP
     blast_output = os.path.join(temp_dir, f"blast_result_{os.path.basename(genome_file)}.xml")
@@ -52,17 +50,13 @@ def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=90.
                 for alignment in record.alignments:
                     header = alignment.hit_def
                     if '$' in header:
-                        gene_id, annotation, pathway_part = header.split('$')
+                        _, annotation, pathway_part = header.split('$')
                         pathway_id = pathway_part.strip()
                         annotation = annotation.strip()
-                        # target_organism = re.sub(r'\d', '', pathway_part.strip()).split('_')[0]
-                        # plants_list = pd.read_csv("/groups/itay_mayrose/alongonda/datasets/KEGG/origin/plants_list.csv")
-                        # organism_name = plants_list[plants_list["Organism_Code"]==target_organism]["Organism_Name"].iloc[0].lower()
                         
                     else:
                         pathway_id = None
                         annotation = None
-                        # organism_name = None
                     
                     for hsp in alignment.hsps:
                         coverage = (hsp.align_length / query_length) * 100
@@ -78,7 +72,7 @@ def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=90.
                     id_to_pathway[query_id] = best_pathway
                     id_to_annotation[query_id] = best_annotation
 
-        # Annotate the dataframe
+    # Annotate the dataframe
     df['pathway'] = df['id'].map(id_to_pathway)
     df['annotation'] = df['id'].map(id_to_annotation)
     return df
@@ -179,8 +173,8 @@ def process_annotated_file(annotated_file, output_file, file_lock, window_size, 
                     break
             if len(window) >= min_genes:
                 window_df = pd.DataFrame(window)
-                genes_and_pathways = {row['id']: [row['pathway']] for idx, row in window_df.iterrows()}
-                genes_and_annotations = {row['id']: [row['annotation']] for idx, row in window_df.iterrows()}
+                genes_and_pathways = {row['id']: [row['pathway']] for _, row in window_df.iterrows()}
+                genes_and_annotations = {row['id']: [row['annotation']] for _, row in window_df.iterrows()}
                 pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
                 metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
                 if pathway and not tuple(metabolic_genes) in prev_matches:
