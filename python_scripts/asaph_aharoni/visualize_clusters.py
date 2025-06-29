@@ -11,7 +11,7 @@ import ast
 # Define file paths
 MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/dataset_organism_mapping.csv"
 TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/species.nwk"
-COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output_without_haaap_stranded/comparison_results.csv"
+COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/output_without_haaap_stranded/comparison_results.csv"
 
 def parse_dict(val):
     if isinstance(val, dict):
@@ -77,7 +77,7 @@ else:
 if comparison_df is not None:
     gene_counts = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Cross Chromosome Lines']))
     chromosome_lines = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Lines']))
-    chromosome_cluster_length = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['Largest Chromosome Length'] / 1000)) # Convert to Kbp
+    chromosome_cluster_length = dict(zip(comparison_df['Organism'].replace(" ", "_"), (comparison_df['Largest Chromosome Length'] / 1000).round())) # Convert to Kbp
     chromosome_cluster_gene_existance = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['MGC Genes Order'].apply(parse_dict)))
     chromosome_cluster_gene_strands = dict(zip(comparison_df['Organism'].replace(" ", "_"), comparison_df['MGC Genes Strands'].apply(parse_dict)))
 
@@ -386,7 +386,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
 
 
 # Save figures
-output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output_without_haaap_stranded/summary_plots"
+output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/output_without_haaap_stranded/summary_plots"
 os.makedirs(output_dir, exist_ok=True)
 
 # Load phylogenetic trees

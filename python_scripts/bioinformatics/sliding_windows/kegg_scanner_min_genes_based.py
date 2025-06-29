@@ -263,11 +263,13 @@ def main():
     # Define genome directories
     genome_dirs = [
         os.path.join(full_genome_dir, "ensembl/processed_annotations_test_no_chloroplast_with_sequences"),
-        os.path.join(full_genome_dir, "phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"),
+        os.path.join(full_genome_dir, "phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences_with_strand"),
         os.path.join(full_genome_dir, "plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences")
     ]
+    window_size = 10
+    min_genes = 3
     kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta/merged_metabolic_pathways/merged_metabolic_pathways"
-    head_output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w10_g3"
+    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w{window_size}_g{min_genes}"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
@@ -291,33 +293,31 @@ def main():
     
     merge_annotated_mibig(annotated_dir, annotated_files)
 
-    for window_size in [20]:
-        for min_genes in [3]:
-            min_genes_subdir = create_output_subdir(output_dir, min_genes)
-            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
-            if os.path.exists(output_file):
-                os.remove(output_file)
-            file_lock = Lock()
-            total_matches = 0
-            with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
-                with ThreadPoolExecutor(max_workers=max_workers) as executor:
-                    futures = [
-                        executor.submit(
-                            process_annotated_file,
-                            annotated_file,
-                            output_file,
-                            file_lock,
-                            window_size,
-                            min_genes
-                        )
-                        for annotated_file in annotated_files
-                    ]
-                    for future in as_completed(futures):
-                        total_matches += future.result()
-                        pbar.update(1)
-            print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
-            print(f"Results saved to: {output_file}")
-            remove_subset_results(output_file)
+    min_genes_subdir = create_output_subdir(output_dir, min_genes)
+    output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
+    if os.path.exists(output_file):
+        os.remove(output_file)
+    file_lock = Lock()
+    total_matches = 0
+    with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
+        with ThreadPoolExecutor(max_workers=max_workers) as executor:
+            futures = [
+                executor.submit(
+                    process_annotated_file,
+                    annotated_file,
+                    output_file,
+                    file_lock,
+                    window_size,
+                    min_genes
+                )
+                for annotated_file in annotated_files
+            ]
+            for future in as_completed(futures):
+                total_matches += future.result()
+                pbar.update(1)
+    print(f"TOTAL MATCHES FOUND for window size {window_size} and min_genes {min_genes}: {total_matches}")
+    print(f"Results saved to: {output_file}")
+    remove_subset_results(output_file)
             
 
 
