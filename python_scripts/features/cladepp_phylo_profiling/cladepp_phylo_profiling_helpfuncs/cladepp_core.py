@@ -1,9 +1,8 @@
 import pandas as pd
+from itertools import combinations
 import numpy as np
 from scipy.stats import zscore
 from scipy.cluster.hierarchy import linkage, fcluster
-from cladepp_phylo_profiling_helpfuncs.io_utils import load_selected_blast_results
-from cladepp_phylo_profiling_helpfuncs.plotting import plot_dendrogram, plot_heatmap
 
 def build_profile_matrix(blast_df, anchors, min_coverage=0.2):
     blast_df = blast_df[blast_df["origin_file"].isin(anchors)]
@@ -41,38 +40,76 @@ def coevolution_score(cluster_series, anchor_names):
                 scores[g] = n_anchors / len(in_cluster)
     return scores
 
-def cladepp_from_comparison_table(comparison_csv, anchor_genes, output_file,
-                                   threshold=1.0, min_coverage=0.2,
-                                   n_threads=4, plot=False):
-    print("Loading selected BLAST results...")
-    blast_df = load_selected_blast_results(comparison_csv, n_threads)
+from Bio import Phylo
 
-    print("Building profile matrix...")
-    matrix = build_profile_matrix(blast_df, anchor_genes, min_coverage)
+def compute_gain_loss_coevolution_copap_style(presence_absence_matrix, tree):
+    """
+    Compute gain/loss coevolution score using a parsimony approximation on the tree.
+    For each gene pair, checks if presence/absence patterns map similarly to the tree.
+    """
+    def reconstruct_parsimony_states(gene_vector):
+        states = {}
+        terminals = {t.name for t in tree.get_terminals()}
 
-    print("Normalizing (NPP)...")
-    npp = normalize_npp(matrix)
+        for tip in terminals:
+            states[tip] = set([1]) if gene_vector.get(tip, 0) == 1 else set([0])
 
-    print("Clustering...")
-    print("Anchor correlation matrix:")
-    corr = npp.T.corr()
-    print(corr.round(2))
-    corr.to_csv("anchor_correlation.csv")
-    clusters, linkage_matrix = compute_clusters(npp, threshold)
+        tree_clades = list(tree.find_clades(order="postorder"))
 
-    print("Scoring coevolution...")
-    scores = coevolution_score(clusters, anchor_genes)
+        for clade in tree_clades:
+            if clade.is_terminal():
+                continue
+            child_states = [states[child.name] if child.is_terminal() else states[child] for child in clade.clades]
+            intersect = set.intersection(*child_states)
+            if intersect:
+                states[clade] = intersect
+            else:
+                states[clade] = set.union(*child_states)
 
-    print("Saving output...")
-    df_scores = pd.DataFrame.from_dict(scores, orient='index', columns=['coevolution_score'])
-    df_scores.index.name = 'gene'
-    df_scores.to_csv(output_file)
+        return states
 
-    if plot:
-        print("Generating plots...")
-        plot_dendrogram(linkage_matrix, labels=npp.index.tolist())
-        plot_heatmap(npp)
+    def pattern_to_dict(gene_row):
+        return (gene_row > 0).astype(int).to_dict()
 
-    print("Done. Results saved to", output_file)
-    print("Top scoring genes:")
-    print(df_scores.sort_values(by="coevolution_score", ascending=False).head(10))
+    gene_pairs = list(combinations(presence_absence_matrix.index, 2))
+    scores = {}
+
+    for g1, g2 in gene_pairs:
+        vec1 = pattern_to_dict(presence_absence_matrix.loc[g1])
+        vec2 = pattern_to_dict(presence_absence_matrix.loc[g2])
+
+        states1 = reconstruct_parsimony_states(vec1)
+        states2 = reconstruct_parsimony_states(vec2)
+
+        shared_changes = 0
+        total_changes = 0
+
+        for clade in tree.get_nonterminals():
+            child1, child2 = clade.clades
+            for state_dict in [states1, states2]:
+                parent_state = list(state_dict[clade])[0]
+                for child in [child1, child2]:
+                    child_state = list(state_dict[child.name] if child.is_terminal() else state_dict[child])[0]
+                    if parent_state != child_state:
+                        total_changes += 1
+
+        for clade in tree.get_nonterminals():
+            child1, child2 = clade.clades
+
+            parent1 = list(states1[clade])[0]
+            parent2 = list(states2[clade])[0]
+
+            for child in [child1, child2]:
+                child1_state = list(states1[child.name] if child.is_terminal() else states1[child])[0]
+                child2_state = list(states2[child.name] if child.is_terminal() else states2[child])[0]
+
+                change1 = parent1 != child1_state
+                change2 = parent2 != child2_state
+
+                if change1 and change2:
+                    shared_changes += 1
+
+        score = shared_changes / total_changes if total_changes > 0 else np.nan
+        scores[(g1, g2)] = score
+
+    return scores

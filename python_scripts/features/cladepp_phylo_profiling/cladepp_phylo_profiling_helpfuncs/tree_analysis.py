@@ -5,14 +5,14 @@ from itertools import combinations
 import os
 import matplotlib.pyplot as plt
 import seaborn as sns
-from cladepp_phylo_profiling_helpfuncs.cladepp_core import normalize_npp, build_profile_matrix
+from cladepp_phylo_profiling_helpfuncs.cladepp_core import normalize_npp, build_profile_matrix, compute_gain_loss_coevolution_copap_style
 from cladepp_phylo_profiling_helpfuncs.io_utils import load_selected_blast_results, load_mapping_if_exists  
 
-# This function normalizes organism names to a consistent format for matching.
+
 def normalize_name(name):
     return name.strip().lower().replace(" ", "_").replace("-", "_").replace(".", "").replace("(", "").replace(")", "")
 
-# This function matches tree tips to comparison table entries based on organism names.
+
 def match_tree_to_comparison(tree_tips, comparison_df, mapping_df):
     tree_names = {normalize_name(name): name for name in tree_tips}
     matched_rows = []
@@ -26,26 +26,30 @@ def match_tree_to_comparison(tree_tips, comparison_df, mapping_df):
                 matched_rows.append((row.to_dict(), tree_names[norm_org_name]))
     return matched_rows
 
-# This function computes statistics on anchor correlations for a given submatrix.
-def compute_anchor_corr_stats(submatrix):
-    genes = submatrix.index
+
+def compute_anchor_corr_stats(submatrix, anchor_genes=None):
+    if anchor_genes:
+        genes = [g for g in anchor_genes if g in submatrix.index]
+    else:
+        genes = submatrix.index
+
     anchor_corrs = []
     corr_gene_pairs = []
     for g1, g2 in combinations(genes, 2):
         corr = submatrix.loc[g1].corr(submatrix.loc[g2])
         anchor_corrs.append(corr)
-        if corr > 0.5:
+        if corr > 0:
             corr_gene_pairs.append((g1, g2, corr))
     stats = {
         "mean_anchor_corr": np.mean(anchor_corrs) if anchor_corrs else np.nan,
         "std_anchor_corr": np.std(anchor_corrs) if anchor_corrs else np.nan,
         "max_anchor_corr": np.max(anchor_corrs) if anchor_corrs else np.nan,
         "min_anchor_corr": np.min(anchor_corrs) if anchor_corrs else np.nan,
-        "high_corr_pairs": "; ".join(f"{g1}-{g2}:{corr:.2f}" for g1, g2, corr in corr_gene_pairs)
+        "positive_corr_pairs": "; ".join(f"{g1}-{g2}:{corr:.2f}" for g1, g2, corr in corr_gene_pairs)
     }
     return stats, anchor_corrs
 
-# This function saves a heatmap of the correlation matrix for a given clade.
+
 def save_clade_heatmap(npp_matrix, clade_id, tip_names, output_dir):
     plt.figure(figsize=(5, 4))
     corr_matrix = npp_matrix.T.corr()
@@ -55,18 +59,29 @@ def save_clade_heatmap(npp_matrix, clade_id, tip_names, output_dir):
     plt.tight_layout()
     plt.savefig(os.path.join(output_dir, f"clade_{clade_id}_corr_heatmap.png"))
     plt.close()
-    
-# This function computes the cladepp score based on anchor correlations.
-def compute_cladepp_score(anchor_corrs):
-    if not anchor_corrs:
-        return np.nan
-    return float(np.mean(anchor_corrs))
 
-# This function computes a global CladePP score for a set of anchor genes across all species.
+
+def compute_cladepp_score(npp_matrix, anchor_genes):
+    """
+    Compute CladePP score based on pairwise correlation between anchor genes.
+    """
+    from itertools import combinations
+
+    missing = [g for g in anchor_genes if g not in npp_matrix.index]
+    if missing:
+        raise ValueError(f"Missing anchor genes in matrix: {missing}")
+
+    corr_matrix = npp_matrix.T.corr()
+
+    corr_values = []
+    for g1, g2 in combinations(anchor_genes, 2):
+        corr = corr_matrix.loc[g1, g2]
+        corr_values.append(corr)
+
+    return np.mean(corr_values) if corr_values else np.nan
+
+
 def compute_cladepp_global_score(npp_matrix: pd.DataFrame, anchor_genes: list[str]) -> float:
-    """
-    Compute a single CladePP score for the given anchor genes across all species.
-    """
     missing = [g for g in anchor_genes if g not in npp_matrix.index]
     if missing:
         raise ValueError(f"Missing anchor genes in matrix: {missing}")
@@ -78,8 +93,15 @@ def compute_cladepp_global_score(npp_matrix: pd.DataFrame, anchor_genes: list[st
     
     return float(np.mean(scores)) if scores else np.nan
 
-# This function analyzes clades in a phylogenetic tree, computes anchor correlations, and saves results.
-def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_prefix="clade_analysis", mapping_file=None):
+
+def analyze_tree_clades_dynamic(
+    tree_path, 
+    comparison_csv, 
+    anchor_genes, 
+    output_prefix="clade_analysis", 
+    mapping_file=None, 
+    compute_gain_loss_coevolution=False
+):
     print(f"Loading tree from {tree_path}")
     tree = Phylo.read(tree_path, "newick")
     terminals = [term.name for term in tree.get_terminals()]
@@ -97,7 +119,30 @@ def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_
     result_rows = []
     clade_id = 1
     heatmap_dir = f"{output_prefix}_clade_figures"
+    os.makedirs(heatmap_dir, exist_ok=True)
 
+    # 🟦 Compute Global CladePP before clade loop
+    try:
+        all_matched_comparisons = [tree_name_map[name] for name in terminals if name in tree_name_map]
+        all_df = pd.DataFrame(all_matched_comparisons).reset_index(drop=True)
+
+        blast_df_global = load_selected_blast_results(all_df)
+        raw_matrix_global = build_profile_matrix(blast_df_global, anchor_genes)
+        npp_matrix_global = normalize_npp(raw_matrix_global)
+
+        global_score = compute_cladepp_global_score(npp_matrix_global, anchor_genes)
+        print(f"✅ Global CladePP Score: {global_score}")
+
+        # שמור את המטריצה והציון
+        npp_matrix_global.to_csv(f"{output_prefix}_matrix_npp_global.csv")
+        raw_matrix_global.to_csv(f"{output_prefix}_matrix_raw_global.csv")
+        with open(f"{output_prefix}_global_score.txt", "w") as f:
+            f.write(f"CladePP Global Score: {global_score}\n")
+    except Exception as e:
+        print(f"⚠️ Skipping global CladePP due to error: {e}")
+        global_score = None
+
+    # 🔵 Clade analysis
     for clade in tree.get_nonterminals():
         tips = clade.get_terminals()
         tip_names = [t.name for t in tips if t.name in tree_name_map]
@@ -111,15 +156,22 @@ def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_
             blast_df = load_selected_blast_results(sub_df)
             raw_matrix = build_profile_matrix(blast_df, anchor_genes)
             npp_matrix = normalize_npp(raw_matrix)
-            corr_stats, anchor_corrs = compute_anchor_corr_stats(npp_matrix)
-            cladepp_score = compute_cladepp_score(anchor_corrs)
-            
+            corr_stats, anchor_corrs = compute_anchor_corr_stats(npp_matrix, anchor_genes=anchor_genes)
+            cladepp_score = compute_cladepp_score(npp_matrix, anchor_genes)
+
+            # Gain/Loss Coevolution if requested
+            gain_loss_score = None
+            if compute_gain_loss_coevolution:
+                gain_loss_scores = compute_gain_loss_coevolution_copap_style(raw_matrix, tree)
+                gain_loss_score = np.mean(list(gain_loss_scores.values()))
+
             result_rows.append({
                 "clade_id": clade_id,
                 "clade_size": len(tip_names),
                 "tip_names": ",".join(tip_names[:5]) + "..." if len(tip_names) > 5 else ",".join(tip_names),
                 **corr_stats,
-                "cladepp_score": cladepp_score
+                "cladepp_score": cladepp_score,
+                "gain_loss_score": gain_loss_score
             })
 
             save_clade_heatmap(npp_matrix, clade_id, tip_names, heatmap_dir)
@@ -131,5 +183,4 @@ def analyze_tree_clades_dynamic(tree_path, comparison_csv, anchor_genes, output_
     df = pd.DataFrame(result_rows)
     df.to_csv(f"{output_prefix}_summary.csv", index=False)
     print(f"Saved clade correlation summary to {output_prefix}_summary.csv")
-    score = compute_cladepp_global_score(npp_matrix, anchor_genes)
-    print("CladePP Global Score:", score)
+
