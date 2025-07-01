@@ -234,7 +234,7 @@ def blast_all_vs_all_slurm(merged_list, output_root):
             print(f"❌ Failed to submit job for {q_name}: {result.stderr.strip()}")
 
 def main():
-    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_w10_g3/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     mgc_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
     merged_list_file = os.path.join(candidate_dir, "merged_list.txt")
     blast_output_dir = os.path.join(candidate_dir, "blast_all_vs_all")
