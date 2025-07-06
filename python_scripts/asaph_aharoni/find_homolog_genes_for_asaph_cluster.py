@@ -6,6 +6,7 @@ import csv
 from matplotlib import pyplot as plt
 import numpy as np
 import threading
+import argparse
 import concurrent.futures
 
 # Directories containing CSV files
@@ -16,15 +17,19 @@ csv_dirs = [
 ]
 
 # Directory to store generated FASTA files and BLAST DBs
-blast_db_dir = "/groups/itay_mayrose/alongonda/datasets/generated_blast_dbs_without_haaap_stranded"
+blast_db_dir = "/groups/itay_mayrose/alongonda/datasets/generated_blast_dbs"
 os.makedirs(blast_db_dir, exist_ok=True)
 
-# Query FASTA files
-example_mgc = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni"
-query_fastas = [os.path.join(example_mgc, f) for f in os.listdir(example_mgc) if f.endswith(".fasta") and "HAAAP" not in f]
+parser = argparse.ArgumentParser(description="Find homolog genes for Asaph cluster")
+parser.add_argument("--example_mgc", type=str, required=True, help="Path to example MGC directory")
+args = parser.parse_args()
+
+example_mgc = args.example_mgc
+
+query_fastas = [os.path.join(example_mgc, f) for f in os.listdir(example_mgc) if f.endswith(".fasta")]
 
 # Output directory for BLAST results
-blast_results_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap_stranded"
+blast_results_dir = os.path.join(example_mgc,"blast_results_chromosome_separated")
 os.makedirs(blast_results_dir, exist_ok=True)
 
 # Function to convert CSV to FASTA, skipping empty files
@@ -32,20 +37,22 @@ def csv_to_fasta(csv_path):
     fasta_filename = os.path.splitext(os.path.basename(csv_path))[0] + ".fasta"
     fasta_path = os.path.join(blast_db_dir, fasta_filename)
     valid_entries = 0
+    if os.path.exists(fasta_path):
+        print(f"⚠️ Skipped existing FASTA: {fasta_path}")
+    else:
+        with open(csv_path, 'r') as csv_in, open(fasta_path, 'w') as fasta_out:
+            reader = csv.DictReader(csv_in, delimiter=',')
+            for row_index, row in enumerate(reader, start=1):
+                if all(k in row for k in ['id', 'sequence', 'chromosome', 'start', 'end', 'strand']) and row['sequence'].strip():
+                    fasta_out.write(f">{row['id']}|{row['chromosome']}|{row['start']}|{row['end']}|{row['strand']}|{row_index}\n{row['sequence']}\n")
+                    valid_entries += 1
 
-    with open(csv_path, 'r') as csv_in, open(fasta_path, 'w') as fasta_out:
-        reader = csv.DictReader(csv_in, delimiter=',')
-        for row_index, row in enumerate(reader, start=1):
-            if all(k in row for k in ['id', 'sequence', 'chromosome', 'start', 'end', 'strand']) and row['sequence'].strip():
-                fasta_out.write(f">{row['id']}|{row['chromosome']}|{row['start']}|{row['end']}|{row['strand']}|{row_index}\n{row['sequence']}\n")
-                valid_entries += 1
+        if valid_entries == 0:
+            os.remove(fasta_path)  # Remove empty FASTA
+            print(f"⚠️ Skipped empty CSV: {csv_path}")
+            return None
 
-    if valid_entries == 0:
-        os.remove(fasta_path)  # Remove empty FASTA
-        print(f"⚠️ Skipped empty CSV: {csv_path}")
-        return None
-
-    print(f"✅ Converted {csv_path} → {fasta_path}")
+        print(f"✅ Converted {csv_path} → {fasta_path}")
     return fasta_path
 
 
@@ -63,7 +70,10 @@ def create_blast_db(fasta_file):
     db_name = fasta_file + "_blastdb"
     cmd = f"makeblastdb -in {fasta_file} -dbtype prot -out {db_name}"
     try:
-        subprocess.run(cmd, shell=True, check=True)
+        if os.path.exists(db_name + ".pin"):
+            print(f"⚠️ Skipped existing BLAST DB: {db_name}")
+        else:
+            subprocess.run(cmd, shell=True, check=True)
         return db_name
     except subprocess.CalledProcessError:
         return None
@@ -82,7 +92,10 @@ def run_blastp(query_fasta, csv_file, blast_db):
     output_file = os.path.join(blast_results_dir, f"{os.path.basename(query_fasta)}_{csv_file}_results.txt")
     cmd = f"blastp -query {query_fasta} -db {blast_db} -evalue 1e-5 -outfmt '6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore' -max_target_seqs 50 -gapopen 11 -gapextend 1 -out {output_file}"
     try:
-        subprocess.run(cmd, shell=True, check=True)
+        if os.path.exists(output_file):
+            print(f"⚠️ Skipped existing BLASTP results: {output_file}")
+        else:
+            subprocess.run(cmd, shell=True, check=True)
         return (query_fasta, csv_file, output_file)
     except subprocess.CalledProcessError:
         return None

@@ -28,11 +28,7 @@ def match_tree_to_comparison(tree_tips, comparison_df, mapping_df):
 
 
 def compute_anchor_corr_stats(submatrix, anchor_genes=None):
-    if anchor_genes:
-        genes = [g for g in anchor_genes if g in submatrix.index]
-    else:
-        genes = submatrix.index
-
+    genes = [g for g in anchor_genes if g in submatrix.index]
     anchor_corrs = []
     corr_gene_pairs = []
     for g1, g2 in combinations(genes, 2):
@@ -66,15 +62,12 @@ def compute_cladepp_score(npp_matrix, anchor_genes):
     Compute CladePP score based on pairwise correlation between anchor genes.
     """
     from itertools import combinations
-
-    missing = [g for g in anchor_genes if g not in npp_matrix.index]
-    if missing:
-        raise ValueError(f"Missing anchor genes in matrix: {missing}")
+    existing_genes = [g for g in anchor_genes if g in npp_matrix.index]
 
     corr_matrix = npp_matrix.T.corr()
 
     corr_values = []
-    for g1, g2 in combinations(anchor_genes, 2):
+    for g1, g2 in combinations(existing_genes, 2):
         corr = corr_matrix.loc[g1, g2]
         corr_values.append(corr)
 
@@ -82,26 +75,37 @@ def compute_cladepp_score(npp_matrix, anchor_genes):
 
 
 def compute_cladepp_global_score(npp_matrix: pd.DataFrame, anchor_genes: list[str]) -> float:
-    missing = [g for g in anchor_genes if g not in npp_matrix.index]
-    if missing:
-        raise ValueError(f"Missing anchor genes in matrix: {missing}")
+    existing_genes = [g for g in anchor_genes if g in npp_matrix.index]
 
     scores = []
-    for g1, g2 in combinations(anchor_genes, 2):
+    for g1, g2 in combinations(existing_genes, 2):
         corr = npp_matrix.loc[g1].corr(npp_matrix.loc[g2])
         scores.append(corr)
     
     return float(np.mean(scores)) if scores else np.nan
 
+def get_anchor_genes_from_comparison_dir(comparison_csv):
+    """
+    Extract anchor genes from the directory of the comparison CSV file.
+    Assumes that anchor genes are fasta files in the same directory.
+    """
+    comp_dir = os.path.dirname(comparison_csv)
+    anchor_genes = [
+        os.path.splitext(f)[0]
+        for f in os.listdir(comp_dir)
+        if f.endswith(".fasta") or f.endswith(".fa") or f.endswith(".faa")
+    ]
+    return anchor_genes
 
 def analyze_tree_clades_dynamic(
     tree_path, 
     comparison_csv, 
-    anchor_genes, 
     output_prefix="clade_analysis", 
     mapping_file=None, 
     compute_gain_loss_coevolution=False
 ):
+    # Find fasta files in the comparison_csv dir and use them as anchor genes
+    anchor_genes = get_anchor_genes_from_comparison_dir(comparison_csv)
     print(f"Loading tree from {tree_path}")
     tree = Phylo.read(tree_path, "newick")
     terminals = [term.name for term in tree.get_terminals()]

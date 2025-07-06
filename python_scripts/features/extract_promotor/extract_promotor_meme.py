@@ -1,116 +1,186 @@
-import argparse
 import os
-import csv
-from pathlib import Path
+import argparse
+import pandas as pd
 from Bio import SeqIO
-from Bio.Seq import Seq
-from Bio.SeqRecord import SeqRecord
-import subprocess
 
-PROMOTER_UPSTREAM = 1000
-PROMOTER_DOWNSTREAM = 100
+# Function to extract dataset_id and organism name from mapping table
+def get_organism_info(annotation_file, mapping_df):
+    """Extract dataset_id and organism name from mapping table"""
+    base = os.path.basename(annotation_file).split(".csv")[0].replace("_annotated", "")
+    matches = mapping_df[mapping_df["Original Filename"].str.lower().str.contains(base.lower())]
+    if matches.empty:
+        raise ValueError(f"❌ No match found in mapping for {annotation_file}")
+    row = matches.iloc[0]
+    return str(row["Dataset ID"]), row["Organism"]
 
+# Function to find fasta file matching dataset_id or organism name
+def find_fasta_file(dataset_id, organism_name, fasta_dirs):
+    """Find fasta file matching dataset_id or organism"""
+    candidates = []
 
-def parse_annotation_csv(annotation_csv):
-    gene_coords = {}
-    with open(annotation_csv) as f:
-        reader = csv.DictReader(f, delimiter='\t')
-        for row in reader:
-            gene_id = row['id']
-            gene_coords[gene_id] = {
-                'chrom': row['chromosome'],
-                'start': int(row['start']),
-                'end': int(row['end']),
-                'strand': int(row['strand'])
-            }
-    return gene_coords
-
-
-def load_genome_fasta(genome_fasta):
-    return {rec.id: rec.seq for rec in SeqIO.parse(genome_fasta, "fasta")}
-
-
-def extract_promoter(seq, start, end, strand):
-    if strand == 1:
-        promoter_start = max(0, start - PROMOTER_UPSTREAM)
-        promoter_end = end + PROMOTER_DOWNSTREAM
-        promoter_seq = seq[promoter_start:promoter_end]
-    else:
-        promoter_start = max(0, start - PROMOTER_DOWNSTREAM)
-        promoter_end = end + PROMOTER_UPSTREAM
-        promoter_seq = seq[promoter_start:promoter_end].reverse_complement()
-    return promoter_seq
-
-
-def parse_cluster_fasta(cluster_fasta):
-    gene_entries = []
-    for record in SeqIO.parse(cluster_fasta, "fasta"):
-        header_parts = record.description.split("|")
-        cluster_id = header_parts[0].strip()
-        gene_id = header_parts[1].strip()
-        genome_id = header_parts[3].strip()
-        annotation_file = header_parts[3].strip()
-        gene_entries.append((cluster_id, gene_id, genome_id, annotation_file))
-    return gene_entries
-
-
-def run_meme(input_fasta, output_dir):
-    os.makedirs(output_dir, exist_ok=True)
-    cmd = [
-        "meme", input_fasta,
-        "-oc", output_dir,
-        "-dna",
-        "-mod", "zoops",
-        "-nmotifs", "5",
-        "-minw", "6",
-        "-maxw", "15"
-    ]
-    subprocess.run(cmd, check=True)
-
-
-def main(cluster_fasta, genome_fasta, annotation_csv, output_dir):
-    gene_coords = parse_annotation_csv(annotation_csv)
-    genome_seqs = load_genome_fasta(genome_fasta)
-    gene_entries = parse_cluster_fasta(cluster_fasta)
-
-    cluster_promoters = {}
-    for cluster_id, gene_id, genome_id, _ in gene_entries:
-        if gene_id not in gene_coords:
+    for fasta_dir in fasta_dirs:
+        if not os.path.isdir(fasta_dir):
             continue
-        coords = gene_coords[gene_id]
-        chrom = coords['chrom']
-        if chrom not in genome_seqs:
-            continue
-        promoter_seq = extract_promoter(
-            genome_seqs[chrom], coords['start'], coords['end'], coords['strand']
+        for file in os.listdir(fasta_dir):
+            file_lower = file.lower()
+            if (
+                str(dataset_id) in file
+                or organism_name.lower().replace(" ", "_") in file_lower
+            ):
+                candidates.append(os.path.join(fasta_dir, file))
+
+    if not candidates:
+        raise FileNotFoundError(
+            f"❌ No matching fasta file found for {organism_name} (dataset_id={dataset_id})"
         )
-        if cluster_id not in cluster_promoters:
-            cluster_promoters[cluster_id] = []
-        cluster_promoters[cluster_id].append(SeqRecord(
-            promoter_seq,
-            id=f"{gene_id}|{cluster_id}|{genome_id}",
-            description=""
-        ))
 
-    for cluster_id, records in cluster_promoters.items():
-        cluster_dir = Path(output_dir) / cluster_id
-        cluster_dir.mkdir(parents=True, exist_ok=True)
-        fasta_path = cluster_dir / "promoters.fasta"
-        SeqIO.write(records, fasta_path, "fasta")
-        run_meme(str(fasta_path), str(cluster_dir / "meme"))
+    if len(candidates) > 1:
+        print(f"⚠️ Multiple fasta candidates found. Using the first:\n{candidates}")
+
+    return candidates[0]
+
+# Function to load genome sequences from a fasta file
+def load_genome(fasta_file):
+    """Load genome sequences into memory"""
+    genome = {}
+    with open(fasta_file) as handle:
+        for record in SeqIO.parse(handle, "fasta"):
+            genome[record.id] = record.seq
+    return genome
+
+# Function to extract promoter sequences from a cluster dataframe and annotation dataframe
+def extract_promoters(cluster_df, annotation_df, genome, upstream=1000):
+    """Extract promoter sequences"""
+    promoters = {}
+
+    for _, row in cluster_df.iterrows():
+        gene_id = row["gene_id"]
+
+        hit = annotation_df[annotation_df['id'].str.strip() == gene_id.strip()]
+        if hit.empty:
+            print(f"⚠️ Gene {gene_id} not found in annotation.")
+            continue
+
+        hit_row = hit.iloc[0]
+        chrom = str(hit_row["chromosome"])
+        strand = hit_row["strand"]
+        start = int(hit_row["start"])
+        end = int(hit_row["end"])
+
+        if chrom not in genome:
+            print(f"⚠️ Chromosome {chrom} not found in genome fasta.")
+            continue
+
+        seq = genome[chrom]
+        if strand == "+":
+            promoter_start = max(0, start - upstream - 1)
+            promoter_end = start - 1
+            promoter_seq = seq[promoter_start:promoter_end]
+        else:
+            promoter_start = end
+            promoter_end = min(len(seq), end + upstream)
+            promoter_seq = seq[promoter_start:promoter_end].reverse_complement()
+
+        header = f"{gene_id}|{chrom}:{promoter_start+1}-{promoter_end}|{strand}"
+        promoters[header] = str(promoter_seq)
+
+    return promoters
+
+# Function to save promoter sequences to a fasta file
+def save_promoters(promoters, output_path):
+    """Save promoter sequences to fasta"""
+    with open(output_path, "w") as f:
+        for header, seq in promoters.items():
+            f.write(f">{header}\n{seq}\n")
+            
+# Function to analyze promoter sequences for GC content, motif counts, and length
+def analyze_promoters(fasta_file):
+    """Analyze promoter sequences: GC content, motif counts, length."""
+    results = []
+    for record in SeqIO.parse(fasta_file, "fasta"):
+        seq = str(record.seq).upper()
+
+        gc = (seq.count('G') + seq.count('C')) / len(seq) if len(seq) > 0 else 0
+
+        tata = seq.count('TATA')
+        caat = seq.count('CAAT')
+        at_rich = (seq.count('A') + seq.count('T')) / len(seq) if len(seq) > 0 else 0
+
+        results.append({
+            'gene': record.id,
+            'length': len(seq),
+            'GC_content': round(gc, 4),
+            'AT_content': round(at_rich, 4),
+            'TATA_count': tata,
+            'CAAT_count': caat,
+        })
+    return pd.DataFrame(results)
+
+# Main function to process the cluster CSV and extract promoter sequences
+def main(cluster_csv, output_dir):
+    mapping_file = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/dataset_organism_mapping.csv"
+    annotation_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/annotated_genomes_metabolic"
+    fasta_dirs = [
+        "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/phytozome_genomes/Phytozome",
+        "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/ensembl_genomes/dna",
+    ]
+
+    os.makedirs(output_dir, exist_ok=True)
+
+    cluster_df = pd.read_csv(cluster_csv)
+    cluster_name = os.path.basename(cluster_csv).replace(".csv", "")
+    print(f"🚩 Processing cluster: {cluster_name}")
+
+    mapping_df = pd.read_csv(mapping_file)
+
+    # Match annotation file
+    annotation_files = [
+        os.path.join(annotation_dir, f) for f in os.listdir(annotation_dir) if f.endswith(".csv")
+    ]
+
+    best_file = None
+    max_hits = 0
+    for ann in annotation_files:
+        try:
+            ann_df = pd.read_csv(ann)
+            if "id" not in ann_df.columns:
+                continue
+            hits = sum(
+                cluster_df["gene_id"].str.contains("|".join(ann_df["id"].astype(str)), na=False)
+            )
+            if hits > max_hits:
+                max_hits = hits
+                best_file = ann
+        except Exception:
+            continue
+
+    if not best_file:
+        raise ValueError("❌ Could not match annotation file.")
+
+    print(f"✅ Best matching annotation file: {os.path.basename(best_file)} ({max_hits} gene hits)")
+
+    ann_df = pd.read_csv(best_file)
+
+    dataset_id, organism_name = get_organism_info(best_file, mapping_df)
+    fasta_file = find_fasta_file(dataset_id, organism_name, fasta_dirs)
+    print(f"✅ Using fasta file: {os.path.basename(fasta_file)}")
+
+    genome = load_genome(fasta_file)
+    promoters = extract_promoters(cluster_df, ann_df, genome)
+
+    output_fasta = os.path.join(output_dir, f"{cluster_name}_promoters.fasta")
+    save_promoters(promoters, output_fasta)
+    print(f"✅ Saved {len(promoters)} promoters to {output_fasta}")
+    analysis_df = analyze_promoters(output_fasta)
+    output_csv = os.path.join(output_dir, f"{cluster_name}_promoters_analysis.csv")
+    analysis_df.to_csv(output_csv, index=False)
+    print(f"✅ Saved promoter analysis to {output_csv}")
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Extract promoter sequences and run MEME")
-    parser.add_argument("--cluster_fasta", required=True, help="FASTA file of protein sequences from MGC cluster")
-    parser.add_argument("--genome_fasta", required=True, help="Genomic DNA FASTA file")
-    parser.add_argument("--annotation_csv", required=True, help="Gene annotation CSV file")
+    parser = argparse.ArgumentParser(description="Extract promoter sequences for cluster genes.")
+    parser.add_argument("--cluster_csv", required=True, help="Cluster CSV file")
     parser.add_argument("--output_dir", required=True, help="Output directory")
     args = parser.parse_args()
 
-    main(
-        cluster_fasta=args.cluster_fasta,
-        genome_fasta=args.genome_fasta,
-        annotation_csv=args.annotation_csv,
-        output_dir=args.output_dir
-    )
+    main(args.cluster_csv, args.output_dir)

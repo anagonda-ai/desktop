@@ -1,8 +1,7 @@
+import argparse
 import os
 import pandas as pd
 import concurrent.futures
-import itertools
-from collections import defaultdict
 import re
 
 def find_csv_files(root_dir):
@@ -114,8 +113,10 @@ def process_organism(organism, file_paths, output_dir, all_distances):
     all_distances.extend(local_distances)
 
 def process_csv_files(root_dir):
+    # Define input files
+    best_hits_by_organism = os.path.join(root_dir, "blast_results_chromosome_separated/best_hits_by_organism")
     # Find all relevant CSV files per organism
-    organism_files = find_csv_files(root_dir)
+    organism_files = find_csv_files(best_hits_by_organism)
     
     # Define output directory
     output_dir = "potential_clusters_by_chromosome"
@@ -142,14 +143,11 @@ def process_csv_files(root_dir):
             'median_distance': sorted(all_distances)[len(all_distances) // 2]
         }
         stats_df = pd.DataFrame([stats])
-        output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output_without_haaap_stranded"
-        os.makedirs(output_dir, exist_ok=True)
-        stats_output_file = os.path.join(output_dir, "general_summary_statistics.csv")
+        stats_output_file = os.path.join(root_dir, "general_summary_statistics.csv")
         stats_df.to_csv(stats_output_file, index=False)
         print(f"Saved general summary statistics: {stats_output_file}")
 
 def _extract_organism(origin_file):
-    # Handles adcs.fasta_Ahalleri_765_v2.1.0, cs.fasta_Vvinifera_457_v2.1, etc.
     m = re.search(r'\.fasta_(.+)', origin_file)
     if m:
         return m.group(1)
@@ -309,14 +307,11 @@ def compute_tightest_clusters_from_raw_blast(directory, output_dir, max_workers=
         print(f"[Main] Saved best tightest cluster for organism {org}: {best_file}")
 
 if __name__ == "__main__":
-    # Define input files
-    root_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap_stranded/best_hits_by_organism"
+    parser = argparse.ArgumentParser(description="Find homolog genes for Asaph cluster")
+    parser.add_argument("--example_mgc", type=str, required=True, help="Path to example MGC directory")
+    args = parser.parse_args()
+
+    root_dir = args.example_mgc
     
     # Process files
     process_csv_files(root_dir)
-
-    # Call the new function
-    compute_tightest_clusters_from_raw_blast(
-        '/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap_stranded',
-        '/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/tightest_clusters_without_haaap_stranded'
-    )

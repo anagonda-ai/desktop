@@ -1,3 +1,4 @@
+import argparse
 import os
 import csv
 import matplotlib.pyplot as plt
@@ -161,14 +162,18 @@ def plot_results(results, output_dir, chunk_size=50):
     print(f"Plots saved in: {sub_dir}")
 
 if __name__ == "__main__":
-    root_directory = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap_stranded/best_hits_by_organism"  # Replace with the actual root directory
-    output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/output_without_haaap_stranded"  # Replace with the actual output directory
-    os.makedirs(output_dir, exist_ok=True)
-    output_filename = "comparison_results.csv"  # Output file name
-    output_file = os.path.join(output_dir, output_filename)
+    parser = argparse.ArgumentParser(description="Find homolog genes for Asaph cluster")
+    parser.add_argument("--example_mgc", type=str, required=True, help="Path to example MGC directory")
+    args = parser.parse_args()
 
-    results = compare_csvs_in_each_dir(root_directory, output_file)
+    example_mgc = args.example_mgc
+    
+    best_hits_by_organism = os.path.join(example_mgc,"blast_results_chromosome_separated/best_hits_by_organism")  # Replace with the actual root directory
+    output_filename = "comparison_results.csv"  # Output file name
+    output_file = os.path.join(example_mgc, output_filename)
+
+    results = compare_csvs_in_each_dir(best_hits_by_organism, output_file)
     
     
     if results:
-        plot_results(results, output_dir)
+        plot_results(results, example_mgc)

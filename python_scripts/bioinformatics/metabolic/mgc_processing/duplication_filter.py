@@ -48,7 +48,7 @@ def prepare_fasta(file_path, temp_dir):
     if file_path.endswith(".fasta") or file_path.endswith(".fa"):
         return file_path
     elif file_path.endswith(".csv"):
-        fasta_out = os.path.join(temp_dir, os.path.basename(file_path).replace(".csv", ".fasta"))
+        fasta_out = file_path.replace(".csv", ".fasta")
         csv_to_fasta(file_path, fasta_out)
         return fasta_out
     else:
