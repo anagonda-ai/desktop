@@ -8,68 +8,12 @@ from tqdm import tqdm
 from Bio.Blast import NCBIXML
 
 # ------------------------------
-# KEGG Annotation Function (Local or within SLURM)
+# KEGG Database Path and Mapping
 # ------------------------------
 
-def blast_and_map_to_kegg(genome_file, kegg_db, temp_dir, identity_threshold=90.0, evalue_threshold=1e-3, coverage_threshold=90.0):
-    df = pd.read_csv(genome_file)
-    fasta_query = os.path.join(temp_dir, os.path.basename(genome_file).replace('.csv', '.fasta'))
-
-    # Write fasta
-    with open(fasta_query, "w") as f:
-        for idx, row in df.iterrows():
-            f.write(f">{row['id']}\n{row['sequence']}\n")
-
-    blast_output = os.path.join(temp_dir, f"blast_result_{os.path.basename(genome_file)}.xml")
-    if not os.path.exists(blast_output):
-        subprocess.run([
-            "blastp",
-            "-task", "blastp-fast",
-            "-query", fasta_query,
-            "-db", kegg_db,
-            "-out", blast_output,
-            "-outfmt", "5",
-            "-evalue", str(evalue_threshold),
-            "-num_threads", "4",
-            "-max_target_seqs", "5"
-        ], check=True)
-
-    id_to_pathway, id_to_annotation = {}, {}
-    with open(blast_output) as result_handle:
-        blast_records = NCBIXML.parse(result_handle)
-        for record in blast_records:
-            query_id = record.query
-            query_length = record.query_length
-            best_score = 0
-            best_pathway = None
-            best_annotation = None
-
-            for alignment in record.alignments:
-                header = alignment.hit_def
-                if '$' in header:
-                    _, annotation, pathway = header.split('$')
-                    annotation = annotation.strip()
-                    pathway = pathway.strip()
-                else:
-                    continue
-
-                for hsp in alignment.hsps:
-                    coverage = (hsp.align_length / query_length) * 100
-                    identity = (hsp.identities / hsp.align_length) * 100
-                    bit_score = hsp.bits
-
-                    if coverage >= coverage_threshold and identity >= identity_threshold and bit_score > best_score:
-                        best_score = bit_score
-                        best_pathway = pathway
-                        best_annotation = annotation
-
-            if best_pathway:
-                id_to_pathway[query_id] = best_pathway
-                id_to_annotation[query_id] = best_annotation
-
-    df['pathway'] = df['id'].map(id_to_pathway)
-    df['annotation'] = df['id'].map(id_to_annotation)
-    return df
+MAPPING_CSV = "/groups/itay_mayrose/alongonda/datasets/full_genomes/genome_file_organism_mapping_with_gene_count_max_with_kegg_with_final_chloro_filteret_dataset_path_no_empty_kegg_blastdb_paths.csv"
+mapping_df = pd.read_csv(MAPPING_CSV)
+kegg_path_dict = dict(zip(mapping_df["filtered_path"], mapping_df["kegg_blastdb"]))
 
 # ------------------------------
 # Count Running Jobs
@@ -88,27 +32,30 @@ def count_running_jobs(user="alongonda"):
 # SLURM Submission
 # ------------------------------
 
-def submit_annotation_jobs(genome_files, kegg_db, temp_dir, annotated_dir, max_jobs=100):
-    slurm_script = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/kegg_annotation.sh"
+def submit_annotation_jobs(genome_files, temp_dir, annotated_dir, max_jobs=100):
+    slurm_script = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/kegg_verified_annotation.sh"
     os.makedirs(annotated_dir, exist_ok=True)
     os.makedirs(temp_dir, exist_ok=True)
 
     for genome_file in genome_files:
-        job_name = os.path.basename(genome_file).replace('.csv', '')
+        if genome_file not in kegg_path_dict:
+            print(f"⚠️ No KEGG DB found for: {genome_file}")
+            continue
 
-        output_file = os.path.join(annotated_dir, os.path.basename(genome_file).replace('.csv', '_annotated.csv'))
+        kegg_db = kegg_path_dict[genome_file]
+        job_name = os.path.basename(genome_file).replace('.csv', '')
+        output_file = os.path.join(annotated_dir, f"{job_name}_annotated.csv")
         if os.path.exists(output_file):
             print(f"✔️ Already exists: {output_file}")
             continue
-        
-        # Throttle: wait if too many jobs
+
         while True:
             current_jobs = count_running_jobs(user="alongonda")
             if current_jobs < max_jobs:
                 break
             print(f"⏳ {current_jobs} jobs running (limit {max_jobs}). Waiting 30 seconds...")
             time.sleep(30)
-        
+
         sbatch_cmd = [
             "sbatch",
             "--job-name", f"kegg_{job_name}",
@@ -242,13 +189,10 @@ def main():
     # Directories
     full_genome_dir = "/groups/itay_mayrose/alongonda/datasets/full_genomes"
     genome_dirs = [
-        os.path.join(full_genome_dir, "ensembl/processed_annotations_test_no_chloroplast_with_sequences"),
-        os.path.join(full_genome_dir, "phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences_with_strand"),
-        os.path.join(full_genome_dir, "plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences")
+        os.path.join(full_genome_dir, "final_dataset/filtered_no_mito")
     ]
     min_genes = 3
-    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta/merged_metabolic_pathways/merged_metabolic_pathways"
-    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g{min_genes}_slurm"
+    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/kegg_final_verified_output_g{min_genes}_slurm_no_chloroplast"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
@@ -261,13 +205,14 @@ def main():
     genome_files = []
     for genome_dir in genome_dirs:
         for file in os.listdir(genome_dir):
-            if file.endswith('.csv'):
-                genome_files.append(os.path.join(genome_dir, file))
+            full_path = os.path.join(genome_dir, file)
+            if file.endswith('.csv') and full_path in kegg_path_dict:
+                genome_files.append(full_path)
 
-    print(f"Found {len(genome_files)} genome files.")
+    print(f"🧬 {len(genome_files)} genome files with KEGG matches found.")
 
     # Submit SLURM jobs for annotation
-    submit_annotation_jobs(genome_files, kegg_db, temp_dir, annotated_dir, max_jobs=100)
+    submit_annotation_jobs(genome_files, temp_dir, annotated_dir, max_jobs=100)
     
     # Wait until all jobs finish
     wait_for_jobs(job_prefix="kegg_", user="alongonda")

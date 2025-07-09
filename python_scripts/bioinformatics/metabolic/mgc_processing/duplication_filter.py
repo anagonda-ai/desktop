@@ -3,6 +3,7 @@ import csv
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
+import tempfile
 import networkx as nx
 import subprocess
 from networkx.algorithms.matching import max_weight_matching
@@ -55,12 +56,40 @@ def prepare_fasta(file_path, temp_dir):
         return None
 
 def build_bipartite_graph(candidate_sequences, mgc_sequences):
-    graph = nx.Graph()
-    for candidate_seq in candidate_sequences:
-        for mgc_seq in mgc_sequences:
-            if candidate_seq in mgc_seq or mgc_seq in candidate_seq:
-                graph.add_edge(candidate_seq, mgc_seq, weight=1)
-    return graph
+    with tempfile.TemporaryDirectory() as temp_dir:
+        query_fasta = os.path.join(temp_dir, "query.fasta")
+        subject_fasta = os.path.join(temp_dir, "subject.fasta")
+        db_prefix = os.path.join(temp_dir, "blast_db")
+        out_path = os.path.join(temp_dir, "blast_result.txt")
+
+        # Write FASTA files
+        SeqIO.write([SeqRecord(Seq(s), id=f"q{i}") for i, s in enumerate(candidate_sequences)], query_fasta, "fasta")
+        SeqIO.write([SeqRecord(Seq(s), id=f"s{i}") for i, s in enumerate(mgc_sequences)], subject_fasta, "fasta")
+
+        # Make BLAST DB
+        subprocess.run(["makeblastdb", "-in", subject_fasta, "-dbtype", "prot", "-out", db_prefix], capture_output=True)
+
+        # Run BLASTP
+        subprocess.run([
+            "blastp", "-query", query_fasta, "-db", db_prefix,
+            "-outfmt", "6 qseqid sseqid pident length evalue bitscore",
+            "-evalue", str(EVALUE_THRESHOLD), "-num_threads", str(NUM_THREADS), "-out", out_path
+        ], capture_output=True)
+
+        # Build graph
+        graph = nx.Graph()
+        with open(out_path) as f:
+            for line in f:
+                parts = line.strip().split()
+                if len(parts) != 6:
+                    continue
+                qid, sid, pident, length, evalue, bitscore = parts
+                pident = float(pident)
+                evalue = float(evalue)
+                if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
+                    graph.add_edge(qid, sid, weight=float(bitscore))
+
+        return graph
 
 def check_identity(mgc_directory, candidate_directory, output_file):
     unmatched_candidates = []
@@ -234,7 +263,7 @@ def blast_all_vs_all_slurm(merged_list, output_root):
             print(f"❌ Failed to submit job for {q_name}: {result.stderr.strip()}")
 
 def main():
-    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_final_metabolic_output_g3_slurm_no_chloroplast/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     mgc_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
     merged_list_file = os.path.join(candidate_dir, "merged_list.txt")
     blast_output_dir = os.path.join(candidate_dir, "blast_all_vs_all")
