@@ -5,13 +5,12 @@ import pandas as pd
 from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
-from Bio.Blast import NCBIXML
 
 # ------------------------------
 # KEGG Database Path and Mapping
 # ------------------------------
 
-MAPPING_CSV = "/groups/itay_mayrose/alongonda/datasets/full_genomes/genome_file_organism_mapping_with_gene_count_max_with_kegg_with_final_chloro_filteret_dataset_path_no_empty_kegg_blastdb_paths_with_fasta.csv"
+MAPPING_CSV = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/dataset_organism_mapping_with_fasta.csv"
 mapping_df = pd.read_csv(MAPPING_CSV)
 kegg_path_dict = dict(zip(mapping_df["filtered_path"], mapping_df["kegg_fasta"]))
 
@@ -206,7 +205,7 @@ def main():
     for genome_dir in genome_dirs:
         for file in os.listdir(genome_dir):
             full_path = os.path.join(genome_dir, file)
-            if file.endswith('.csv') and full_path in kegg_path_dict:
+            if file.endswith('.csv') and full_path in kegg_path_dict and pd.notna(kegg_path_dict[full_path]):
                 genome_files.append(full_path)
 
     print(f"🧬 {len(genome_files)} genome files with KEGG matches found.")
