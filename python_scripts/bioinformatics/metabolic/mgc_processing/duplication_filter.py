@@ -55,41 +55,53 @@ def prepare_fasta(file_path, temp_dir):
     else:
         return None
 
-def build_bipartite_graph(candidate_sequences, mgc_sequences):
+def build_bipartite_graph(candidate_sequences, mgc_sequences, batch_size=500):
     with tempfile.TemporaryDirectory() as temp_dir:
-        query_fasta = os.path.join(temp_dir, "query.fasta")
         subject_fasta = os.path.join(temp_dir, "subject.fasta")
         db_prefix = os.path.join(temp_dir, "blast_db")
-        out_path = os.path.join(temp_dir, "blast_result.txt")
 
-        # Write FASTA files
-        SeqIO.write([SeqRecord(Seq(s), id=f"q{i}") for i, s in enumerate(candidate_sequences)], query_fasta, "fasta")
+        # Write MGC subject sequences
         SeqIO.write([SeqRecord(Seq(s), id=f"s{i}") for i, s in enumerate(mgc_sequences)], subject_fasta, "fasta")
 
-        # Make BLAST DB
+        # Make BLAST DB once
         subprocess.run(["makeblastdb", "-in", subject_fasta, "-dbtype", "prot", "-out", db_prefix], capture_output=True)
 
-        # Run BLASTP
-        subprocess.run([
-            "blastp", "-query", query_fasta, "-db", db_prefix,
-            "-outfmt", "6 qseqid sseqid pident length evalue bitscore",
-            "-evalue", str(EVALUE_THRESHOLD), "-num_threads", str(NUM_THREADS), "-out", out_path
-        ], capture_output=True)
-
-        # Build graph
         graph = nx.Graph()
-        with open(out_path) as f:
-            for line in f:
-                parts = line.strip().split()
-                if len(parts) != 6:
-                    continue
-                qid, sid, pident, length, evalue, bitscore = parts
-                pident = float(pident)
-                evalue = float(evalue)
-                if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
-                    graph.add_edge(qid, sid, weight=float(bitscore))
 
-        return graph
+        candidate_list = list(candidate_sequences)
+        num_batches = (len(candidate_list) + batch_size - 1) // batch_size
+
+        for batch_idx in range(num_batches):
+            batch_seqs = candidate_list[batch_idx * batch_size: (batch_idx + 1) * batch_size]
+            query_fasta = os.path.join(temp_dir, f"query_batch_{batch_idx}.fasta")
+            out_path = os.path.join(temp_dir, f"blast_result_{batch_idx}.txt")
+
+            # Write query batch
+            SeqIO.write(
+                [SeqRecord(Seq(s), id=f"q{batch_idx}_{i}") for i, s in enumerate(batch_seqs)],
+                query_fasta, "fasta"
+            )
+
+            # Run BLAST
+            subprocess.run([
+                "blastp", "-query", query_fasta, "-db", db_prefix,
+                "-outfmt", "6 qseqid sseqid pident length evalue bitscore",
+                "-evalue", str(EVALUE_THRESHOLD), "-num_threads", str(NUM_THREADS), "-out", out_path
+            ], capture_output=True)
+
+            # Parse BLAST results and update graph
+            with open(out_path) as f:
+                for line in f:
+                    parts = line.strip().split()
+                    if len(parts) != 6:
+                        continue
+                    qid, sid, pident, length, evalue, bitscore = parts
+                    pident = float(pident)
+                    evalue = float(evalue)
+                    if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
+                        graph.add_edge(qid, sid, weight=float(bitscore))
+
+    return graph
 
 def check_identity(mgc_directory, candidate_directory, output_file):
     unmatched_candidates = []
@@ -113,12 +125,16 @@ def check_identity(mgc_directory, candidate_directory, output_file):
                 matching = max_weight_matching(graph, maxcardinality=True)
 
                 if len(matching) == len(candidate_sequences):
+                    print(f"✅ All sequences in {fasta_path} matched to {csv_path}.")
                     out_file.write(f"The candidate {fasta_path} is matched to {csv_path} cluster.\n")
+                    out_file.flush()
                     all_match_found = True
                     break
 
             if not all_match_found:
+                print(f"❌ No matches found for {fasta_path} in any MGC CSV file.")
                 out_file.write(f"Not all sequences in {fasta_path} have matches in any MGC CSV file.\n")
+                out_file.flush()
                 unmatched_candidates.append(fasta_path)
     return unmatched_candidates
 
@@ -263,7 +279,7 @@ def blast_all_vs_all_slurm(merged_list, output_root):
             print(f"❌ Failed to submit job for {q_name}: {result.stderr.strip()}")
 
 def main():
-    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_final_metabolic_output_g3_slurm_no_chloroplast/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/test/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     mgc_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
     merged_list_file = os.path.join(candidate_dir, "merged_list.txt")
     blast_output_dir = os.path.join(candidate_dir, "blast_all_vs_all")

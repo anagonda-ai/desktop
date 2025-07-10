@@ -10,10 +10,9 @@ import argparse
 import concurrent.futures
 
 # Directories containing CSV files
+full_genome_dir = "/groups/itay_mayrose/alongonda/datasets/full_genomes"
 csv_dirs = [
-    # "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/processed_annotations_test_no_chloroplast_with_sequences",
-    "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/processed_annotations_with_chromosomes_no_chloroplast_with_sequences_with_strand",
-    # "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/processed_annotations_with_chromosomes_no_chloroplast_with_sequences"
+    os.path.join(full_genome_dir, "final_dataset/filtered_no_mito")
 ]
 
 # Directory to store generated FASTA files and BLAST DBs

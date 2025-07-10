@@ -26,7 +26,7 @@ if not os.path.exists(plants_csv):
         parts = line.split("\t")
         if len(parts) >= 4 and "Plants" in parts[3]:
             org_code, org_name = parts[1], parts[2]
-            plants[org_code] = org_name
+            plants[org_code] = org_name if "(" not in org_name else org_name.split(" (")[0]
 
     with open(plants_csv, "w", newline="") as f:
         writer = csv.writer(f)

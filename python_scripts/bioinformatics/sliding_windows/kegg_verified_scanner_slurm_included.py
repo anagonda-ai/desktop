@@ -11,9 +11,9 @@ from Bio.Blast import NCBIXML
 # KEGG Database Path and Mapping
 # ------------------------------
 
-MAPPING_CSV = "/groups/itay_mayrose/alongonda/datasets/full_genomes/genome_file_organism_mapping_with_gene_count_max_with_kegg_with_final_chloro_filteret_dataset_path_no_empty_kegg_blastdb_paths.csv"
+MAPPING_CSV = "/groups/itay_mayrose/alongonda/datasets/full_genomes/genome_file_organism_mapping_with_gene_count_max_with_kegg_with_final_chloro_filteret_dataset_path_no_empty_kegg_blastdb_paths_with_fasta.csv"
 mapping_df = pd.read_csv(MAPPING_CSV)
-kegg_path_dict = dict(zip(mapping_df["filtered_path"], mapping_df["kegg_blastdb"]))
+kegg_path_dict = dict(zip(mapping_df["filtered_path"], mapping_df["kegg_fasta"]))
 
 # ------------------------------
 # Count Running Jobs
@@ -42,7 +42,7 @@ def submit_annotation_jobs(genome_files, temp_dir, annotated_dir, max_jobs=100):
             print(f"⚠️ No KEGG DB found for: {genome_file}")
             continue
 
-        kegg_db = kegg_path_dict[genome_file]
+        kegg_fasta = kegg_path_dict[genome_file]
         job_name = os.path.basename(genome_file).replace('.csv', '')
         output_file = os.path.join(annotated_dir, f"{job_name}_annotated.csv")
         if os.path.exists(output_file):
@@ -65,7 +65,7 @@ def submit_annotation_jobs(genome_files, temp_dir, annotated_dir, max_jobs=100):
             genome_file,
             annotated_dir,
             temp_dir,
-            kegg_db
+            kegg_fasta
         ]
         result = subprocess.run(sbatch_cmd, capture_output=True, text=True)
 
@@ -138,8 +138,8 @@ def process_annotated_file(annotated_file, output_file, file_lock, window_size, 
 
             if len(window) >= min_genes:
                 window_df = pd.DataFrame(window)
-                genes_and_pathways = {row['id']: [row['pathway']] for _, row in window_df.iterrows()}
-                genes_and_annotations = {row['id']: [row['annotation']] for _, row in window_df.iterrows()}
+                genes_and_pathways = {row['id']: row['pathway'].split(",") for _, row in window_df.iterrows()}
+                genes_and_annotations = {row['id']: row['annotation'].split(",") for _, row in window_df.iterrows()}
                 pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
                 metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
                 if pathway and not tuple(metabolic_genes) in prev_matches:
@@ -192,7 +192,7 @@ def main():
         os.path.join(full_genome_dir, "final_dataset/filtered_no_mito")
     ]
     min_genes = 3
-    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/kegg_final_verified_output_g{min_genes}_slurm_no_chloroplast"
+    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/test"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
