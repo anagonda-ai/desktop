@@ -63,6 +63,7 @@ if [ ! -f "$blast_output" ]; then
         -out "$blast_output" \
         -outfmt 5 \
         -evalue 1e-5 \
+        -qcov_hsp_perc 90 \
         -num_threads 4
 else
     echo "BLAST output already exists: $blast_output"

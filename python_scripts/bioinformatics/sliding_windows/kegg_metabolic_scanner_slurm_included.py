@@ -23,27 +23,26 @@ def count_running_jobs(user="alongonda"):
 # SLURM Submission
 # ------------------------------
 
-def submit_annotation_jobs(genome_files, kegg_db, temp_dir, annotated_dir, max_jobs=100):
+def submit_annotation_jobs(genome_files, temp_dir, annotated_dir, max_jobs=100):
     slurm_script = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/kegg_metabolic_annotation.sh"
+    kegg_fasta = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta/merged_metabolic_pathways.fasta"
     os.makedirs(annotated_dir, exist_ok=True)
     os.makedirs(temp_dir, exist_ok=True)
 
     for genome_file in genome_files:
         job_name = os.path.basename(genome_file).replace('.csv', '')
-
-        output_file = os.path.join(annotated_dir, os.path.basename(genome_file).replace('.csv', '_annotated.csv'))
+        output_file = os.path.join(annotated_dir, f"{job_name}_annotated.csv")
         if os.path.exists(output_file):
             print(f"✔️ Already exists: {output_file}")
             continue
-        
-        # Throttle: wait if too many jobs
+
         while True:
             current_jobs = count_running_jobs(user="alongonda")
             if current_jobs < max_jobs:
                 break
             print(f"⏳ {current_jobs} jobs running (limit {max_jobs}). Waiting 30 seconds...")
             time.sleep(30)
-        
+
         sbatch_cmd = [
             "sbatch",
             "--job-name", f"kegg_{job_name}",
@@ -53,7 +52,7 @@ def submit_annotation_jobs(genome_files, kegg_db, temp_dir, annotated_dir, max_j
             genome_file,
             annotated_dir,
             temp_dir,
-            kegg_db
+            kegg_fasta
         ]
         result = subprocess.run(sbatch_cmd, capture_output=True, text=True)
 
@@ -126,8 +125,8 @@ def process_annotated_file(annotated_file, output_file, file_lock, window_size, 
 
             if len(window) >= min_genes:
                 window_df = pd.DataFrame(window)
-                genes_and_pathways = {row['id']: [row['pathway']] for _, row in window_df.iterrows()}
-                genes_and_annotations = {row['id']: [row['annotation']] for _, row in window_df.iterrows()}
+                genes_and_pathways = {row['id']: row['pathway'].split(",") for _, row in window_df.iterrows()}
+                genes_and_annotations = {row['id']: row['annotation'].split(",") for _, row in window_df.iterrows()}
                 pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
                 metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
                 if pathway and not tuple(metabolic_genes) in prev_matches:
@@ -180,8 +179,7 @@ def main():
         os.path.join(full_genome_dir, "final_dataset/filtered_no_mito")
     ]
     min_genes = 3
-    kegg_db = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta/merged_metabolic_pathways/merged_metabolic_pathways"
-    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/kegg_final_metabolic_output_g{min_genes}_slurm_no_chloroplast"
+    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/test_metabolic"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
@@ -200,7 +198,7 @@ def main():
     print(f"Found {len(genome_files)} genome files.")
 
     # Submit SLURM jobs for annotation
-    submit_annotation_jobs(genome_files, kegg_db, temp_dir, annotated_dir, max_jobs=100)
+    submit_annotation_jobs(genome_files, temp_dir, annotated_dir, max_jobs=100)
     
     # Wait until all jobs finish
     wait_for_jobs(job_prefix="kegg_", user="alongonda")
