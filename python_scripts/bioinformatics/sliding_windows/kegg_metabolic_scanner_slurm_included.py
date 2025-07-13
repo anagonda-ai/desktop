@@ -1,3 +1,4 @@
+import glob
 import os
 import subprocess
 import time
@@ -9,14 +10,18 @@ from tqdm import tqdm
 # Count Running Jobs
 # ------------------------------
 
-def count_running_jobs(user="alongonda"):
-    """Count number of running jobs for a user."""
+def count_running_jobs(user="alongonda", name_prefix=None):
+    """Count number of running jobs for a user, optionally filtered by job name prefix."""
     result = subprocess.run(
-        ["squeue", "-u", user, "-h"],
+        ["squeue", "-u", user, "-h", "-o", "%.100j"],
         capture_output=True, text=True
     )
-    jobs = result.stdout.strip().splitlines()
-    return len(jobs)
+    job_names = result.stdout.strip().splitlines()
+
+    if name_prefix:
+        job_names = [name for name in job_names if name.startswith(name_prefix)]
+
+    return len(job_names)
 
 # ------------------------------
 # SLURM Submission
@@ -141,6 +146,8 @@ def main():
 
     min_genes_subdir = os.path.join(output_dir, f"min_genes_{min_genes}")
     os.makedirs(min_genes_subdir, exist_ok=True)
+    tmp_output_dir = os.path.join(min_genes_subdir, "tmp_outputs")
+    os.makedirs(tmp_output_dir, exist_ok=True)
 
     for window_size in [10, 20]:
         output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
@@ -161,6 +168,7 @@ def main():
             
             # Submit SLURM job for processing annotated file
             job_name = os.path.basename(annotated_file).replace('.csv', '')
+            tmp_output_file = os.path.join(tmp_output_dir, f"{job_name}_w{window_size}.csv")
             sbatch_cmd = [
                 "sbatch",
                 "--job-name", f"process_{job_name}",
@@ -168,7 +176,7 @@ def main():
                 "--error", os.path.join(err_out_output_dir, f"{job_name}_{window_size}.err"),
                 process_annotated_file_slurm_script,
                 annotated_file,
-                output_file,
+                tmp_output_file,
                 str(window_size),
                 str(min_genes)
             ]
@@ -177,6 +185,33 @@ def main():
                 print(f"✅ Submitted job for {job_name}: {result.stdout.strip()}")
             else:
                 print(f"❌ Failed to submit job for {job_name}: {result.stderr.strip()}")
+                
+        # המתנה לסיום כל העבודות
+        print("⏳ Waiting for all SLURM jobs to finish...")
+        while True:
+            running_jobs = count_running_jobs(user="alongonda", name_prefix="process_")
+            if running_jobs == 0:
+                print("✅ All jobs completed.")
+                break
+            print(f"⏳ {running_jobs} jobs still running. Waiting 60 seconds...")
+            time.sleep(60)
+        
+        # איחוד כל קבצי הפלט
+        merged_dfs = []
+        tmp_files = sorted(glob.glob(os.path.join(tmp_output_dir, f"*w{window_size}.csv")))
+        for tmp_file in tmp_files:
+            try:
+                df = pd.read_csv(tmp_file)
+                merged_dfs.append(df)
+            except Exception as e:
+                print(f"⚠️ Failed to read {tmp_file}: {e}")
+
+        if merged_dfs:
+            merged = pd.concat(merged_dfs, ignore_index=True)
+            merged.to_csv(output_file, index=False)
+            print(f"✔️ Merged {len(tmp_files)} files into {output_file} (Total rows: {len(merged)})")
+        else:
+            print("⚠️ No output files to merge.")
 
         print(f"✔️ Total Matches for w{window_size}, min_genes={min_genes}: {total_matches}")
         remove_subset_results(output_file)

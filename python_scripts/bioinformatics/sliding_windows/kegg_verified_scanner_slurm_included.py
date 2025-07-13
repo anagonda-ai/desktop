@@ -1,5 +1,6 @@
 import os
 import subprocess
+import threading
 import time
 import pandas as pd
 from threading import Lock
@@ -10,7 +11,7 @@ from tqdm import tqdm
 # KEGG Database Path and Mapping
 # ------------------------------
 
-MAPPING_CSV = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/dataset_organism_mapping_with_fasta.csv"
+MAPPING_CSV = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/dataset_organism_mapping_with_fasta.csv"
 mapping_df = pd.read_csv(MAPPING_CSV)
 kegg_path_dict = dict(zip(mapping_df["filtered_path"], mapping_df["kegg_fasta"]))
 
@@ -112,55 +113,111 @@ def find_first_common_element(genes_and_pathways, min_genes):
                     return combination[0], list(selected_genes)
     return None, []
 
-def process_annotated_file(annotated_file, output_file, file_lock, window_size, min_genes):
+def process_chromosome(chr_data, window_size, min_genes, annotated_file):
+    matches = []
+    prev_matches = set()
+    last_match = None
+    num_genes = len(chr_data)
+    i = 0
+    while i < num_genes:
+        window = [chr_data.iloc[i]]
+        start_index = chr_data.iloc[i]['index']
+        for j in range(i + 1, num_genes):
+            end_index = chr_data.iloc[j]['index']
+            if (end_index - start_index <= window_size):
+                window.append(chr_data.iloc[j])
+            else:
+                break
+
+        if len(window) >= min_genes:
+            window_df = pd.DataFrame(window)
+            genes_and_pathways = {row['id']: row['pathway'].split(",") for _, row in window_df.iterrows()}
+            genes_and_annotations = {row['id']: row['annotation'].split(",") for _, row in window_df.iterrows()}
+            pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
+            if pathway and not tuple(metabolic_genes) in prev_matches:
+                prev_matches.add(tuple(metabolic_genes))
+                metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
+
+                current_match = {
+                    'pathway': pathway,
+                    'genes': list(window_df['id']),
+                    'metabolic_genes': metabolic_genes,
+                    'metabolic_genes_annotations': metabolic_annotations,
+                    'start': window_df['start'].min(),
+                    'end': window_df['end'].max()
+                }
+
+                if (
+                    last_match and
+                    pathway == last_match['pathway'] and
+                    metabolic_genes[:2] == last_match['metabolic_genes'][-2:]
+                ):
+                    new_genes = [g for g in current_match['genes'] if g not in last_match['genes']]
+                    new_metabolic_genes = [g for g in current_match['metabolic_genes'] if g not in last_match['metabolic_genes']]
+                    new_annotations = [
+                        ann for gene, ann in zip(current_match['metabolic_genes'], current_match['metabolic_genes_annotations'])
+                        if gene in new_metabolic_genes
+                    ]
+                    last_match['genes'] += new_genes
+                    last_match['metabolic_genes'] += new_metabolic_genes
+                    last_match['metabolic_genes_annotations'] += new_annotations
+                    last_match['end'] = max(last_match['end'], current_match['end'])
+                    print(f"🔄 Merging with last match: {last_match['pathway']} - {len(last_match['genes'])} genes")
+                else:
+                    if last_match:
+                        matches.append({
+                            'pathway': last_match['pathway'],
+                            'genes': ','.join(last_match['genes']),
+                            'metabolic_genes': ','.join(last_match['metabolic_genes']),
+                            'metabolic_genes_annotations': ','.join(last_match['metabolic_genes_annotations']),
+                            'start': last_match['start'],
+                            'end': last_match['end'],
+                            'source_file': annotated_file
+                        })
+                    last_match = current_match
+        i += 1
+
+    if last_match:
+        matches.append({
+            'pathway': last_match['pathway'],
+            'genes': ','.join(last_match['genes']),
+            'metabolic_genes': ','.join(last_match['metabolic_genes']),
+            'metabolic_genes_annotations': ','.join(last_match['metabolic_genes_annotations']),
+            'start': last_match['start'],
+            'end': last_match['end'],
+            'source_file': annotated_file
+        })
+
+    return matches
+
+def process_annotated_file(annotated_file, output_file, window_size, min_genes):
+    file_lock = threading.Lock()
     print(f"Processing: {annotated_file}")
-    total_matches = 0
     df = pd.read_csv(annotated_file)
     df["index"] = df.index
     filtered_df = df[df["pathway"].notna()]
     chromosomes = filtered_df['chromosome'].unique()
-    prev_matches = set()
 
-    for chromosome in chromosomes:
-        chr_data = filtered_df[filtered_df['chromosome'] == chromosome]
-        num_genes = len(chr_data)
-        i = 0
-        while i < num_genes:
-            window = [chr_data.iloc[i]]
-            start_index = chr_data.iloc[i]['index']
-            for j in range(i + 1, num_genes):
-                end_index = chr_data.iloc[j]['index']
-                if (end_index - start_index <= window_size):
-                    window.append(chr_data.iloc[j])
-                else:
-                    break
+    def wrapped(chr):
+        chr_data = filtered_df[filtered_df['chromosome'] == chr]
+        return process_chromosome(chr_data, window_size, min_genes, annotated_file)
 
-            if len(window) >= min_genes:
-                window_df = pd.DataFrame(window)
-                genes_and_pathways = {row['id']: row['pathway'].split(",") for _, row in window_df.iterrows()}
-                genes_and_annotations = {row['id']: row['annotation'].split(",") for _, row in window_df.iterrows()}
-                pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
-                metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
-                if pathway and not tuple(metabolic_genes) in prev_matches:
-                    prev_matches.add(tuple(metabolic_genes))
-                    group = {
-                        'pathway': pathway,
-                        'genes': ','.join(window_df['id']),
-                        'metabolic_genes': ','.join(metabolic_genes),
-                        'metabolic_genes_annotations': ','.join(metabolic_annotations),
-                        'start': window_df['start'].min(),
-                        'end': window_df['end'].max(),
-                        'source_file': annotated_file
-                    }
-                    with file_lock:
-                        mode = 'a' if os.path.exists(output_file) else 'w'
-                        header = not os.path.exists(output_file)
-                        pd.DataFrame([group]).to_csv(output_file, mode=mode, header=header, index=False)
-                        total_matches += 1
-            i += 1
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        results = executor.map(wrapped, chromosomes)
 
-    print(f"✔️ {annotated_file} - Matches: {total_matches}")
-    return total_matches
+    all_matches = []
+    for match_list in results:
+        all_matches.extend(match_list)
+
+    if all_matches:
+        with file_lock:
+            mode = 'a' if os.path.exists(output_file) else 'w'
+            header = not os.path.exists(output_file)
+            pd.DataFrame(all_matches).to_csv(output_file, mode=mode, header=header, index=False)
+            print(f"✔️ {annotated_file} - Matches: {len(all_matches)}")
+    else:
+        print(f"⚠️ {annotated_file} - No matches found")
+    return len(all_matches)
 
 # ------------------------------
 # Subset Filtering
@@ -191,7 +248,7 @@ def main():
         os.path.join(full_genome_dir, "final_dataset/filtered_no_mito")
     ]
     min_genes = 3
-    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/test"
+    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/kegg_verified_scanner_min_genes_{min_genes}_overlap_merge"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
@@ -227,7 +284,6 @@ def main():
         if os.path.exists(output_file):
             os.remove(output_file)
 
-        file_lock = Lock()
         total_matches = 0
 
         with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
@@ -237,7 +293,6 @@ def main():
                         process_annotated_file,
                         annotated_file,
                         output_file,
-                        file_lock,
                         window_size,
                         min_genes
                     )

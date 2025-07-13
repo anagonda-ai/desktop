@@ -17,13 +17,14 @@ python3 - <<EOF
 import pandas as pd
 import os
 from itertools import combinations, product
-from concurrent.futures import ProcessPoolExecutor
-import multiprocessing
+from concurrent.futures import ThreadPoolExecutor
+import threading
 
 annotated_file = "$annotated_file"
 output_file = "$output_file"
 window_size = int("$window_size")
 min_genes = int("$min_genes")
+file_lock = threading.Lock()
 
 def find_first_common_element(genes_and_pathways, min_genes):
     gene_sets = {gene: set([pathway for pathway in paths if pd.notna(pathway)])
@@ -39,6 +40,8 @@ def find_first_common_element(genes_and_pathways, min_genes):
 
 def process_chromosome(chr_data, window_size, min_genes, annotated_file):
     matches = []
+    prev_matches = set()
+    last_match = None
     num_genes = len(chr_data)
     i = 0
     while i < num_genes:
@@ -56,19 +59,59 @@ def process_chromosome(chr_data, window_size, min_genes, annotated_file):
             genes_and_pathways = {row['id']: row['pathway'].split(",") for _, row in window_df.iterrows()}
             genes_and_annotations = {row['id']: row['annotation'].split(",") for _, row in window_df.iterrows()}
             pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
-            if pathway:
+            if pathway and not tuple(metabolic_genes) in prev_matches:
+                prev_matches.add(tuple(metabolic_genes))
                 metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
-                group = {
+
+                current_match = {
                     'pathway': pathway,
-                    'genes': ','.join(window_df['id']),
-                    'metabolic_genes': ','.join(metabolic_genes),
-                    'metabolic_genes_annotations': ','.join(metabolic_annotations),
+                    'genes': list(window_df['id']),
+                    'metabolic_genes': metabolic_genes,
+                    'metabolic_genes_annotations': metabolic_annotations,
                     'start': window_df['start'].min(),
-                    'end': window_df['end'].max(),
-                    'source_file': annotated_file
+                    'end': window_df['end'].max()
                 }
-                matches.append(group)
+
+                if (
+                    last_match and
+                    pathway == last_match['pathway'] and
+                    metabolic_genes[:2] == last_match['metabolic_genes'][-2:]
+                ):
+                    new_genes = [g for g in current_match['genes'] if g not in last_match['genes']]
+                    new_metabolic_genes = [g for g in current_match['metabolic_genes'] if g not in last_match['metabolic_genes']]
+                    new_annotations = [
+                        ann for gene, ann in zip(current_match['metabolic_genes'], current_match['metabolic_genes_annotations'])
+                        if gene in new_metabolic_genes
+                    ]
+                    last_match['genes'] += new_genes
+                    last_match['metabolic_genes'] += new_metabolic_genes
+                    last_match['metabolic_genes_annotations'] += new_annotations
+                    last_match['end'] = max(last_match['end'], current_match['end'])
+                else:
+                    if last_match:
+                        matches.append({
+                            'pathway': last_match['pathway'],
+                            'genes': ','.join(last_match['genes']),
+                            'metabolic_genes': ','.join(last_match['metabolic_genes']),
+                            'metabolic_genes_annotations': ','.join(last_match['metabolic_genes_annotations']),
+                            'start': last_match['start'],
+                            'end': last_match['end'],
+                            'source_file': annotated_file
+                        })
+                    last_match = current_match
         i += 1
+
+    if last_match:
+        matches.append({
+            'pathway': last_match['pathway'],
+            'genes': ','.join(last_match['genes']),
+            'metabolic_genes': ','.join(last_match['metabolic_genes']),
+            'metabolic_genes_annotations': ','.join(last_match['metabolic_genes_annotations']),
+            'start': last_match['start'],
+            'end': last_match['end'],
+            'source_file': annotated_file
+        })
+
     return matches
 
 def process_annotated_file(annotated_file, output_file, window_size, min_genes):
@@ -78,23 +121,23 @@ def process_annotated_file(annotated_file, output_file, window_size, min_genes):
     filtered_df = df[df["pathway"].notna()]
     chromosomes = filtered_df['chromosome'].unique()
 
-    with ProcessPoolExecutor(max_workers=multiprocessing.cpu_count()) as executor:
-        futures = [
-            executor.submit(process_chromosome,
-                            filtered_df[filtered_df['chromosome'] == chromosome].copy(),
-                            window_size, min_genes, annotated_file)
-            for chromosome in chromosomes
-        ]
-        all_matches = []
-        for future in futures:
-            result = future.result()
-            all_matches.extend(result)
+    def wrapped(chr):
+        chr_data = filtered_df[filtered_df['chromosome'] == chr]
+        return process_chromosome(chr_data, window_size, min_genes, annotated_file)
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        results = executor.map(wrapped, chromosomes)
+
+    all_matches = []
+    for match_list in results:
+        all_matches.extend(match_list)
 
     if all_matches:
-        pd.DataFrame(all_matches).drop_duplicates(subset=["metabolic_genes"]).to_csv(
-            output_file, index=False
-        )
-        print(f"✔️ {annotated_file} - Matches: {len(all_matches)}")
+        with file_lock:
+            mode = 'a' if os.path.exists(output_file) else 'w'
+            header = not os.path.exists(output_file)
+            pd.DataFrame(all_matches).to_csv(output_file, mode=mode, header=header, index=False)
+            print(f"✔️ {annotated_file} - Matches: {len(all_matches)}")
     else:
         print(f"⚠️ {annotated_file} - No matches found")
 

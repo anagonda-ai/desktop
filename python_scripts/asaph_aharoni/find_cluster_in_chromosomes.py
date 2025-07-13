@@ -315,3 +315,7 @@ if __name__ == "__main__":
     
     # Process files
     process_csv_files(root_dir)
+    compute_tightest_clusters_from_raw_blast(directory=os.path.join(root_dir, "blast_results_chromosome_separated"),
+                                              output_dir=os.path.join(root_dir, "tightest_clusters"),
+                                              max_workers=30)
+    print("Processing completed.")

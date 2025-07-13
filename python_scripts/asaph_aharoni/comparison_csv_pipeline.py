@@ -4,7 +4,7 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Config paths
-root_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_dir_fixed"
+root_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/test/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_dir_fixed"
 submit_find_homolog_genes_in_dir = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_find_homolog_genes_in_dir.sh"
 submit_find_clusters_in_chromosome = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_find_clusters_in_chromosome.sh"
 submit_multichromosome_statistics = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_multichromosome_statistics.sh"
@@ -22,6 +22,7 @@ def wait_for_slot(max_jobs=100):
     while True:
         result = subprocess.run(["squeue", "-u", "alongonda"], capture_output=True, text=True)
         lines = result.stdout.strip().splitlines()
+        lines = [line for line in lines if "mgc_" in line]
         running_jobs = len(lines) - 1 if len(lines) > 1 else 0
         if running_jobs < max_jobs:
             break
@@ -75,7 +76,7 @@ def process_mgc_path(mgc_path):
         out1 = os.path.join(jobs_dir, f"{mgc_name}_homolog.out")
         err1 = os.path.join(jobs_dir, f"{mgc_name}_homolog.err")
         if not os.path.exists(out1):
-            job_id1 = submit_job(mgc_name + "_homolog", out1, err1, submit_find_homolog_genes_in_dir, mgc_path)
+            job_id1 = submit_job("mgc_" + mgc_name + "_homolog", out1, err1, submit_find_homolog_genes_in_dir, mgc_path)
             if job_id1:
                 wait_for_job_and_file(job_id1, out1)
 
@@ -84,7 +85,7 @@ def process_mgc_path(mgc_path):
         out2 = os.path.join(jobs_dir, f"{mgc_name}_cluster.out")
         err2 = os.path.join(jobs_dir, f"{mgc_name}_cluster.err")
         if not os.path.exists(out2):
-            job_id2 = submit_job(mgc_name + "_cluster", out2, err2, submit_find_clusters_in_chromosome, mgc_path)
+            job_id2 = submit_job("mgc_" + mgc_name + "_cluster", out2, err2, submit_find_clusters_in_chromosome, mgc_path)
             if job_id2:
                 wait_for_job_and_file(job_id2, out2)
 
@@ -93,7 +94,7 @@ def process_mgc_path(mgc_path):
         out3 = os.path.join(jobs_dir, f"{mgc_name}_multi.out")
         err3 = os.path.join(jobs_dir, f"{mgc_name}_multi.err")
         if not os.path.exists(out3):
-            job_id3 = submit_job(mgc_name + "_multi", out3, err3, submit_multichromosome_statistics, mgc_path)
+            job_id3 = submit_job("mgc_" + mgc_name + "_multi", out3, err3, submit_multichromosome_statistics, mgc_path)
             if job_id3:
                 wait_for_job_and_file(job_id3, out3)
 

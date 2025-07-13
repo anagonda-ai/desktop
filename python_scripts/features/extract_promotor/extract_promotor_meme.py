@@ -118,8 +118,8 @@ def analyze_promoters(fasta_file):
 
 # Main function to process the cluster CSV and extract promoter sequences
 def main(cluster_csv, output_dir):
-    mapping_file = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/dataset_organism_mapping.csv"
-    annotation_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/annotated_genomes_metabolic"
+    mapping_file = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/dataset_organism_mapping.csv"
+    annotation_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm_no_chloroplast/annotated_genomes_metabolic"
     fasta_dirs = [
         "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/phytozome_genomes/Phytozome",
         "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/ensembl_genomes/dna",

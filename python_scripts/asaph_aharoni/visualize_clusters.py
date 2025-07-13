@@ -7,11 +7,18 @@ from Bio import Phylo
 import numpy as np
 from matplotlib.colors import to_rgb
 import ast
+import argparse
+
+parser = argparse.ArgumentParser(description="Find homolog genes for Asaph cluster")
+parser.add_argument("--example_mgc", type=str, required=True, help="Path to example MGC directory")
+args = parser.parse_args()
+
+example_mgc = args.example_mgc
 
 # Define file paths
-MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/dataset_organism_mapping.csv"
-TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/species.nwk"
-COMPARISON_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/output_without_haaap_stranded/comparison_results.csv"
+MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/dataset_organism_mapping.csv"
+TREE_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/species.nwk"
+COMPARISON_FILE = os.path.join(example_mgc, "comparison_results.csv")
 
 def parse_dict(val):
     if isinstance(val, dict):
@@ -26,10 +33,7 @@ def parse_dict(val):
 # Load dataset organism mapping file
 if os.path.exists(MAPPING_FILE):
     mapping_df = pd.read_csv(MAPPING_FILE)
-    mapping_df['Dataset ID'] = pd.to_numeric(mapping_df['Dataset ID'], errors='coerce')  # Ensure numeric for sorting
-    # Keep the latest dataset per organism (highest Dataset ID)
-    latest_df = mapping_df.loc[mapping_df.groupby("Organism")["Dataset ID"].idxmax()]
-    mapping_dict = dict(zip(latest_df['Original Filename'], latest_df['Organism']))
+    mapping_dict = dict(zip(mapping_df['Original Filename'], mapping_df['Organism']))
 else:
     mapping_df = None
     mapping_dict = {}
@@ -41,8 +45,8 @@ if os.path.exists(COMPARISON_FILE):
     
     # Extract only the relevant part of the directory to match mapping_dict
     def clean_directory_name(directory):
-        return directory.split("/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/blast_results_chromosome_separated_without_haaap_stranded/best_hits_by_organism/")[1].split(".gene_transformed_filtered")[0]
-    
+        return directory.split(os.path.join(example_mgc, "blast_results_chromosome_separated/best_hits_by_organism/"))[1].split("/")[0]
+
     comparison_df['Cleaned_Name'] = comparison_df['Directory'].apply(clean_directory_name)
     
     def calculate_largest_chromosome_length(row):
@@ -109,7 +113,7 @@ def label_function_factory(data_dict,  cmap_name="viridis"):
     min_val, max_val = (min(values), max(values)) if values else (0, 1)
 
     def label_function(clade):
-        label = clade.name.replace("_", " ") if clade.name else None
+        label = clade.name.replace("_", " ").lower() if clade.name else None
         value = data_dict.get(label, min_val)
         color = get_color(value, min_val, max_val, cmap_name)
         return (f"{label}: {value}", color) if label else (None, color)
@@ -187,7 +191,7 @@ def label_function_factory_discrete(data_dict, cmap_name="viridis"):
     min_val, max_val = (min(values), max(values)) if values else (0, 1)
 
     def label_function(clade):
-        label = clade.name.replace("_", " ") if clade.name else None
+        label = clade.name.replace("_", " ").lower() if clade.name else None
         value = data_dict.get(label, min_val)
         color = get_color_discrete(value, cmap_name=cmap_name)
         return (f"{label}: {value}", color) if label else (None, color)
@@ -296,6 +300,9 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
     for clade in tree.get_nonterminals():
         clade.name = None
         clade.confidence = None
+    
+    for clade in tree.get_terminals():
+        clade.name = clade.name.lower()
 
     # Get leaf names in the drawn order
     # First, collect all possible gene keys
@@ -354,6 +361,9 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
         if isinstance(v, dict):
             all_gene_keys.update(v.keys())
     all_gene_keys = sorted(all_gene_keys)
+    
+    if "haaap_transporters" in all_gene_keys:
+        all_gene_keys.remove("haaap_transporters")  # Remove specific gene key if needed
 
     # Add one column per gene key
     for gene_idx, gene_key in enumerate(all_gene_keys):
@@ -386,7 +396,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
 
 
 # Save figures
-output_dir = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/output_without_haaap_stranded/summary_plots"
+output_dir = os.path.join(example_mgc, "summary_plots")
 os.makedirs(output_dir, exist_ok=True)
 
 # Load phylogenetic trees
@@ -398,7 +408,7 @@ plot_combined_tree_with_metrics(
     tree_file=TREE_FILE,
     output_path=os.path.join(output_dir, "CombinedClusterMetrics.png"),
     metrics=[gene_counts, chromosome_lines, chromosome_cluster_length_genes, chromosome_cluster_length],
-    metric_titles=["Genes in the Genome", "Single-Chr Genes", "Cluster Length (Genes)", "Cluster Length (Kbp)"],
+    metric_titles=["Genome Matches", "Chr Matches", "Cluster Size (Genes)", "Cluster Size (kbp)"],
     chromosome_cluster_gene_existance=chromosome_cluster_gene_existance,
     chromosome_cluster_gene_strands=chromosome_cluster_gene_strands,
     cmap_name="viridis"
