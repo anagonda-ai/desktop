@@ -230,16 +230,11 @@ def blast_all_vs_all_slurm(merged_list, output_root):
         fasta = prepare_fasta(file_path, temp_dir)
         if fasta:
             fasta_map[file_path] = fasta
-    
-    can_run = False
+
     for q_path, q_fasta in fasta_map.items():
         q_name = os.path.basename(q_fasta)
         q_id = os.path.splitext(q_name)[0].split('_')[-1] if '_' in q_name else os.path.splitext(q_name)[0].split('BGC')[-1]
         bucket = int(q_id) // 100
-        if bucket >= 32:
-            can_run = True
-        if not can_run:
-            continue
         bucket_dir = os.path.join(results_dir, f"bucket_{bucket}")
         os.makedirs(bucket_dir, exist_ok=True)
 

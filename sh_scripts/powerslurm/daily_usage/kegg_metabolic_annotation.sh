@@ -6,7 +6,7 @@
 #SBATCH --cpus-per-task=16
 #SBATCH --mem=16G
 #SBATCH --partition=itaym
-#SBATCH --time=04:00:00
+#SBATCH --time=20:00:00
 
 input_csv=$1
 annotated_dir=$2

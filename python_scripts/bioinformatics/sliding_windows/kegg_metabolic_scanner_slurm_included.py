@@ -2,7 +2,6 @@ import os
 import subprocess
 import time
 import pandas as pd
-from threading import Lock
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
@@ -81,74 +80,6 @@ def wait_for_jobs(job_prefix="kegg_", user="alongonda", check_interval=60):
         else:
             print(f"🕒 {len(kegg_jobs)} jobs still running. Checking again in {check_interval} seconds...")
             time.sleep(check_interval)
-            
-# ------------------------------
-# Sliding Window Clustering
-# ------------------------------
-
-def find_first_common_element(genes_and_pathways, min_genes):
-    from itertools import combinations, product
-
-    gene_sets = {gene: set([pathway for pathway in paths if pd.notna(pathway)])
-                 for gene, paths in genes_and_pathways.items()}
-
-    for group_size in range(len(gene_sets), min_genes - 1, -1):
-        for selected_genes in combinations(gene_sets.keys(), group_size):
-            selected_sets = [gene_sets[gene] for gene in selected_genes]
-            for combination in product(*selected_sets):
-                if len(set(combination)) == 1:
-                    return combination[0], list(selected_genes)
-    return None, []
-
-def process_annotated_file(annotated_file, output_file, file_lock, window_size, min_genes):
-    print(f"Processing: {annotated_file}")
-    total_matches = 0
-    df = pd.read_csv(annotated_file)
-    df["index"] = df.index
-    filtered_df = df[df["pathway"].notna()]
-    chromosomes = filtered_df['chromosome'].unique()
-    prev_matches = set()
-
-    for chromosome in chromosomes:
-        chr_data = filtered_df[filtered_df['chromosome'] == chromosome]
-        num_genes = len(chr_data)
-        i = 0
-        while i < num_genes:
-            window = [chr_data.iloc[i]]
-            start_index = chr_data.iloc[i]['index']
-            for j in range(i + 1, num_genes):
-                end_index = chr_data.iloc[j]['index']
-                if (end_index - start_index <= window_size):
-                    window.append(chr_data.iloc[j])
-                else:
-                    break
-
-            if len(window) >= min_genes:
-                window_df = pd.DataFrame(window)
-                genes_and_pathways = {row['id']: row['pathway'].split(",") for _, row in window_df.iterrows()}
-                genes_and_annotations = {row['id']: row['annotation'].split(",") for _, row in window_df.iterrows()}
-                pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
-                metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
-                if pathway and not tuple(metabolic_genes) in prev_matches:
-                    prev_matches.add(tuple(metabolic_genes))
-                    group = {
-                        'pathway': pathway,
-                        'genes': ','.join(window_df['id']),
-                        'metabolic_genes': ','.join(metabolic_genes),
-                        'metabolic_genes_annotations': ','.join(metabolic_annotations),
-                        'start': window_df['start'].min(),
-                        'end': window_df['end'].max(),
-                        'source_file': annotated_file
-                    }
-                    with file_lock:
-                        mode = 'a' if os.path.exists(output_file) else 'w'
-                        header = not os.path.exists(output_file)
-                        pd.DataFrame([group]).to_csv(output_file, mode=mode, header=header, index=False)
-                        total_matches += 1
-            i += 1
-
-    print(f"✔️ {annotated_file} - Matches: {total_matches}")
-    return total_matches
 
 # ------------------------------
 # Subset Filtering
@@ -178,11 +109,13 @@ def main():
     genome_dirs = [
         os.path.join(full_genome_dir, "final_dataset/filtered_no_mito")
     ]
+    max_jobs = 100
     min_genes = 3
     head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/test_metabolic"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
+    process_annotated_file_slurm_script = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/process_annotated_file_slurm_script.sh"
 
     os.makedirs(output_dir, exist_ok=True)
     os.makedirs(temp_dir, exist_ok=True)
@@ -211,28 +144,39 @@ def main():
 
     for window_size in [10, 20]:
         output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
+        err_out_output_dir = os.path.join(min_genes_subdir, "err_out")
+        os.makedirs(err_out_output_dir, exist_ok=True)
         if os.path.exists(output_file):
             os.remove(output_file)
 
-        file_lock = Lock()
         total_matches = 0
 
-        with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
-            with ThreadPoolExecutor(max_workers=32) as executor:
-                futures = [
-                    executor.submit(
-                        process_annotated_file,
-                        annotated_file,
-                        output_file,
-                        file_lock,
-                        window_size,
-                        min_genes
-                    )
-                    for annotated_file in annotated_files
-                ]
-                for future in as_completed(futures):
-                    total_matches += future.result()
-                    pbar.update(1)
+        for annotated_file in annotated_files:
+            while True:
+                current_jobs = count_running_jobs(user="alongonda")
+                if current_jobs < max_jobs:
+                    break
+                print(f"⏳ {current_jobs} jobs running (limit {max_jobs}). Waiting 30 seconds...")
+                time.sleep(30)
+            
+            # Submit SLURM job for processing annotated file
+            job_name = os.path.basename(annotated_file).replace('.csv', '')
+            sbatch_cmd = [
+                "sbatch",
+                "--job-name", f"process_{job_name}",
+                "--output", os.path.join(err_out_output_dir, f"{job_name}_{window_size}.out"),
+                "--error", os.path.join(err_out_output_dir, f"{job_name}_{window_size}.err"),
+                process_annotated_file_slurm_script,
+                annotated_file,
+                output_file,
+                str(window_size),
+                str(min_genes)
+            ]
+            result = subprocess.run(sbatch_cmd, capture_output=True, text=True)
+            if result.returncode == 0:
+                print(f"✅ Submitted job for {job_name}: {result.stdout.strip()}")
+            else:
+                print(f"❌ Failed to submit job for {job_name}: {result.stderr.strip()}")
 
         print(f"✔️ Total Matches for w{window_size}, min_genes={min_genes}: {total_matches}")
         remove_subset_results(output_file)
