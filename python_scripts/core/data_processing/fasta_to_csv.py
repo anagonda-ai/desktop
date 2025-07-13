@@ -121,8 +121,8 @@ def process_fasta_list(list_txt_path, output_dir, max_workers=8):
 
 
 if __name__ == "__main__":
-    fasta_list_path = '/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/merged_list.txt'
+    fasta_list_path = '/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm_no_chloroplast/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/merged_list.txt'
 
-    output_folder = '/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_csv_files'
+    output_folder = '/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm_no_chloroplast/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_csv_files'
 
     process_fasta_list(fasta_list_path, output_folder, max_workers=30)

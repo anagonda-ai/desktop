@@ -4,8 +4,8 @@ from collections import defaultdict
 from concurrent.futures import ProcessPoolExecutor
 
 # Input files
-CSV_FILE = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/kegg_scanner_min_genes_based_metabolic/min_genes_3/potential_groups_w10_filtered.csv"
-OUTPUT_DIR = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_metabolic_output_g3_slurm/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+CSV_FILE = "/groups/itay_mayrose/alongonda/Plant_MGC/test/kegg_scanner_min_genes_based_metabolic/min_genes_3/potential_groups_w10_filtered.csv"
+OUTPUT_DIR = "/groups/itay_mayrose/alongonda/Plant_MGC/test/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
 
 # Create output directory
 os.makedirs(OUTPUT_DIR, exist_ok=True)
