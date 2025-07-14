@@ -1,9 +1,9 @@
 import os
 from cladepp_phylo_profiling_helpfuncs.tree_analysis import analyze_tree_clades_dynamic
 
-TREE_PATH = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/species.nwk"
+TREE_PATH = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/species.nwk"
 COMPARISON_CSV = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/without_haaap/output_without_haaap/comparison_results.csv"
-MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/with_haaap/output_with_haaap/dataset_organism_mapping.csv"
+MAPPING_FILE = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/dataset_organism_mapping.csv"
 ANCHOR_GENES = ["adcs", "cs", "pABA_transporter"]
 OUTPUT_PREFIX = "/groups/itay_mayrose/alongonda/desktop/tree_test/clade_analysis_test"
 
