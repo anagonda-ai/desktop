@@ -1,0 +1,104 @@
+version: '3.8'
+
+services:
+  # Main application
+  plant-mgc:
+    build: .
+    container_name: plant-mgc-analysis
+    volumes:
+      - ./data:/app/data
+      - ./output:/app/output
+      - ./cache:/app/cache
+      - ./examples:/app/examples
+    environment:
+      - PLANT_MGC_DATA_DIR=/app/data
+      - PLANT_MGC_OUTPUT_DIR=/app/output
+      - PLANT_MGC_CACHE_DIR=/app/cache
+      - PLANT_MGC_DEBUG=true
+    networks:
+      - plant-mgc-network
+    depends_on:
+      - redis
+      - postgres
+  
+  # Redis for caching
+  redis:
+    image: redis:7-alpine
+    container_name: plant-mgc-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - plant-mgc-network
+    command: redis-server --appendonly yes
+  
+  # PostgreSQL for metadata storage
+  postgres:
+    image: postgres:15-alpine
+    container_name: plant-mgc-postgres
+    environment:
+      POSTGRES_DB: plant_mgc
+      POSTGRES_USER: plant_mgc
+      POSTGRES_PASSWORD: plant_mgc_password
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./scripts/init_db.sql:/docker-entrypoint-initdb.d/init_db.sql
+    networks:
+      - plant-mgc-network
+  
+  # Jupyter notebook for interactive analysis
+  jupyter:
+    build: .
+    container_name: plant-mgc-jupyter
+    ports:
+      - "8888:8888"
+    volumes:
+      - ./notebooks:/app/notebooks
+      - ./data:/app/data
+      - ./output:/app/output
+    environment:
+      - PLANT_MGC_DATA_DIR=/app/data
+      - PLANT_MGC_OUTPUT_DIR=/app/output
+    command: >
+      bash -c "pip install jupyter jupyterlab && 
+               jupyter lab --ip=0.0.0.0 --port=8888 --no-browser --allow-root
+               --NotebookApp.token='' --NotebookApp.password=''"
+    networks:
+      - plant-mgc-network
+    depends_on:
+      - redis
+      - postgres
+  
+  # Development container with hot reload
+  dev:
+    build: 
+      context: .
+      dockerfile: Dockerfile.dev
+    container_name: plant-mgc-dev
+    volumes:
+      - .:/app
+      - ./data:/app/data
+      - ./output:/app/output
+    environment:
+      - PLANT_MGC_DATA_DIR=/app/data
+      - PLANT_MGC_OUTPUT_DIR=/app/output
+      - PLANT_MGC_DEBUG=true
+    networks:
+      - plant-mgc-network
+    depends_on:
+      - redis
+      - postgres
+    command: >
+      bash -c "pip install -e '.[dev]' && 
+               python -m pytest --cov=plant_mgc_analysis tests/"
+
+volumes:
+  redis_data:
+  postgres_data:
+
+networks:
+  plant-mgc-network:
+    driver: bridge
