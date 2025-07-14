@@ -312,8 +312,14 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
             all_gene_keys.update(v.keys())
     all_gene_keys = sorted(all_gene_keys)
     total_columns = 1 + len(metrics) + len(all_gene_keys)
-    fig = plt.figure(figsize=(18, len(tree.get_terminals()) * 0.2))
-    gs = gridspec.GridSpec(1, total_columns, width_ratios=[3] + [0.5] * (total_columns - 1), wspace=0.05)
+    n_leaves = len(tree.get_terminals())
+    total_columns = 1 + len(metrics) + len(all_gene_keys)
+
+    fig_height = max(20, n_leaves * 0.25)  # More vertical space per leaf
+    fig_width = 22                         # Keep it narrow and tidy
+
+    fig = plt.figure(figsize=(fig_width, fig_height))
+    gs = gridspec.GridSpec(1, total_columns, width_ratios=[6] + [0.4] * (total_columns - 1), wspace=0.05)
 
     # Plot tree and capture label Y positions
     ax_tree = fig.add_subplot(gs[0, 0])
@@ -390,7 +396,7 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
             else:
                 ax.text(0.5, y_idx, (val,strand) if val else "✗", ha="center", va="center", fontsize=10, color="black")
 
-    plt.savefig(output_path, dpi=300, bbox_inches="tight")
+    plt.savefig(output_path, dpi=150, bbox_inches="tight")
     plt.close()
     print(f"✅ Combined tree saved: {output_path}")
 
@@ -408,7 +414,7 @@ plot_combined_tree_with_metrics(
     tree_file=TREE_FILE,
     output_path=os.path.join(output_dir, "CombinedClusterMetrics.png"),
     metrics=[gene_counts, chromosome_lines, chromosome_cluster_length_genes, chromosome_cluster_length],
-    metric_titles=["Genome Matches", "Chr Matches", "Cluster Size (Genes)", "Cluster Size (kbp)"],
+    metric_titles = ["Genome Hits", "Chr Hits", "Size (genes)", "Size (kbp)"],
     chromosome_cluster_gene_existance=chromosome_cluster_gene_existance,
     chromosome_cluster_gene_strands=chromosome_cluster_gene_strands,
     cmap_name="viridis"
