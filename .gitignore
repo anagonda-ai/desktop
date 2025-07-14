@@ -25,3 +25,6 @@ example_jobs/
 # Ignore pycache data directory and files
 __pycache__/
 *.pyc
+
+# Ignore node_modules directory
+node_modules/
