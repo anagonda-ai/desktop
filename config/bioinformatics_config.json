@@ -1,0 +1,60 @@
+{
+  "database": {
+    "kegg_api_url": "https://rest.kegg.jp",
+    "kegg_rate_limit": 0.2,
+    "ncbi_email": "your.email@institution.edu",
+    "ncbi_api_key": null,
+    "ncbi_rate_limit": 0.35,
+    "uniprot_api_url": "https://rest.uniprot.org",
+    "uniprot_rate_limit": 0.1,
+    "mibig_database_path": "/groups/itay_mayrose/alongonda/datasets/MIBIG",
+    "blast_db_path": "/groups/itay_mayrose/alongonda/datasets/blast_databases"
+  },
+  
+  "compute": {
+    "max_workers": 16,
+    "batch_size": 100,
+    "memory_limit_gb": 64,
+    "timeout_seconds": 7200,
+    "use_slurm": true,
+    "slurm_partition": "general",
+    "slurm_job_limit": 200,
+    "slurm_memory": "16G",
+    "slurm_time": "48:00:00",
+    "use_cache": true,
+    "cache_dir": "./cache",
+    "cache_ttl_hours": 48
+  },
+  
+  "analysis": {
+    "blast_evalue": 1e-5,
+    "blast_max_targets": 500,
+    "blast_word_size": 6,
+    "default_window_size": 50000,
+    "default_step_size": 10000,
+    "min_genes_per_window": 3,
+    "significance_threshold": 0.05,
+    "multiple_testing_correction": "fdr_bh",
+    "mgc_min_genes": 5,
+    "mgc_max_gap": 20000,
+    "mgc_min_score": 0.6
+  },
+  
+  "paths": {
+    "data_dir": "/groups/itay_mayrose/alongonda/datasets",
+    "output_dir": "/groups/itay_mayrose/alongonda/results",
+    "cache_dir": "/groups/itay_mayrose/alongonda/cache",
+    "log_dir": "/groups/itay_mayrose/alongonda/logs",
+    "temp_dir": "/groups/itay_mayrose/alongonda/temp"
+  },
+  
+  "logging": {
+    "level": "INFO",
+    "format": "{time:YYYY-MM-DD HH:mm:ss} | {level} | {name}:{function}:{line} | {message}",
+    "rotation": "1 week",
+    "retention": "1 month",
+    "backtrace": true,
+    "diagnose": true,
+    "enable_json": true
+  }
+}

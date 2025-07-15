@@ -1,0 +1,52 @@
+{
+  "pipeline_name": "comprehensive_bioinformatics_analysis",
+  "description": "Complete bioinformatics pipeline integrating KEGG, BLAST, and MGC analysis",
+  "workspace": "./workspace",
+  
+  "workflow_order": ["kegg", "blast", "mgc"],
+  
+  "kegg": {
+    "mode": "full",
+    "organism_codes": ["ath", "osa", "zma", "gma"],
+    "organism_batch_size": 5,
+    "extract_workers": 8,
+    "use_cache": true,
+    "skip_existing": true,
+    "copy_files": true,
+    "metabolic_modules_file": "./data/metabolic_modules.csv"
+  },
+  
+  "blast": {
+    "query_sequences": "./data/query_sequences.fasta",
+    "target_databases": [
+      "./data/databases/plant_genomes.faa",
+      "./data/databases/mibig_proteins.faa"
+    ],
+    "blast_type": "blastp",
+    "evalue": 1e-5,
+    "num_threads": 16,
+    "max_target_seqs": 100,
+    "min_identity": 40.0,
+    "min_coverage": 60.0,
+    "db_type": "prot"
+  },
+  
+  "mgc": {
+    "genome_files": "./data/genomes/",
+    "detection_method": "antiSMASH",
+    "min_cluster_size": 5,
+    "max_gap_size": 15000,
+    "reference_clusters": "./data/reference_mgcs.csv"
+  },
+  
+  "global_settings": {
+    "max_workers": 16,
+    "batch_size": 50,
+    "memory_limit_gb": 32,
+    "timeout_hours": 12,
+    "log_level": "INFO",
+    "enable_structured_logging": true,
+    "generate_reports": true,
+    "cleanup_temp_files": true
+  }
+}
