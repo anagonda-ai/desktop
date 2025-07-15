@@ -292,37 +292,36 @@ def plot_metric_column(ax, metric_dict, colormap, title, y_positions, leaf_names
 
 
 
-def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titles, chromosome_cluster_gene_existance, chromosome_cluster_gene_strands, cmap_name="viridis"):
-    """Creates a single tree plot with value-annotated sidebars aligned with leaves."""
+def plot_combined_tree_with_metrics(tree_file, output_tree_path, output_data_path, metrics, metric_titles, chromosome_cluster_gene_existance, chromosome_cluster_gene_strands, cmap_name="viridis"):
+    """Creates two plots: species tree and a value-annotated data matrix aligned with leaves."""
     tree = Phylo.read(tree_file, "newick")
 
     # Clear internal node labels
     for clade in tree.get_nonterminals():
         clade.name = None
         clade.confidence = None
-    
+
     for clade in tree.get_terminals():
         clade.name = clade.name.lower()
 
     # Get leaf names in the drawn order
-    # First, collect all possible gene keys
     all_gene_keys = set()
     for v in chromosome_cluster_gene_existance.values():
         if isinstance(v, dict):
             all_gene_keys.update(v.keys())
     all_gene_keys = sorted(all_gene_keys)
+
+    if "haaap_transporters" in all_gene_keys:
+        all_gene_keys.remove("haaap_transporters")
+
     total_columns = 1 + len(metrics) + len(all_gene_keys)
     n_leaves = len(tree.get_terminals())
-    total_columns = 1 + len(metrics) + len(all_gene_keys)
 
-    fig_height = max(20, n_leaves * 0.25)  # More vertical space per leaf
-    fig_width = 22                         # Keep it narrow and tidy
+    fig_height = max(20, n_leaves * 0.25)
 
-    fig = plt.figure(figsize=(fig_width, fig_height))
-    gs = gridspec.GridSpec(1, total_columns, width_ratios=[6] + [0.4] * (total_columns - 1), wspace=0.05)
-
-    # Plot tree and capture label Y positions
-    ax_tree = fig.add_subplot(gs[0, 0])
+    # --- Tree Figure ---
+    fig_tree = plt.figure(figsize=(6, fig_height))
+    ax_tree = fig_tree.add_subplot(111)
     label_positions = {}
 
     def custom_label_func(clade):
@@ -334,14 +333,18 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
     Phylo.draw(tree, do_show=False, axes=ax_tree, label_func=custom_label_func)
     ax_tree.set_xticks([])
     ax_tree.set_yticks([])
+    fig_tree.savefig(output_tree_path, dpi=300, bbox_inches="tight")
+    plt.close(fig_tree)
 
-    # Convert label positions to Y coords in plot order
+    # --- Data Matrix Figure ---
     leaf_names = sorted(label_positions, key=lambda name: label_positions[name], reverse=True)
     y_positions = np.linspace(0, len(leaf_names) - 1, len(leaf_names))
 
-    # Plot metric columns
+    fig_matrix = plt.figure(figsize=(max(5, 0.3 * total_columns), fig_height))
+    gs = gridspec.GridSpec(1, total_columns, width_ratios=[0.4] * total_columns, wspace=0.05)
+
     for i, (metric_dict, title) in enumerate(zip(metrics, metric_titles)):
-        ax = fig.add_subplot(gs[0, i + 1])
+        ax = fig_matrix.add_subplot(gs[0, i])
         cmap = normalize_metric_colors(metric_dict, cmap_name)
         ax.set_xlim(0, 1)
         ax.set_xticks([])
@@ -359,46 +362,35 @@ def plot_combined_tree_with_metrics(tree_file, output_path, metrics, metric_titl
             else:
                 display = f"≥{val}" if val == 200 else str(val)
                 ax.text(0.5, y_idx, display, ha="center", va="center", fontsize=7)
-    
-    # Add chromosome_cluster_gene_existance as a matrix metric column
-    # First, collect all possible gene keys
-    all_gene_keys = set()
-    for v in chromosome_cluster_gene_existance.values():
-        if isinstance(v, dict):
-            all_gene_keys.update(v.keys())
-    all_gene_keys = sorted(all_gene_keys)
-    
-    if "haaap_transporters" in all_gene_keys:
-        all_gene_keys.remove("haaap_transporters")  # Remove specific gene key if needed
 
-    # Add one column per gene key
     for gene_idx, gene_key in enumerate(all_gene_keys):
-        ax = fig.add_subplot(gs[0, len(metrics) + 1 + gene_idx])
+        ax = fig_matrix.add_subplot(gs[0, len(metrics) + gene_idx])
         ax.set_xlim(0, 1)
         ax.set_xticks([])
         ax.set_yticks([])
         ax.set_title(gene_key, fontsize=9)
         ax.set_ylim(len(leaf_names) - 0.5, -0.5)
         ax.invert_yaxis()
-        # Adjust the column width to match the header by setting aspect ratio
         ax.set_aspect('auto')
+
         for y_idx, name in enumerate(leaf_names):
             gene_dict = chromosome_cluster_gene_existance.get(name, {})
             gene_strand_dict = chromosome_cluster_gene_strands.get(name, {})
             val = gene_dict.get(gene_key, None) if isinstance(gene_dict, dict) else None
             strand = gene_strand_dict.get(gene_key, None) if isinstance(gene_strand_dict, dict) else None
-            # Adjust color mapping for gene order: 1=green, 2=yellow, 3=orange, 4=red, None=transparent
             color_map = {1: "#4daf4a", 2: "#ffd92f", 3: "#ff7f00", 4: "#e41a1c"}
             color = color_map.get(val, (1, 1, 1, 0))
             ax.barh(y_idx, 1, color=color, edgecolor='none')
             if val is None:
                 ax.plot([0.1, 0.9], [y_idx] * 2, color="black", linewidth=1.5)
             else:
-                ax.text(0.5, y_idx, (val,strand) if val else "✗", ha="center", va="center", fontsize=10, color="black")
+                ax.text(0.5, y_idx, (val, strand) if val else "✗", ha="center", va="center", fontsize=10, color="black")
 
-    plt.savefig(output_path, dpi=150, bbox_inches="tight")
-    plt.close()
-    print(f"✅ Combined tree saved: {output_path}")
+    fig_matrix.tight_layout()
+    fig_matrix.savefig(output_data_path, dpi=300, bbox_inches="tight")
+    plt.close(fig_matrix)
+    print(f"✅ Species tree saved: {output_tree_path}")
+    print(f"✅ Cluster metrics matrix saved: {output_data_path}")
 
 
 # Save figures
@@ -412,9 +404,10 @@ ClusterLengthGenesTree = Phylo.read(TREE_FILE, "newick")
 
 plot_combined_tree_with_metrics(
     tree_file=TREE_FILE,
-    output_path=os.path.join(output_dir, "CombinedClusterMetrics.png"),
+    output_tree_path=os.path.join(output_dir, "SpeciesTree.png"),
+    output_data_path=os.path.join(output_dir, "ClusterMetricsMatrix.png"),
     metrics=[gene_counts, chromosome_lines, chromosome_cluster_length_genes, chromosome_cluster_length],
-    metric_titles = ["Genome Hits", "Chr Hits", "Size (genes)", "Size (kbp)"],
+    metric_titles=["Genome Hits", "Chr Hits", "Size (genes)", "Size (kbp)"],
     chromosome_cluster_gene_existance=chromosome_cluster_gene_existance,
     chromosome_cluster_gene_strands=chromosome_cluster_gene_strands,
     cmap_name="viridis"
