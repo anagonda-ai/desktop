@@ -1,0 +1,334 @@
+
+class KeggVerifiedScannerSlurmIncludedProcessor(BioinformaticsProcessor):
+    """Migrated from legacy script: kegg_verified_scanner_slurm_included.py."""
+    
+    def __init__(self, **kwargs):
+        """Initialize processor."""
+        super().__init__(**kwargs)
+        self.settings = get_settings()
+    
+    def validate_input(self, data):
+        """Validate input data."""
+        pass  # Implement validation
+    
+    def process(self, data, **kwargs):
+        """Process data."""
+        # Original script logic here
+        pass
+
+
+from ..config.settings import get_settings
+from ..core.base import BioinformaticsProcessor
+from ..core.exceptions import ProcessingError, ValidationError
+from ..utils.file_operations import file_manager
+from loguru import logger
+import os
+import subprocess
+import threading
+import time
+import pandas as pd
+from threading import Lock
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tqdm import tqdm
+
+# ------------------------------
+# KEGG Database Path and Mapping
+# ------------------------------
+
+MAPPING_CSV = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/dataset_organism_mapping_with_fasta.csv"
+mapping_df = pd.read_csv(MAPPING_CSV)
+kegg_path_dict = dict(zip(mapping_df["filtered_path"], mapping_df["kegg_fasta"]))
+
+# ------------------------------
+# Count Running Jobs
+# ------------------------------
+
+def count_running_jobs(user="alongonda"):
+    """Count number of running jobs for a user."""
+    result = subprocess.run(
+        ["squeue", "-u", user, "-h"],
+        capture_output=True, text=True
+    )
+    jobs = result.stdout.strip().splitlines()
+    return len(jobs)
+
+# ------------------------------
+# SLURM Submission
+# ------------------------------
+
+def submit_annotation_jobs(genome_files, temp_dir, annotated_dir, max_jobs=100):
+    slurm_script = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/kegg_verified_annotation.sh"
+    os.makedirs(annotated_dir, exist_ok=True)
+    os.makedirs(temp_dir, exist_ok=True)
+
+    for genome_file in genome_files:
+        if genome_file not in kegg_path_dict:
+            logger.info(f"⚠️ No KEGG DB found for: {genome_file}")
+            continue
+
+        kegg_fasta = kegg_path_dict[genome_file]
+        job_name = os.path.basename(genome_file).replace('.csv', '')
+        output_file = os.path.join(annotated_dir, f"{job_name}_annotated.csv")
+        if os.path.exists(output_file):
+            logger.info(f"✔️ Already exists: {output_file}")
+            continue
+
+        while True:
+            current_jobs = count_running_jobs(user="alongonda")
+            if current_jobs < max_jobs:
+                break
+            logger.info(f"⏳ {current_jobs} jobs running (limit {max_jobs}). Waiting 30 seconds...")
+            time.sleep(30)
+
+        sbatch_cmd = [
+            "sbatch",
+            "--job-name", f"kegg_{job_name}",
+            "--output", os.path.join(annotated_dir, f"{job_name}.out"),
+            "--error", os.path.join(annotated_dir, f"{job_name}.err"),
+            slurm_script,
+            genome_file,
+            annotated_dir,
+            temp_dir,
+            kegg_fasta
+        ]
+        result = subprocess.run(sbatch_cmd, capture_output=True, text=True)
+
+        if result.returncode == 0:
+            logger.info(f"✅ Submitted job for {job_name}: {result.stdout.strip()}")
+        else:
+            logger.info(f"❌ Failed to submit job for {job_name}: {result.stderr.strip()}")
+
+# ------------------------------
+# Wait for SLURM Jobs
+# ------------------------------
+
+def wait_for_jobs(job_prefix="kegg_", user="alongonda", check_interval=60):
+    logger.info(f"⏳ Waiting for SLURM jobs starting with '{job_prefix}' by user '{user}'...")
+    while True:
+        result = subprocess.run(
+            ["squeue", "-u", user, "-h", "-o", "%.18i %.9P %.100j %.8u %.2t %.10M %.6D %R"],
+            capture_output=True, text=True
+        )
+        jobs = result.stdout.strip().splitlines()
+        kegg_jobs = [j for j in jobs if job_prefix in j]
+
+        if not kegg_jobs:
+            logger.info("✅ All KEGG annotation jobs are finished.")
+            break
+        else:
+            logger.info(f"🕒 {len(kegg_jobs)} jobs still running. Checking again in {check_interval} seconds...")
+            time.sleep(check_interval)
+            
+# ------------------------------
+# Sliding Window Clustering
+# ------------------------------
+
+def find_first_common_element(genes_and_pathways, min_genes):
+    from itertools import combinations, product
+
+    gene_sets = {gene: set([pathway for pathway in paths if pd.notna(pathway)])
+                 for gene, paths in genes_and_pathways.items()}
+
+    for group_size in range(len(gene_sets), min_genes - 1, -1):
+        for selected_genes in combinations(gene_sets.keys(), group_size):
+            selected_sets = [gene_sets[gene] for gene in selected_genes]
+            for combination in product(*selected_sets):
+                if len(set(combination)) == 1:
+                    return combination[0], list(selected_genes)
+    return None, []
+
+def process_chromosome(chr_data, window_size, min_genes, annotated_file):
+    matches = []
+    prev_matches = set()
+    last_match = None
+    num_genes = len(chr_data)
+    i = 0
+    while i < num_genes:
+        window = [chr_data.iloc[i]]
+        start_index = chr_data.iloc[i]['index']
+        for j in range(i + 1, num_genes):
+            end_index = chr_data.iloc[j]['index']
+            if (end_index - start_index <= window_size):
+                window.append(chr_data.iloc[j])
+            else:
+                break
+
+        if len(window) >= min_genes:
+            window_df = pd.DataFrame(window)
+            genes_and_pathways = {row['id']: row['pathway'].split(",") for _, row in window_df.iterrows()}
+            genes_and_annotations = {row['id']: row['annotation'].split(",") for _, row in window_df.iterrows()}
+            pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
+            if pathway and not tuple(metabolic_genes) in prev_matches:
+                prev_matches.add(tuple(metabolic_genes))
+                metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
+
+                current_match = {
+                    'pathway': pathway,
+                    'genes': list(window_df['id']),
+                    'metabolic_genes': metabolic_genes,
+                    'metabolic_genes_annotations': metabolic_annotations,
+                    'start': window_df['start'].min(),
+                    'end': window_df['end'].max()
+                }
+
+                if (
+                    last_match and
+                    pathway == last_match['pathway'] and
+                    metabolic_genes[:2] == last_match['metabolic_genes'][-2:]
+                ):
+                    new_genes = [g for g in current_match['genes'] if g not in last_match['genes']]
+                    new_metabolic_genes = [g for g in current_match['metabolic_genes'] if g not in last_match['metabolic_genes']]
+                    new_annotations = [
+                        ann for gene, ann in zip(current_match['metabolic_genes'], current_match['metabolic_genes_annotations'])
+                        if gene in new_metabolic_genes
+                    ]
+                    last_match['genes'] += new_genes
+                    last_match['metabolic_genes'] += new_metabolic_genes
+                    last_match['metabolic_genes_annotations'] += new_annotations
+                    last_match['end'] = max(last_match['end'], current_match['end'])
+                    logger.info(f"🔄 Merging with last match: {last_match['pathway']} - {len(last_match['genes'])} genes")
+                else:
+                    if last_match:
+                        matches.append({
+                            'pathway': last_match['pathway'],
+                            'genes': ','.join(last_match['genes']),
+                            'metabolic_genes': ','.join(last_match['metabolic_genes']),
+                            'metabolic_genes_annotations': ','.join(last_match['metabolic_genes_annotations']),
+                            'start': last_match['start'],
+                            'end': last_match['end'],
+                            'source_file': annotated_file
+                        })
+                    last_match = current_match
+        i += 1
+
+    if last_match:
+        matches.append({
+            'pathway': last_match['pathway'],
+            'genes': ','.join(last_match['genes']),
+            'metabolic_genes': ','.join(last_match['metabolic_genes']),
+            'metabolic_genes_annotations': ','.join(last_match['metabolic_genes_annotations']),
+            'start': last_match['start'],
+            'end': last_match['end'],
+            'source_file': annotated_file
+        })
+
+    return matches
+
+def process_annotated_file(annotated_file, output_file, window_size, min_genes):
+    file_lock = threading.Lock()
+    logger.info(f"Processing: {annotated_file}")
+    df = pd.read_csv(annotated_file)
+    df["index"] = df.index
+    filtered_df = df[df["pathway"].notna()]
+    chromosomes = filtered_df['chromosome'].unique()
+
+    def wrapped(chr):
+        chr_data = filtered_df[filtered_df['chromosome'] == chr]
+        return process_chromosome(chr_data, window_size, min_genes, annotated_file)
+
+    with ThreadPoolExecutor(max_workers=16) as executor:
+        results = executor.map(wrapped, chromosomes)
+
+    all_matches = []
+    for match_list in results:
+        all_matches.extend(match_list)
+
+    if all_matches:
+        with file_lock:
+            mode = 'a' if os.path.exists(output_file) else 'w'
+            header = not os.path.exists(output_file)
+            pd.DataFrame(all_matches).to_csv(output_file, mode=mode, header=header, index=False)
+            logger.info(f"✔️ {annotated_file} - Matches: {len(all_matches)}")
+    else:
+        logger.info(f"⚠️ {annotated_file} - No matches found")
+    return len(all_matches)
+
+# ------------------------------
+# Subset Filtering
+# ------------------------------
+
+def remove_subset_results(output_file):
+    df = pd.read_csv(output_file)
+    df['metabolic_genes_set'] = df['metabolic_genes'].apply(lambda x: set(x.split(',')))
+    to_remove = set()
+    for i, genes_i in enumerate(df['metabolic_genes_set']):
+        for j, genes_j in enumerate(df['metabolic_genes_set']):
+            if i != j and genes_i < genes_j:
+                to_remove.add(i)
+                break
+    filtered_df = df.drop(list(to_remove)).drop(columns=['metabolic_genes_set'])
+    filtered_output_file = output_file.replace(".csv", "_filtered.csv")
+    filtered_df.to_csv(filtered_output_file, index=False)
+    logger.info(f"🧹 Removed {len(to_remove)} subset results: {filtered_output_file}")
+
+# ------------------------------
+# Main Function
+# ------------------------------
+
+def main():
+    # Directories
+    full_genome_dir = "/groups/itay_mayrose/alongonda/datasets/full_genomes"
+    genome_dirs = [
+        os.path.join(full_genome_dir, "final_dataset/filtered_no_mito")
+    ]
+    min_genes = 3
+    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/kegg_verified_scanner_min_genes_{min_genes}_overlap_merge"
+    output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
+    temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
+    annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
+
+    os.makedirs(output_dir, exist_ok=True)
+    os.makedirs(temp_dir, exist_ok=True)
+    os.makedirs(annotated_dir, exist_ok=True)
+
+    # Genome files
+    genome_files = []
+    for genome_dir in genome_dirs:
+        for file in os.listdir(genome_dir):
+            full_path = os.path.join(genome_dir, file)
+            if file.endswith('.csv') and full_path in kegg_path_dict and pd.notna(kegg_path_dict[full_path]):
+                genome_files.append(full_path)
+
+    logger.info(f"🧬 {len(genome_files)} genome files with KEGG matches found.")
+
+    # Submit SLURM jobs for annotation
+    submit_annotation_jobs(genome_files, temp_dir, annotated_dir, max_jobs=100)
+    
+    # Wait until all jobs finish
+    wait_for_jobs(job_prefix="kegg_", user="alongonda")
+
+    # Sliding Window (after annotation completes manually)
+    annotated_files = [os.path.join(annotated_dir, f) for f in os.listdir(annotated_dir) if f.endswith('_annotated.csv')]
+
+    min_genes_subdir = os.path.join(output_dir, f"min_genes_{min_genes}")
+    os.makedirs(min_genes_subdir, exist_ok=True)
+
+    for window_size in [10, 20]:
+        output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}.csv")
+        if os.path.exists(output_file):
+            os.remove(output_file)
+
+        total_matches = 0
+
+        with tqdm(total=len(annotated_files), desc=f"Sliding Window w{window_size}", unit='file') as pbar:
+            with ThreadPoolExecutor(max_workers=32) as executor:
+                futures = [
+                    executor.submit(
+                        process_annotated_file,
+                        annotated_file,
+                        output_file,
+                        window_size,
+                        min_genes
+                    )
+                    for annotated_file in annotated_files
+                ]
+                for future in as_completed(futures):
+                    total_matches += future.result()
+                    pbar.update(1)
+
+        logger.info(f"✔️ Total Matches for w{window_size}, min_genes={min_genes}: {total_matches}")
+        remove_subset_results(output_file)
+
+
+if __name__ == "__main__":
+    main()

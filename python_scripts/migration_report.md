@@ -1,0 +1,161 @@
+
+# Plant MGC Analysis Pipeline - Migration Report
+
+## Summary
+{'total_scripts': 99, 'analyzed': 99, 'high_priority': 20, 'medium_priority': 36, 'low_priority': 43, 'total_duplications': 49, 'estimated_effort_hours': 195}
+
+## High Priority Scripts (20)
+- process_organism.py -> csv (complexity: 61)
+- kegg_pathway_extractor_local.py -> csv (complexity: 64)
+- kegg_pathway_extractor_cluster.py -> csv (complexity: 102)
+- blast_mibig_vs_all_genomes_parallel.py -> blast (complexity: 70)
+- alphafold_predictions_candidates.py -> fasta (complexity: 63)
+- generate_random_windows.py -> csv (complexity: 53)
+- base_classes.py -> fasta (complexity: 130)
+- csv_merger.py -> csv (complexity: 53)
+- fasta_merger.py -> fasta (complexity: 66)
+- file_renamer.py -> csv (complexity: 61)
+- zip_extractor.py -> analysis (complexity: 66)
+- column_extractor.py -> csv (complexity: 70)
+- fasta_to_csv.py -> fasta (complexity: 79)
+- csv_to_fasta.py -> fasta (complexity: 64)
+- sliding_window.py -> blast (complexity: 51)
+- filter_metabolic_genes_in_organism.py -> csv (complexity: 56)
+- duplication_filter.py -> blast (complexity: 55)
+- pairwise_scorer.py -> blast (complexity: 57)
+- phytoClust_pipeline.py -> fasta (complexity: 64)
+- db_scanner_basebairs_based.py -> csv (complexity: 52)
+
+## Medium Priority Scripts (36)
+- check_module_metabolic.py -> csv (complexity: 23)
+- find_homolog_genes_for_asaph_cluster.py -> blast (complexity: 34)
+- find_cluster_in_chromosomes.py -> blast (complexity: 32)
+- visualize_clusters.py -> csv (complexity: 48)
+- single_multi_chromosome_cluster_statistics.py -> csv (complexity: 24)
+- comparison_csv_pipeline.py -> csv (complexity: 31)
+- visualize_timetree.py -> csv (complexity: 24)
+- extract_promotor_meme.py -> fasta (complexity: 46)
+- tree_analysis.py -> blast (complexity: 28)
+- directory_mover.py -> analysis (complexity: 47)
+- process_pathways_savi_status.py -> csv (complexity: 23)
+- gff3_loader.py -> csv (complexity: 24)
+- submit_multiple_jobs.py -> csv (complexity: 28)
+- header_extractor.py -> csv (complexity: 21)
+- fasta_orderer.py -> fasta (complexity: 24)
+- filter_mitochondrial_genes.py -> blast (complexity: 32)
+- ncbi_extractor.py -> fasta (complexity: 24)
+- gene_counter.py -> fasta (complexity: 21)
+- dblink_extractor.py -> analysis (complexity: 26)
+- phytozome_extractor.py -> fasta (complexity: 37)
+- ensembl_filter.py -> fasta (complexity: 22)
+- chloroplast_filter.py -> blast (complexity: 26)
+- gene_processor.py -> csv (complexity: 29)
+- fasta_creator_e2p2.py -> fasta (complexity: 39)
+- fasta_creator.py -> fasta (complexity: 30)
+- csv_converter.py -> fasta (complexity: 26)
+- gbk_converter.py -> fasta (complexity: 25)
+- kegg_scanner_min_genes_based.py -> blast (complexity: 45)
+- db_scanner_min_genes_based.py -> csv (complexity: 39)
+- statistical_scanner_min_genes_based.py -> csv (complexity: 44)
+- statistical_scanner_basepairs_based.py -> csv (complexity: 35)
+- kegg_metabolic_scanner_slurm_included.py -> csv (complexity: 37)
+- kegg_verified_scanner_slurm_included.py -> csv (complexity: 42)
+- protein_similarity_calculator.py -> fasta (complexity: 39)
+- girvan_newman_graph_clustering.py -> csv (complexity: 33)
+- similarity_filter.py -> blast (complexity: 32)
+
+## Low Priority Scripts (43)
+- create_foldseek_db_for_pdb_file.py -> analysis (complexity: 17)
+- metabolic_genes_in_window.py -> csv (complexity: 18)
+- run_analysis.py -> analysis (complexity: 0)
+- test_run.py -> analysis (complexity: 16)
+- cladepp_core.py -> csv (complexity: 14)
+- io_utils.py -> blast (complexity: 16)
+- plotting.py -> utils (complexity: 4)
+- sequence_merger.py -> fasta (complexity: 13)
+- column_renamer.py -> csv (complexity: 14)
+- fasta_splitter.py -> fasta (complexity: 12)
+- phytozome_name_extractor.py -> csv (complexity: 20)
+- hmmer_profile_merger.py -> analysis (complexity: 19)
+- gbk_to_fasta.py -> fasta (complexity: 16)
+- gbk_to_fasta_gene.py -> fasta (complexity: 16)
+- gbk_to_fasta_protein.py -> fasta (complexity: 16)
+- gff_splicing_handler.py -> analysis (complexity: 19)
+- blast_to_csv.py -> blast (complexity: 8)
+- score_filter.py -> csv (complexity: 10)
+- normalizer.py -> blast (complexity: 16)
+- gene_counter.py -> file_ops (complexity: 16)
+- tmscore_filter.py -> csv (complexity: 10)
+- transcript_filter.py -> csv (complexity: 14)
+- sequence_converter.py -> fasta (complexity: 19)
+- file_converter.py -> fasta (complexity: 20)
+- ensembl_downloader.py -> utils (complexity: 12)
+- plaza_downloader.py -> fasta (complexity: 14)
+- cluster_counter.py -> analysis (complexity: 10)
+- gene_distance_analyzer.py -> fasta (complexity: 8)
+- protein_id_converter.py -> fasta (complexity: 14)
+- pathway_counter.py -> kegg (complexity: 15)
+- evolution_analyzer.py -> csv (complexity: 18)
+- phytozome_filter.py -> csv (complexity: 18)
+- swissprot_handler.py -> fasta (complexity: 20)
+- mibig_analyzer.py -> blast (complexity: 12)
+- phytoClust_train.py -> csv (complexity: 7)
+- enrichment_analyzer.py -> csv (complexity: 13)
+- visualize_results.py -> csv (complexity: 13)
+- candidate_finder.py -> csv (complexity: 20)
+- size_visualizer.py -> csv (complexity: 11)
+- candidate_gene_counter.py -> csv (complexity: 14)
+- pathway_gene_counter.py -> csv (complexity: 14)
+- pathway_matcher.py -> csv (complexity: 13)
+- gene_count_merger.py -> csv (complexity: 15)
+
+## Duplicated Functions
+- parse_kegg_entry: 2 occurrences
+- is_metabolic_module: 3 occurrences
+- process_organism: 3 occurrences
+- main: 52 occurrences
+- __init__: 39 occurrences
+- validate_input: 16 occurrences
+- process: 12 occurrences
+- batch_function: 3 occurrences
+- __post_init__: 6 occurrences
+- submit_job: 2 occurrences
+- run_blast: 2 occurrences
+- parse_blast_results: 5 occurrences
+- to_dict: 3 occurrences
+- csv_to_fasta: 2 occurrences
+- create_blast_db: 2 occurrences
+- run_blastp: 2 occurrences
+- label_function: 2 occurrences
+- process_batch: 2 occurrences
+- get_merge_statistics: 2 occurrences
+- validate_sequence: 3 occurrences
+- _convert_directory: 2 occurrences
+- _convert_single_file: 2 occurrences
+- get_conversion_statistics: 2 occurrences
+- process_file: 10 occurrences
+- process_directory: 3 occurrences
+- extract_numeric_part: 2 occurrences
+- calculate_composite_score: 2 occurrences
+- process_chunk: 2 occurrences
+- normalize_scores: 2 occurrences
+- parse_fasta: 3 occurrences
+- process_fasta_file: 2 occurrences
+- create_pathways_dict: 6 occurrences
+- process_genome_dir: 5 occurrences
+- create_output_subdir: 6 occurrences
+- extract_unique_ids: 2 occurrences
+- parse_gene_ids: 2 occurrences
+- read_csv: 2 occurrences
+- write_fasta_files: 2 occurrences
+- generate_group_hash: 2 occurrences
+- clean_and_process_genes_and_pathways: 5 occurrences
+- find_first_common_element: 6 occurrences
+- process_annotated_file: 2 occurrences
+- remove_subset_results: 3 occurrences
+- process_df: 2 occurrences
+- enrichment_analysis: 2 occurrences
+- count_running_jobs: 2 occurrences
+- submit_annotation_jobs: 2 occurrences
+- wait_for_jobs: 2 occurrences
+- apply_clustering: 2 occurrences

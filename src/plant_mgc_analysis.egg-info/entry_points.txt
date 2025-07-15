@@ -1,0 +1,5 @@
+[console_scripts]
+mgc-analyze = plant_mgc_analysis.cli:analyze
+mgc-pipeline = plant_mgc_analysis.cli:pipeline
+mgc-predict = plant_mgc_analysis.cli:predict
+plant-mgc = plant_mgc_analysis.cli:main

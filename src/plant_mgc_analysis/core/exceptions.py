@@ -283,3 +283,28 @@ class FileSystemError(PlantMGCError):
         super().__init__(message, **kwargs)
         self.file_path = file_path
         self.operation = operation
+
+
+class ProcessingError(PlantMGCError):
+    """Raised when general processing operations fail."""
+    
+    def __init__(
+        self,
+        message: str,
+        processing_type: Optional[str] = None,
+        **kwargs
+    ):
+        """
+        Initialize ProcessingError.
+        
+        Args:
+            message: Error message
+            processing_type: Type of processing that failed
+            **kwargs: Additional arguments passed to parent
+        """
+        details = kwargs.get("details", {})
+        if processing_type:
+            details["processing_type"] = processing_type
+        
+        super().__init__(message, **kwargs)
+        self.processing_type = processing_type

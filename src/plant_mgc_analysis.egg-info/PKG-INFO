@@ -1,3 +1,95 @@
+Metadata-Version: 2.4
+Name: plant-mgc-analysis
+Version: 0.1.0
+Summary: Plant Metabolic Gene Cluster Analysis Pipeline - A comprehensive bioinformatics toolkit for identifying and analyzing biosynthetic gene clusters in plant genomes
+Home-page: https://github.com/your-org/plant-mgc-analysis
+Author: Plant MGC Analysis Team
+Author-email: Itay Mayrose Lab <itay.mayrose@example.com>
+Maintainer-email: Itay Mayrose Lab <itay.mayrose@example.com>
+License: MIT
+Project-URL: Homepage, https://github.com/itay-mayrose/plant-mgc-analysis
+Project-URL: Documentation, https://plant-mgc-analysis.readthedocs.io/
+Project-URL: Repository, https://github.com/itay-mayrose/plant-mgc-analysis
+Project-URL: Issues, https://github.com/itay-mayrose/plant-mgc-analysis/issues
+Project-URL: Changelog, https://github.com/itay-mayrose/plant-mgc-analysis/blob/main/CHANGELOG.md
+Keywords: bioinformatics,genomics,plant-biology,metabolic-pathways,gene-clusters,secondary-metabolism,phylogenomics,machine-learning
+Classifier: Development Status :: 3 - Alpha
+Classifier: Intended Audience :: Science/Research
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.9
+Classifier: Programming Language :: Python :: 3.10
+Classifier: Programming Language :: Python :: 3.11
+Classifier: Programming Language :: Python :: 3.12
+Classifier: Topic :: Scientific/Engineering :: Bio-Informatics
+Classifier: Topic :: Scientific/Engineering :: Information Analysis
+Requires-Python: >=3.8
+Description-Content-Type: text/markdown
+Requires-Dist: numpy>=1.21.0
+Requires-Dist: pandas>=1.3.0
+Requires-Dist: scipy>=1.7.0
+Requires-Dist: biopython>=1.79
+Requires-Dist: pybedtools>=0.9.0
+Requires-Dist: scikit-learn>=1.0.0
+Requires-Dist: tensorflow>=2.8.0
+Requires-Dist: joblib>=1.0.0
+Requires-Dist: requests>=2.25.0
+Requires-Dist: aiohttp>=3.8.0
+Requires-Dist: beautifulsoup4>=4.9.0
+Requires-Dist: click>=8.0.0
+Requires-Dist: pydantic>=2.0.0
+Requires-Dist: pydantic-settings>=2.0.0
+Requires-Dist: rich>=12.0.0
+Requires-Dist: typer>=0.7.0
+Requires-Dist: tqdm>=4.60.0
+Requires-Dist: loguru>=0.6.0
+Requires-Dist: pathlib2>=2.3.0
+Requires-Dist: matplotlib>=3.5.0
+Requires-Dist: seaborn>=0.11.0
+Requires-Dist: plotly>=5.0.0
+Requires-Dist: statsmodels>=0.13.0
+Requires-Dist: networkx>=2.6.0
+Requires-Dist: openpyxl>=3.0.0
+Requires-Dist: xlsxwriter>=3.0.0
+Requires-Dist: dask>=2021.0.0
+Requires-Dist: multiprocessing-logging>=0.3.0
+Provides-Extra: dev
+Requires-Dist: pytest>=7.0.0; extra == "dev"
+Requires-Dist: pytest-cov>=4.0.0; extra == "dev"
+Requires-Dist: pytest-mock>=3.10.0; extra == "dev"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "dev"
+Requires-Dist: black>=22.0.0; extra == "dev"
+Requires-Dist: isort>=5.10.0; extra == "dev"
+Requires-Dist: flake8>=5.0.0; extra == "dev"
+Requires-Dist: mypy>=1.0.0; extra == "dev"
+Requires-Dist: pre-commit>=2.20.0; extra == "dev"
+Requires-Dist: sphinx>=5.0.0; extra == "dev"
+Requires-Dist: sphinx-rtd-theme>=1.0.0; extra == "dev"
+Requires-Dist: myst-parser>=0.18.0; extra == "dev"
+Provides-Extra: docs
+Requires-Dist: sphinx>=5.0.0; extra == "docs"
+Requires-Dist: sphinx-rtd-theme>=1.0.0; extra == "docs"
+Requires-Dist: myst-parser>=0.18.0; extra == "docs"
+Requires-Dist: sphinx-autodoc-typehints>=1.19.0; extra == "docs"
+Requires-Dist: sphinxcontrib-mermaid>=0.7.0; extra == "docs"
+Provides-Extra: test
+Requires-Dist: pytest>=7.0.0; extra == "test"
+Requires-Dist: pytest-cov>=4.0.0; extra == "test"
+Requires-Dist: pytest-mock>=3.10.0; extra == "test"
+Requires-Dist: pytest-asyncio>=0.21.0; extra == "test"
+Requires-Dist: hypothesis>=6.0.0; extra == "test"
+Requires-Dist: factory-boy>=3.2.0; extra == "test"
+Provides-Extra: performance
+Requires-Dist: numba>=0.56.0; extra == "performance"
+Requires-Dist: cython>=0.29.0; extra == "performance"
+Requires-Dist: polars>=0.15.0; extra == "performance"
+Provides-Extra: gpu
+Requires-Dist: cupy-cuda11x>=10.0.0; extra == "gpu"
+Requires-Dist: rapids-cudf>=22.0.0; extra == "gpu"
+Dynamic: author
+Dynamic: home-page
+Dynamic: requires-python
+
 # Plant MGC Analysis Pipeline
 
 A unified, industry-level bioinformatics pipeline for plant metabolic gene cluster analysis that consolidates 92 legacy scripts into a single, cohesive framework.
