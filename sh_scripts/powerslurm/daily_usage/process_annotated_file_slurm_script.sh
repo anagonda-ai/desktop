@@ -15,10 +15,13 @@ min_genes=$4
 
 python3 - <<EOF
 import pandas as pd
+import numpy as np
 import os
-from itertools import combinations, product
-from concurrent.futures import ThreadPoolExecutor
+from itertools import combinations
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import threading
+from collections import defaultdict, Counter
+import gc
 
 annotated_file = "$annotated_file"
 output_file = "$output_file"
@@ -26,120 +29,305 @@ window_size = int("$window_size")
 min_genes = int("$min_genes")
 file_lock = threading.Lock()
 
-def find_first_common_element(genes_and_pathways, min_genes):
-    gene_sets = {gene: set([pathway for pathway in paths if pd.notna(pathway)])
-                 for gene, paths in genes_and_pathways.items()}
+class PathwayMatcher:
+    def __init__(self, min_genes):
+        self.min_genes = min_genes
+        self.pathway_cache = {}
+        
+    def find_common_pathway_vectorized(self, gene_ids, pathway_arrays):
+        """Ultra-fast pathway finding using numpy operations and caching"""
+        # Create cache key
+        cache_key = tuple(sorted(gene_ids))
+        if cache_key in self.pathway_cache:
+            return self.pathway_cache[cache_key]
+        
+        if len(gene_ids) < self.min_genes:
+            result = (None, [])
+            self.pathway_cache[cache_key] = result
+            return result
+        
+        # Get pathway sets for all genes
+        valid_genes = []
+        pathway_sets = []
+        
+        for gene_id in gene_ids:
+            if gene_id in pathway_arrays:
+                pathways = pathway_arrays[gene_id]
+                if pathways:
+                    valid_genes.append(gene_id)
+                    pathway_sets.append(pathways)
+        
+        if len(valid_genes) < self.min_genes:
+            result = (None, [])
+            self.pathway_cache[cache_key] = result
+            return result
+        
+        # Find intersection efficiently using Counter
+        pathway_counts = Counter()
+        for pathway_set in pathway_sets:
+            for pathway in pathway_set:
+                pathway_counts[pathway] += 1
+        
+        # Find pathways present in at least min_genes
+        common_pathways = [pathway for pathway, count in pathway_counts.items() 
+                          if count >= self.min_genes]
+        
+        if not common_pathways:
+            result = (None, [])
+            self.pathway_cache[cache_key] = result
+            return result
+        
+        # Return first common pathway and genes that have it
+        target_pathway = common_pathways[0]
+        genes_with_pathway = [gene for gene in valid_genes 
+                             if target_pathway in pathway_arrays[gene]][:self.min_genes]
+        
+        result = (target_pathway, genes_with_pathway)
+        self.pathway_cache[cache_key] = result
+        return result
 
-    for group_size in range(len(gene_sets), min_genes - 1, -1):
-        for selected_genes in combinations(gene_sets.keys(), group_size):
-            selected_sets = [gene_sets[gene] for gene in selected_genes]
-            for combination in product(*selected_sets):
-                if len(set(combination)) == 1:
-                    return combination[0], list(selected_genes)
-    return None, []
-
-def process_chromosome(chr_data, window_size, min_genes, annotated_file):
-    matches = []
-    prev_matches = set()
-    last_match = None
-    num_genes = len(chr_data)
-    i = 0
-    while i < num_genes:
-        window = [chr_data.iloc[i]]
-        start_index = chr_data.iloc[i]['index']
-        for j in range(i + 1, num_genes):
-            end_index = chr_data.iloc[j]['index']
-            if (end_index - start_index <= window_size):
-                window.append(chr_data.iloc[j])
+def preprocess_annotations(df):
+    """Vectorized preprocessing of pathway and annotation data"""
+    # Convert pathways to sets in vectorized manner
+    pathway_dict = {}
+    annotation_dict = {}
+    
+    # Process in chunks to avoid memory issues
+    chunk_size = 10000
+    for i in range(0, len(df), chunk_size):
+        chunk = df.iloc[i:i+chunk_size]
+        
+        for _, row in chunk.iterrows():
+            gene_id = row['id']
+            
+            # Process pathways
+            if pd.notna(row['pathway']):
+                pathways = frozenset(p.strip() for p in row['pathway'].split(",") if p.strip())
+                pathway_dict[gene_id] = pathways
             else:
-                break
+                pathway_dict[gene_id] = frozenset()
+            
+            # Process annotations
+            if pd.notna(row['annotation']):
+                annotations = [a.strip() for a in row['annotation'].split(",") if a.strip()]
+                annotation_dict[gene_id] = annotations[0] if annotations else ''
+            else:
+                annotation_dict[gene_id] = ''
+    
+    return pathway_dict, annotation_dict
 
-        if len(window) >= min_genes:
-            window_df = pd.DataFrame(window)
-            genes_and_pathways = {row['id']: row['pathway'].split(",") for _, row in window_df.iterrows()}
-            genes_and_annotations = {row['id']: row['annotation'].split(",") for _, row in window_df.iterrows()}
-            pathway, metabolic_genes = find_first_common_element(genes_and_pathways, min_genes)
-            if pathway and not tuple(metabolic_genes) in prev_matches:
-                prev_matches.add(tuple(metabolic_genes))
-                metabolic_annotations = [genes_and_annotations[gene][0] for gene in metabolic_genes]
-
-                current_match = {
-                    'pathway': pathway,
-                    'genes': list(window_df['id']),
-                    'metabolic_genes': metabolic_genes,
-                    'metabolic_genes_annotations': metabolic_annotations,
-                    'start': window_df['start'].min(),
-                    'end': window_df['end'].max()
-                }
-
-                if (
-                    last_match and
-                    pathway == last_match['pathway'] and
-                    metabolic_genes[:2] == last_match['metabolic_genes'][-2:]
-                ):
-                    new_genes = [g for g in current_match['genes'] if g not in last_match['genes']]
-                    new_metabolic_genes = [g for g in current_match['metabolic_genes'] if g not in last_match['metabolic_genes']]
-                    new_annotations = [
-                        ann for gene, ann in zip(current_match['metabolic_genes'], current_match['metabolic_genes_annotations'])
-                        if gene in new_metabolic_genes
-                    ]
-                    last_match['genes'] += new_genes
-                    last_match['metabolic_genes'] += new_metabolic_genes
-                    last_match['metabolic_genes_annotations'] += new_annotations
-                    last_match['end'] = max(last_match['end'], current_match['end'])
-                else:
-                    if last_match:
-                        matches.append({
-                            'pathway': last_match['pathway'],
-                            'genes': ','.join(last_match['genes']),
-                            'metabolic_genes': ','.join(last_match['metabolic_genes']),
-                            'metabolic_genes_annotations': ','.join(last_match['metabolic_genes_annotations']),
-                            'start': last_match['start'],
-                            'end': last_match['end'],
-                            'source_file': annotated_file
-                        })
-                    last_match = current_match
-        i += 1
-
+def process_chromosome_vectorized(chr_data, window_size, min_genes, annotated_file, pathway_matcher):
+    """Highly optimized chromosome processing with numpy vectorization"""
+    if len(chr_data) < min_genes:
+        return []
+    
+    # Convert to numpy arrays for maximum speed
+    positions = chr_data['index'].values
+    gene_ids = chr_data['id'].values
+    starts = chr_data['start'].values
+    ends = chr_data['end'].values
+    
+    # Preprocess annotations once
+    pathway_dict, annotation_dict = preprocess_annotations(chr_data)
+    
+    matches = []
+    processed_combinations = set()
+    last_match = None
+    
+    # Use sliding window with numpy operations
+    n_genes = len(positions)
+    
+    # Pre-compute all possible windows using numpy
+    for i in range(n_genes):
+        start_pos = positions[i]
+        
+        # Find window boundaries using vectorized operations
+        within_window = positions >= start_pos
+        within_window &= positions <= start_pos + window_size
+        window_indices = np.where(within_window)[0]
+        
+        # Skip if window too small
+        if len(window_indices) < min_genes:
+            continue
+        
+        # Get genes in current window
+        window_genes = gene_ids[window_indices]
+        
+        # Find common pathway
+        pathway, metabolic_genes = pathway_matcher.find_common_pathway_vectorized(
+            window_genes, pathway_dict
+        )
+        
+        if not pathway or not metabolic_genes:
+            continue
+        
+        # Check if this combination was already processed
+        combo_key = tuple(sorted(metabolic_genes))
+        if combo_key in processed_combinations:
+            continue
+        processed_combinations.add(combo_key)
+        
+        # Get annotations for metabolic genes
+        metabolic_annotations = [annotation_dict.get(gene, '') for gene in metabolic_genes]
+        
+        # Calculate window boundaries
+        window_start = starts[window_indices].min()
+        window_end = ends[window_indices].max()
+        
+        current_match = {
+            'pathway': pathway,
+            'genes': window_genes.tolist(),
+            'metabolic_genes': metabolic_genes,
+            'metabolic_genes_annotations': metabolic_annotations,
+            'start': window_start,
+            'end': window_end
+        }
+        
+        # Optimize merging logic
+        should_merge = (
+            last_match and 
+            pathway == last_match['pathway'] and 
+            len(metabolic_genes) >= 2 and 
+            len(last_match['metabolic_genes']) >= 2 and
+            metabolic_genes[:2] == last_match['metabolic_genes'][-2:]
+        )
+        
+        if should_merge:
+            # Use set operations for faster merging
+            last_genes_set = set(last_match['genes'])
+            last_metabolic_set = set(last_match['metabolic_genes'])
+            
+            new_genes = [g for g in current_match['genes'] if g not in last_genes_set]
+            new_metabolic_genes = [g for g in metabolic_genes if g not in last_metabolic_set]
+            new_annotations = [ann for gene, ann in zip(metabolic_genes, metabolic_annotations)
+                             if gene in new_metabolic_genes]
+            
+            last_match['genes'].extend(new_genes)
+            last_match['metabolic_genes'].extend(new_metabolic_genes)
+            last_match['metabolic_genes_annotations'].extend(new_annotations)
+            last_match['end'] = max(last_match['end'], current_match['end'])
+        else:
+            if last_match:
+                matches.append(format_match(last_match, annotated_file))
+            last_match = current_match
+    
+    # Add final match
     if last_match:
-        matches.append({
-            'pathway': last_match['pathway'],
-            'genes': ','.join(last_match['genes']),
-            'metabolic_genes': ','.join(last_match['metabolic_genes']),
-            'metabolic_genes_annotations': ','.join(last_match['metabolic_genes_annotations']),
-            'start': last_match['start'],
-            'end': last_match['end'],
-            'source_file': annotated_file
-        })
-
+        matches.append(format_match(last_match, annotated_file))
+    
     return matches
 
-def process_annotated_file(annotated_file, output_file, window_size, min_genes):
+def format_match(match, annotated_file):
+    """Format match for output"""
+    return {
+        'pathway': match['pathway'],
+        'genes': ','.join(match['genes']),
+        'metabolic_genes': ','.join(match['metabolic_genes']),
+        'metabolic_genes_annotations': ','.join(match['metabolic_genes_annotations']),
+        'start': match['start'],
+        'end': match['end'],
+        'source_file': annotated_file
+    }
+
+def process_annotated_file_optimized(annotated_file, output_file, window_size, min_genes):
+    """Main processing with maximum optimization"""
     print(f"Processing: {annotated_file}")
-    df = pd.read_csv(annotated_file)
+    
+    try:
+        # Read with optimized settings
+        df = pd.read_csv(
+            annotated_file, 
+            dtype={'chromosome': 'category'},
+            engine='c',  # Use C parser for speed
+            memory_map=True  # Use memory mapping for large files
+        )
+    except Exception as e:
+        print(f"Error reading {annotated_file}: {e}")
+        return
+    
+    # Add index and filter in one operation
+    df.reset_index(drop=True, inplace=True)
     df["index"] = df.index
-    filtered_df = df[df["pathway"].notna()]
-    chromosomes = filtered_df['chromosome'].unique()
-
-    def wrapped(chr):
-        chr_data = filtered_df[filtered_df['chromosome'] == chr]
-        return process_chromosome(chr_data, window_size, min_genes, annotated_file)
-
-    with ThreadPoolExecutor(max_workers=16) as executor:
-        results = executor.map(wrapped, chromosomes)
-
+    
+    # Filter more efficiently
+    valid_mask = df['pathway'].notna() & (df['pathway'].str.len() > 0)
+    filtered_df = df[valid_mask].copy()
+    
+    if filtered_df.empty:
+        print(f"⚠️ {annotated_file} - No valid pathways found")
+        return
+    
+    # Create pathway matcher instance
+    pathway_matcher = PathwayMatcher(min_genes)
+    
+    # Group chromosomes and optimize memory usage
+    chromosome_groups = list(filtered_df.groupby('chromosome', observed=True))
+    
+    # Process with optimal thread count
+    max_workers = min(16, len(chromosome_groups), os.cpu_count())
     all_matches = []
-    for match_list in results:
-        all_matches.extend(match_list)
-
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit tasks with progress tracking
+        future_to_chr = {}
+        for chr_name, chr_data in chromosome_groups:
+            # Sort by position for optimal sliding window
+            chr_data_sorted = chr_data.sort_values('index').reset_index(drop=True)
+            future = executor.submit(
+                process_chromosome_vectorized, 
+                chr_data_sorted, window_size, min_genes, annotated_file, pathway_matcher
+            )
+            future_to_chr[future] = chr_name
+        
+        # Process results with progress indication
+        completed = 0
+        total = len(future_to_chr)
+        
+        for future in as_completed(future_to_chr):
+            chr_name = future_to_chr[future]
+            completed += 1
+            
+            try:
+                matches = future.result()
+                all_matches.extend(matches)
+                if matches:
+                    print(f"  Chr {chr_name}: {len(matches)} matches ({completed}/{total})")
+            except Exception as e:
+                print(f"  Error processing chromosome {chr_name}: {e}")
+    
+    # Efficient output writing
     if all_matches:
-        with file_lock:
-            mode = 'a' if os.path.exists(output_file) else 'w'
-            header = not os.path.exists(output_file)
-            pd.DataFrame(all_matches).to_csv(output_file, mode=mode, header=header, index=False)
-            print(f"✔️ {annotated_file} - Matches: {len(all_matches)}")
+        write_results_optimized(all_matches, output_file)
+        print(f"✔️ {annotated_file} - Total matches: {len(all_matches)}")
     else:
         print(f"⚠️ {annotated_file} - No matches found")
+    
+    # Force garbage collection
+    del df, filtered_df, all_matches
+    gc.collect()
 
-process_annotated_file(annotated_file, output_file, window_size, min_genes)
+def write_results_optimized(matches, output_file):
+    """Optimized result writing with batching"""
+    with file_lock:
+        file_exists = os.path.exists(output_file)
+        
+        # Write in chunks to avoid memory issues with large result sets
+        chunk_size = 10000
+        for i in range(0, len(matches), chunk_size):
+            chunk = matches[i:i+chunk_size]
+            chunk_df = pd.DataFrame(chunk)
+            
+            # Write header only for first chunk of first file
+            write_header = not file_exists and i == 0
+            chunk_df.to_csv(
+                output_file, 
+                mode='a' if file_exists or i > 0 else 'w',
+                header=write_header,
+                index=False,
+                chunksize=1000  # Write in smaller chunks
+            )
+            file_exists = True  # After first write, file exists
+
+# Execute main function
+process_annotated_file_optimized(annotated_file, output_file, window_size, min_genes)
 EOF

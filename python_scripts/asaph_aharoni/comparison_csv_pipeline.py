@@ -4,10 +4,10 @@ import time
 from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Config paths
-root_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/test/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_dir_fixed"
-submit_find_homolog_genes_in_dir = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_find_homolog_genes_in_dir.sh"
-submit_find_clusters_in_chromosome = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_find_clusters_in_chromosome.sh"
-submit_multichromosome_statistics = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_multichromosome_statistics.sh"
+root_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_dir"
+submit_find_homolog_genes_in_dir_array = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_find_homolog_genes_in_dir_array.sh"
+submit_find_clusters_in_chromosome_array = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_find_clusters_in_chromosome_array.sh"
+submit_multichromosome_statistics_array = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_multichromosome_statistics_array.sh"
 jobs_dir = "/groups/itay_mayrose/alongonda/desktop/example_jobs"
 
 # Get MGC dirs
@@ -17,94 +17,110 @@ all_subdirs = [
     if os.path.isdir(os.path.join(root_dir, d))
 ]
 
+# Create MGC list file for array jobs
+mgc_list_file = os.path.join(jobs_dir, "mgc_list.txt")
+with open(mgc_list_file, 'w') as f:
+    for mgc_path in all_subdirs:
+        f.write(mgc_path + '\n')
+
+num_mgcs = len(all_subdirs)
+
 # Helpers
-def wait_for_slot(max_jobs=100):
-    while True:
-        result = subprocess.run(["squeue", "-u", "alongonda"], capture_output=True, text=True)
-        lines = result.stdout.strip().splitlines()
-        lines = [line for line in lines if "mgc_" in line]
-        running_jobs = len(lines) - 1 if len(lines) > 1 else 0
-        if running_jobs < max_jobs:
-            break
-        print(f"⏳ Waiting: {running_jobs} jobs running. Sleeping 30s...")
-        time.sleep(30)
 
-def submit_job(job_name, out_file, err_file, script_path, mgc_path):
-    cmd = [
-        "sbatch",
-        "--job-name", job_name,
-        "--output", out_file,
-        "--error", err_file,
-        script_path,
-        mgc_path
-    ]
-    result = subprocess.run(cmd, capture_output=True, text=True)
-    if result.returncode != 0:
-        print(f"❌ Failed to submit job {job_name}: {result.stderr}")
-        return None
-    job_id = result.stdout.strip().split()[-1]
-    print(f"✅ Submitted {job_name} with job ID {job_id}")
-    return job_id
+def submit_array_job(job_name, script_path, mgc_list_file, num_tasks):
+    max_array_index = 1000  # Maximum allowed array index on this cluster
+    job_ids = []
+    
+    if num_tasks <= max_array_index:
+        # Single array job
+        cmd = [
+            "sbatch",
+            f"--array=1-{num_tasks}",
+            "--job-name", job_name,
+            "--output", os.path.join(jobs_dir, f"{job_name}_%a.out"),
+            "--error", os.path.join(jobs_dir, f"{job_name}_%a.err"),
+            script_path,
+            mgc_list_file
+        ]
+        result = subprocess.run(cmd, capture_output=True, text=True)
+        if result.returncode != 0:
+            print(f"❌ Failed to submit array job {job_name}: {result.stderr}")
+            return None
+        job_id = result.stdout.strip().split()[-1]
+        print(f"✅ Submitted array job {job_name} with job ID {job_id}")
+        return [job_id]
+    else:
+        # Multiple chunked array jobs with separate list files
+        chunks = (num_tasks + max_array_index - 1) // max_array_index  # Ceiling division
+        for chunk in range(chunks):
+            start_task = chunk * max_array_index + 1
+            end_task = min((chunk + 1) * max_array_index, num_tasks)
+            chunk_size = end_task - start_task + 1
+            chunk_name = f"{job_name}_chunk{chunk + 1}"
+            
+            # Create a separate list file for this chunk
+            chunk_list_file = os.path.join(jobs_dir, f"mgc_list_chunk{chunk + 1}.txt")
+            with open(mgc_list_file, 'r') as f:
+                all_lines = f.readlines()
+            
+            with open(chunk_list_file, 'w') as f:
+                for i in range(start_task - 1, end_task):
+                    f.write(all_lines[i])
+            
+            cmd = [
+                "sbatch",
+                f"--array=1-{chunk_size}",
+                "--job-name", chunk_name,
+                "--output", os.path.join(jobs_dir, f"{chunk_name}_%a.out"),
+                "--error", os.path.join(jobs_dir, f"{chunk_name}_%a.err"),
+                script_path,
+                chunk_list_file
+            ]
+            result = subprocess.run(cmd, capture_output=True, text=True)
+            if result.returncode != 0:
+                print(f"❌ Failed to submit array job {chunk_name}: {result.stderr}")
+                return None
+            job_id = result.stdout.strip().split()[-1]
+            print(f"✅ Submitted array job {chunk_name} with job ID {job_id}")
+            job_ids.append(job_id)
+        
+        return job_ids
 
-def wait_for_job_and_file(job_id, expected_output_file):
-    print(f"⏳ Waiting for job {job_id} to finish...")
-    while True:
-        result = subprocess.run(["squeue", "-j", job_id], capture_output=True, text=True)
-        if job_id not in result.stdout:
-            print(f"✅ Job {job_id} completed.")
-            break
-        time.sleep(30)
+def wait_for_array_job(job_ids):
+    if isinstance(job_ids, str):
+        job_ids = [job_ids]
+    
+    print(f"⏳ Waiting for {len(job_ids)} array job(s) to finish...")
+    remaining_jobs = set(job_ids)
+    
+    while remaining_jobs:
+        completed_jobs = set()
+        for job_id in remaining_jobs:
+            result = subprocess.run(["squeue", "-j", job_id], capture_output=True, text=True)
+            if job_id not in result.stdout:
+                print(f"✅ Array job {job_id} completed.")
+                completed_jobs.add(job_id)
+        
+        remaining_jobs -= completed_jobs
+        if remaining_jobs:
+            time.sleep(30)
 
-    print(f"⏳ Waiting for output file: {expected_output_file}")
-    while not os.path.exists(expected_output_file):
-        time.sleep(5)
+# === Main execution: Submit array jobs for all MGCs ===
+print(f"Processing {num_mgcs} MGC directories using array jobs...")
 
-    prev_size = -1
-    while True:
-        curr_size = os.path.getsize(expected_output_file)
-        if curr_size == prev_size:
-            break
-        prev_size = curr_size
-        time.sleep(5)
-    print(f"✅ Output file ready: {expected_output_file}")
+# Step 1: Submit homolog array job
+job_ids1 = submit_array_job("mgc_homolog", submit_find_homolog_genes_in_dir_array, mgc_list_file, num_mgcs)
+if job_ids1:
+    wait_for_array_job(job_ids1)
 
-def process_mgc_path(mgc_path):
-    mgc_name = os.path.basename(mgc_path)
-    try:
-        # Step 1: homolog
-        wait_for_slot()
-        out1 = os.path.join(jobs_dir, f"{mgc_name}_homolog.out")
-        err1 = os.path.join(jobs_dir, f"{mgc_name}_homolog.err")
-        if not os.path.exists(out1):
-            job_id1 = submit_job("mgc_" + mgc_name + "_homolog", out1, err1, submit_find_homolog_genes_in_dir, mgc_path)
-            if job_id1:
-                wait_for_job_and_file(job_id1, out1)
+# Step 2: Submit cluster array job
+job_ids2 = submit_array_job("mgc_cluster", submit_find_clusters_in_chromosome_array, mgc_list_file, num_mgcs)
+if job_ids2:
+    wait_for_array_job(job_ids2)
 
-        # Step 2: cluster
-        wait_for_slot()
-        out2 = os.path.join(jobs_dir, f"{mgc_name}_cluster.out")
-        err2 = os.path.join(jobs_dir, f"{mgc_name}_cluster.err")
-        if not os.path.exists(out2):
-            job_id2 = submit_job("mgc_" + mgc_name + "_cluster", out2, err2, submit_find_clusters_in_chromosome, mgc_path)
-            if job_id2:
-                wait_for_job_and_file(job_id2, out2)
+# Step 3: Submit multi array job
+job_ids3 = submit_array_job("mgc_multi", submit_multichromosome_statistics_array, mgc_list_file, num_mgcs)
+if job_ids3:
+    wait_for_array_job(job_ids3)
 
-        # Step 3: multi
-        wait_for_slot()
-        out3 = os.path.join(jobs_dir, f"{mgc_name}_multi.out")
-        err3 = os.path.join(jobs_dir, f"{mgc_name}_multi.err")
-        if not os.path.exists(out3):
-            job_id3 = submit_job("mgc_" + mgc_name + "_multi", out3, err3, submit_multichromosome_statistics, mgc_path)
-            if job_id3:
-                wait_for_job_and_file(job_id3, out3)
-
-        print(f"🎉 Finished all jobs for {mgc_name}")
-    except Exception as e:
-        print(f"❌ Error processing {mgc_name}: {e}")
-
-# === Main execution: run multiple MGCs in parallel ===
-max_workers = 30  # number of MGCs to run in parallel
-with ThreadPoolExecutor(max_workers=max_workers) as executor:
-    futures = [executor.submit(process_mgc_path, mgc) for mgc in all_subdirs]
-    for future in as_completed(futures):
-        future.result()  # to raise any exceptions
+print("🎉 All array jobs completed!")
