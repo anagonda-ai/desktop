@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=32G
 #SBATCH --partition=itaym
-#SBATCH --time=3-24:00:00
+#SBATCH --time=6-24:00:00
 
 # Array job script for multichromosome statistics
 # Usage: sbatch --array=1-N submit_multichromosome_statistics_array.sh mgc_list_file.txt

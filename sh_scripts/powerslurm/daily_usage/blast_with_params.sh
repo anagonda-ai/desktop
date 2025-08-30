@@ -2,9 +2,9 @@
 #SBATCH --output=/groups/itay_mayrose/alongonda/desktop/example_jobs/out.OU
 #SBATCH --error=/groups/itay_mayrose/alongonda/desktop/example_jobs/error.ER
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --mem=16G
-#SBATCH --time=8:00:00
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=32G
+#SBATCH --time=6-24:00:00
 #SBATCH --partition=itaym
 
 query_fasta="$1"

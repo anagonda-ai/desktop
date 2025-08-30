@@ -3,8 +3,10 @@ import os
 import subprocess
 import threading
 import time
+import numpy as np
 import pandas as pd
 import random
+import shutil
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from tqdm import tqdm
 
@@ -24,12 +26,6 @@ def parse_arguments():
     """Parse command line arguments"""
     parser = argparse.ArgumentParser(description='KEGG metabolic gene cluster analysis')
     
-    parser.add_argument('--use_random', 
-                       type=str, 
-                       choices=['true', 'false', 'True', 'False', '1', '0'],
-                       default='false',
-                       help='Use random grouping (true/1) or sliding windows (false/0). Default: false')
-    
     parser.add_argument('--min_genes', 
                        type=int, 
                        default=3,
@@ -46,7 +42,80 @@ def parse_arguments():
                        default=[10, 20],
                        help='Window sizes to process. Default: 10 20')
     
+    # Analysis mode
+    parser.add_argument('--run_shuffle_test',
+                       action='store_true',
+                       help='Run shuffle statistical test (200 iterations of shuffled data with sliding windows)')
+    
+    parser.add_argument('--num_shuffle_iterations',
+                       type=int,
+                       default=200,
+                       help='Number of shuffle iterations. Default: 200')
+    
+    parser.add_argument('--shuffle_seed',
+                       type=int,
+                       help='Base seed for shuffle iterations (optional)')
+    
     return parser.parse_args()
+
+# ------------------------------
+# Annotation Shuffling Functions
+# ------------------------------
+
+def shuffle_annotations_inplace(annotated_files, seed=None):
+    """
+    Shuffle the annotation data (kegg_ids, annotation, pathway) in-place across all files.
+    Keeps the three annotation columns together as units.
+    """
+    if seed is not None:
+        np.random.seed(seed)
+    
+    success_count = 0
+    for annotated_file in annotated_files:
+        try:
+            # Read the file
+            df = pd.read_csv(annotated_file)
+            
+            # Check if annotation columns exist
+            annotation_columns = ['kegg_ids', 'annotation', 'pathway']
+            missing_cols = [col for col in annotation_columns if col not in df.columns]
+            if missing_cols:
+                continue  # Skip files without proper annotation columns
+            
+            # Create shuffled indices for the annotation data
+            shuffled_indices = np.random.permutation(len(df))
+            
+            # Apply shuffled annotation data
+            original_annotations = df[annotation_columns].copy()
+            df[annotation_columns] = original_annotations.iloc[shuffled_indices].reset_index(drop=True)
+            
+            # Save back to the same file
+            df.to_csv(annotated_file, index=False)
+            success_count += 1
+            
+        except Exception as e:
+            print(f"⚠️  Error shuffling {annotated_file}: {str(e)}")
+    
+    return success_count
+
+def backup_original_files(annotated_files, backup_dir):
+    """Create backup copies of original annotated files"""
+    os.makedirs(backup_dir, exist_ok=True)
+    
+    for file_path in annotated_files:
+        filename = os.path.basename(file_path)
+        backup_path = os.path.join(backup_dir, filename)
+        shutil.copy2(file_path, backup_path)
+    
+    print(f"✅ Backed up {len(annotated_files)} files to: {backup_dir}")
+
+def restore_original_files(annotated_files, backup_dir):
+    """Restore original files from backup"""
+    for file_path in annotated_files:
+        filename = os.path.basename(file_path)
+        backup_path = os.path.join(backup_dir, filename)
+        if os.path.exists(backup_path):
+            shutil.copy2(backup_path, file_path)
 
 # ------------------------------
 # String to Boolean Conversion
@@ -60,7 +129,6 @@ def str_to_bool(value):
         return False
     else:
         raise ValueError(f"Invalid boolean value: {value}")
-
 
 # ------------------------------
 # Count Running Jobs
@@ -193,16 +261,6 @@ def count_sliding_windows(chr_data, window_size, min_genes):
 def process_chromosome_random_groups(chr_data, window_size, min_genes, annotated_file, num_random_groups):
     """
     Process chromosome data using completely random groups of genes.
-    
-    Args:
-        chr_data: DataFrame containing chromosome data
-        window_size: Number of genes to include in each random group
-        min_genes: Minimum number of genes required in a group (for compatibility)
-        annotated_file: Source file name for tracking
-        num_random_groups: Number of random groups to generate (default: 1000)
-    
-    Returns:
-        List of matches found in random groups
     """
     matches = []
     prev_matches = set()
@@ -239,7 +297,7 @@ def process_chromosome_random_groups(chr_data, window_size, min_genes, annotated
                     'start': window_df['start'].min(),
                     'end': window_df['end'].max(),
                     'source_file': annotated_file,
-                    'group_type': 'random'  # Tag to identify this as random grouping
+                    'group_type': 'random'
                 }
                 matches.append(match)
     
@@ -298,7 +356,6 @@ def process_chromosome_sliding(chr_data, window_size, min_genes, annotated_file)
                     last_match['metabolic_genes'] += new_metabolic_genes
                     last_match['metabolic_genes_annotations'] += new_annotations
                     last_match['end'] = max(last_match['end'], current_match['end'])
-                    print(f"🔄 Merging with last match: {last_match['pathway']} - {len(last_match['genes'])} genes")
                 else:
                     if last_match:
                         matches.append({
@@ -327,69 +384,162 @@ def process_chromosome_sliding(chr_data, window_size, min_genes, annotated_file)
     return matches
 
 # ------------------------------
-# Chromosome Random/Actual Decision Function
-# ------------------------------
-
-def process_chromosome_hybrid(chr_data, window_size, min_genes, annotated_file, 
-                            use_random):
-    """
-    Hybrid function that can switch between sliding windows and random groups.
-    
-    Args:
-        chr_data: DataFrame containing chromosome data
-        window_size: For sliding: max distance between genes; For random: number of genes per group
-        min_genes: Minimum number of genes required
-        annotated_file: Source file name for tracking
-        use_random: If True, use random groups; if False, use sliding windows
-        num_random_groups: Number of random groups to generate (only used if use_random=True)
-    
-    Returns:
-        List of matches found
-    """
-    if use_random:
-        num_random_groups = count_sliding_windows(chr_data, window_size, min_genes)
-        return process_chromosome_random_groups(chr_data, window_size, min_genes, annotated_file, num_random_groups)
-    else:
-        return process_chromosome_sliding(chr_data, window_size, min_genes, annotated_file)
-
-# ------------------------------
 # Process Annotated Files
 # ------------------------------
 
-def process_annotated_file(annotated_file, output_file, window_size, min_genes, use_random):
+def process_annotated_file(annotated_file, output_file, window_size, min_genes, use_random_method=False, shuffle_annotations=False, shuffle_seed=None):
     file_lock = threading.Lock()
-    print(f"Processing ({'random' if use_random else 'sliding'}): {annotated_file}")
     df = pd.read_csv(annotated_file)
+    
+    # Shuffle annotations if requested
+    if shuffle_annotations:
+        annotation_columns = ['kegg_ids', 'annotation', 'pathway']
+        
+        # Check if all annotation columns exist
+        missing_cols = [col for col in annotation_columns if col not in df.columns]
+        if not missing_cols:  # Only shuffle if all columns exist
+            if shuffle_seed is not None:
+                np.random.seed(shuffle_seed)
+            
+            # Create shuffled indices for the annotation data
+            shuffled_indices = np.random.permutation(len(df))
+            
+            # Apply shuffled annotation data
+            original_annotations = df[annotation_columns].copy()
+            df[annotation_columns] = original_annotations.iloc[shuffled_indices].reset_index(drop=True)
+    
     df["index"] = df.index
     filtered_df = df[df["pathway"].notna()]
     chromosomes = filtered_df['chromosome'].unique()
 
     def wrapped(chr):
         chr_data = filtered_df[filtered_df['chromosome'] == chr]
-        return process_chromosome_hybrid(chr_data=chr_data, window_size=window_size, min_genes=min_genes, annotated_file=annotated_file, use_random=use_random)
+        return process_chromosome_sliding(chr_data, window_size, min_genes, annotated_file)
 
-    with ThreadPoolExecutor(max_workers=16) as executor:
+    with ThreadPoolExecutor() as executor:
         results = executor.map(wrapped, chromosomes)
 
     all_matches = []
     for match_list in results:
         all_matches.extend(match_list)
 
-    if all_matches:
+    if all_matches and output_file:
         with file_lock:
             mode = 'a' if os.path.exists(output_file) else 'w'
             header = not os.path.exists(output_file)
             pd.DataFrame(all_matches).to_csv(output_file, mode=mode, header=header, index=False)
-            print(f"✔️ {annotated_file} - Matches: {len(all_matches)}")
-    else:
-        print(f"⚠️ {annotated_file} - No matches found")
+
     return len(all_matches)
+
+# ------------------------------
+# Shuffle Statistical Test
+# ------------------------------
+
+def run_shuffle_statistical_test(annotated_files, window_size, min_genes, num_iterations, base_seed=None):
+    """
+    Run shuffle statistical test: 200 iterations of shuffled data analyzed with sliding windows.
+    """
+    shuffle_results = []
+    
+    print(f"🔄 Running {num_iterations} shuffle iterations with sliding windows...")
+    
+    # Use progress bar for iterations
+    with tqdm(total=num_iterations, desc="Shuffle iterations", unit="iter") as pbar:
+        for iteration in range(num_iterations):
+            # Generate unique seed for this iteration
+            iteration_seed = (base_seed or 42) + iteration
+            
+            # Run analysis with shuffling enabled (always sliding windows) - WITH CONCURRENCY
+            total_matches = 0
+            
+            with ThreadPoolExecutor(max_workers=32) as executor:
+                futures = [
+                    executor.submit(
+                        process_annotated_file,
+                        annotated_file, 
+                        None,  # No output file needed for shuffle test
+                        window_size, 
+                        min_genes, 
+                        False,  # Always sliding windows for shuffle test
+                        shuffle_annotations=True,  # Enable shuffling
+                        shuffle_seed=iteration_seed + hash(annotated_file) % 1000  # Unique seed per file
+                    )
+                    for annotated_file in annotated_files
+                ]
+                
+                for future in as_completed(futures):
+                    total_matches += future.result()
+            
+            shuffle_results.append(total_matches)
+            
+            # Update progress bar with running statistics
+            pbar.set_postfix({
+                'Current': total_matches, 
+                'Avg': f"{np.mean(shuffle_results):.1f}",
+                'Std': f"{np.std(shuffle_results):.1f}" if len(shuffle_results) > 1 else "0.0"
+            })
+            pbar.update(1)
+    
+    return shuffle_results
+
+def analyze_shuffle_results(shuffle_results, real_mgc_count=None):
+    """
+    Analyze the results from shuffle iterations and provide statistical summary.
+    """
+    shuffle_array = np.array(shuffle_results)
+    
+    stats = {
+        'mean': np.mean(shuffle_array),
+        'std': np.std(shuffle_array),
+        'median': np.median(shuffle_array),
+        'min': np.min(shuffle_array),
+        'max': np.max(shuffle_array),
+        'q25': np.percentile(shuffle_array, 25),
+        'q75': np.percentile(shuffle_array, 75)
+    }
+    
+    print("\n" + "="*60)
+    print("SHUFFLE STATISTICAL TEST RESULTS")
+    print("="*60)
+    print(f"Number of iterations: {len(shuffle_results)}")
+    print(f"Mean MGCs per iteration: {stats['mean']:.1f}")
+    print(f"Standard deviation: {stats['std']:.1f}")
+    print(f"Median: {stats['median']:.1f}")
+    print(f"Range: {stats['min']} - {stats['max']}")
+    print(f"25th percentile: {stats['q25']:.1f}")
+    print(f"75th percentile: {stats['q75']:.1f}")
+    
+    if real_mgc_count is not None:
+        print(f"\nCOMPARISON TO REAL DATA:")
+        print(f"Real data MGCs: {real_mgc_count}")
+        z_score = (real_mgc_count - stats['mean']) / stats['std'] if stats['std'] > 0 else 0
+        print(f"Z-score: {z_score:.3f}")
+        
+        # Calculate empirical p-value
+        if real_mgc_count >= stats['mean']:
+            extreme_count = np.sum(shuffle_array >= real_mgc_count)
+        else:
+            extreme_count = np.sum(shuffle_array <= real_mgc_count)
+        p_value = extreme_count / len(shuffle_results)
+        print(f"Empirical p-value (one-tailed): {p_value:.4f}")
+        
+        # Two-tailed p-value
+        extreme_count_two = np.sum(np.abs(shuffle_array - stats['mean']) >= np.abs(real_mgc_count - stats['mean']))
+        p_value_two = extreme_count_two / len(shuffle_results)
+        print(f"Empirical p-value (two-tailed): {p_value_two:.4f}")
+    
+    print("="*60)
+    
+    return stats
 
 # ------------------------------
 # Subset Filtering
 # ------------------------------
 
 def remove_subset_results(output_file):
+    if not os.path.exists(output_file):
+        return
+        
     df = pd.read_csv(output_file)
     df['metabolic_genes_set'] = df['metabolic_genes'].apply(lambda x: set(x.split(',')))
     to_remove = set()
@@ -412,8 +562,6 @@ def main():
     # Parse command line arguments
     args = parse_arguments()
     
-    # Convert string to boolean for use_random
-    use_random = str_to_bool(args.use_random)
     min_genes = args.min_genes
     max_jobs = args.max_jobs
     window_sizes = args.window_sizes
@@ -421,10 +569,12 @@ def main():
     # Print configuration
     print("="*50)
     print("CONFIGURATION:")
-    print(f"  Method: {'Random grouping' if use_random else 'Sliding windows'}")
+    print(f"  Analysis mode: {'Shuffle Test (200 iterations)' if args.run_shuffle_test else 'Normal Sliding Window'}")
     print(f"  Min genes: {min_genes}")
     print(f"  Window sizes: {window_sizes}")
     print(f"  Max SLURM jobs: {max_jobs}")
+    if args.run_shuffle_test:
+        print(f"  Shuffle iterations: {args.num_shuffle_iterations}")
     print("="*50)
     
     # Directories
@@ -433,7 +583,7 @@ def main():
         os.path.join(full_genome_dir, "final_dataset/filtered_no_mito")
     ]
     
-    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/kegg_verified_scanner_min_genes_{min_genes}_overlap_merge"
+    head_output_dir = f"/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_{min_genes}_overlap_merge"
     output_dir = os.path.join(head_output_dir, "kegg_scanner_min_genes_based_metabolic")
     temp_dir = os.path.join(head_output_dir, "blast_temp_annotated_metabolic")
     annotated_dir = os.path.join(head_output_dir, "annotated_genomes_metabolic")
@@ -458,42 +608,88 @@ def main():
     # Wait until all jobs finish
     wait_for_jobs(job_prefix="kegg_", user="alongonda")
 
-    # Sliding Window (after annotation completes manually)
+    # Get annotated files
     annotated_files = [os.path.join(annotated_dir, f) for f in os.listdir(annotated_dir) if f.endswith('_annotated.csv')]
+    
+    if not annotated_files:
+        print("❌ No annotated files found!")
+        return
 
     min_genes_subdir = os.path.join(output_dir, f"min_genes_{min_genes}")
     os.makedirs(min_genes_subdir, exist_ok=True)
 
-    for window_size in window_sizes:
-        # Create method-specific output filename
-        method_tag = f"_random" if use_random else "_sliding"
-        output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}{method_tag}.csv")
+    # Run analysis based on mode
+    if args.run_shuffle_test:
+        # Option 2: Shuffle statistical test
+        print("\n" + "="*60)
+        print("RUNNING SHUFFLE STATISTICAL TEST")
+        print("="*60)
         
-        if os.path.exists(output_file):
-            os.remove(output_file)
+        for window_size in window_sizes:
+            print(f"\n🧪 Running shuffle test for window size {window_size}")
+            print(f"   Method: 200 iterations of shuffled data with sliding windows")
+            
+            # Run shuffle statistical test
+            shuffle_results = run_shuffle_statistical_test(
+                annotated_files=annotated_files,
+                window_size=window_size,
+                min_genes=min_genes,
+                num_iterations=args.num_shuffle_iterations,
+                base_seed=args.shuffle_seed
+            )
+            
+            # Analyze and display results
+            stats = analyze_shuffle_results(shuffle_results)
+            
+            # Save shuffle results
+            shuffle_output_file = os.path.join(min_genes_subdir, f"shuffle_results_w{window_size}.csv")
+            results_df = pd.DataFrame({
+                'iteration': range(len(shuffle_results)),
+                'mgc_count': shuffle_results
+            })
+            results_df.to_csv(shuffle_output_file, index=False)
+            print(f"📊 Shuffle results saved to: {shuffle_output_file}")
+        
+        print(f"\n✅ Shuffle statistical test completed!")
+        
+    else:
+        # Option 1: Normal sliding window analysis on real data
+        print("\n" + "="*60)
+        print("RUNNING NORMAL SLIDING WINDOW ANALYSIS")
+        print("="*60)
+        
+        for window_size in window_sizes:
+            output_file = os.path.join(min_genes_subdir, f"potential_groups_w{window_size}_real_data.csv")
+            
+            if os.path.exists(output_file):
+                os.remove(output_file)
 
-        total_matches = 0
+            total_matches = 0
 
-        desc = f"{'Random grouping' if use_random else 'Sliding window'} w{window_size}"
-        with tqdm(total=len(annotated_files), desc=desc, unit='file') as pbar:
-            with ThreadPoolExecutor(max_workers=32) as executor:
-                futures = [
-                    executor.submit(
-                        process_annotated_file,
-                        annotated_file,
-                        output_file,
-                        window_size,
-                        min_genes,
-                        use_random
-                    )
-                    for annotated_file in annotated_files
-                ]
-                for future in as_completed(futures):
-                    total_matches += future.result()
-                    pbar.update(1)
+            desc = f"Real data sliding window w{window_size}"
+            with tqdm(total=len(annotated_files), desc=desc, unit='file') as pbar:
+                with ThreadPoolExecutor() as executor:
+                    futures = [
+                        executor.submit(
+                            process_annotated_file,
+                            annotated_file,
+                            output_file,
+                            window_size,
+                            min_genes,
+                            False,  # Always sliding windows for real data
+                            shuffle_annotations=False,  # No shuffling for real data
+                            shuffle_seed=None
+                        )
+                        for annotated_file in annotated_files
+                    ]
+                    for future in as_completed(futures):
+                        total_matches += future.result()
+                        pbar.update(1)
 
-        print(f"✔️ Total Matches for w{window_size}, min_genes={min_genes} ({'random' if use_random else 'sliding'}): {total_matches}")
-        remove_subset_results(output_file)
+            print(f"✔️ Total MGCs found for w{window_size}, min_genes={min_genes}: {total_matches}")
+            remove_subset_results(output_file)
+            
+        print(f"\n✅ Normal analysis completed!")
 
 
 if __name__ == "__main__":

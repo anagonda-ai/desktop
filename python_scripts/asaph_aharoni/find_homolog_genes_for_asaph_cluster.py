@@ -170,6 +170,9 @@ def save_best_hits(best_hits_by_organism, output_dir):
         organism_dir = os.path.join(best_hits_dir, organism_name)
         os.makedirs(organism_dir, exist_ok=True)
         summary_file = os.path.join(organism_dir, organism)
+        if os.path.exists(summary_file):
+            print(f"⚠️ Skipped existing summary file: {summary_file}")
+            continue
         with open(summary_file, "w", encoding="utf-8") as f:
             f.write("query_fasta,subject_gene,chromosome,start,end,strand_value,identity,evalue,bit_score,row_index\n")
             for hit in hits:

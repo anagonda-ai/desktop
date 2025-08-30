@@ -3,7 +3,7 @@
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=32G
 #SBATCH --partition=itaym
-#SBATCH --time=3-24:00:00
+#SBATCH --time=6-24:00:00
 
 # Array job script for homolog gene finding
 # Usage: sbatch --array=1-N submit_find_homolog_genes_in_dir_array.sh mgc_list_file.txt

@@ -1,5 +1,6 @@
 import os
 import csv
+from collections import defaultdict
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
@@ -55,52 +56,47 @@ def prepare_fasta(file_path, temp_dir):
     else:
         return None
 
-def build_bipartite_graph(candidate_sequences, mgc_sequences, batch_size=500):
-    with tempfile.TemporaryDirectory() as temp_dir:
-        subject_fasta = os.path.join(temp_dir, "subject.fasta")
-        db_prefix = os.path.join(temp_dir, "blast_db")
-
-        # Write MGC subject sequences
-        SeqIO.write([SeqRecord(Seq(s), id=f"s{i}") for i, s in enumerate(mgc_sequences)], subject_fasta, "fasta")
-
-        # Make BLAST DB once
-        subprocess.run(["makeblastdb", "-in", subject_fasta, "-dbtype", "prot", "-out", db_prefix], capture_output=True)
-
-        graph = nx.Graph()
-
-        candidate_list = list(candidate_sequences)
-        num_batches = (len(candidate_list) + batch_size - 1) // batch_size
-
-        for batch_idx in range(num_batches):
-            batch_seqs = candidate_list[batch_idx * batch_size: (batch_idx + 1) * batch_size]
-            query_fasta = os.path.join(temp_dir, f"query_batch_{batch_idx}.fasta")
-            out_path = os.path.join(temp_dir, f"blast_result_{batch_idx}.txt")
-
-            # Write query batch
-            SeqIO.write(
-                [SeqRecord(Seq(s), id=f"q{batch_idx}_{i}") for i, s in enumerate(batch_seqs)],
-                query_fasta, "fasta"
-            )
-
-            # Run BLAST
-            subprocess.run([
-                "blastp", "-query", query_fasta, "-db", db_prefix,
-                "-outfmt", "6 qseqid sseqid pident length evalue bitscore",
-                "-evalue", str(EVALUE_THRESHOLD), "-num_threads", str(NUM_THREADS), "-out", out_path
-            ], capture_output=True)
-
-            # Parse BLAST results and update graph
-            with open(out_path) as f:
-                for line in f:
-                    parts = line.strip().split()
-                    if len(parts) != 6:
-                        continue
-                    qid, sid, pident, length, evalue, bitscore = parts
-                    pident = float(pident)
-                    evalue = float(evalue)
-                    if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
-                        graph.add_edge(qid, sid, weight=float(bitscore))
-
+def build_bipartite_graph_fixed(candidate_fasta, mgc_fasta, temp_dir):
+    """
+    Fixed version that properly handles sequence IDs and creates a bipartite graph
+    """
+    db_prefix = os.path.join(temp_dir, "blast_db")
+    blast_output = os.path.join(temp_dir, "blast_results.txt")
+    
+    # Make BLAST database from MGC sequences
+    subprocess.run(["makeblastdb", "-in", mgc_fasta, "-dbtype", "prot", "-out", db_prefix], 
+                   capture_output=True, check=True)
+    
+    # Run BLAST
+    subprocess.run([
+        "blastp", "-query", candidate_fasta, "-db", db_prefix,
+        "-outfmt", "6 qseqid sseqid pident length evalue bitscore",
+        "-evalue", str(EVALUE_THRESHOLD), "-num_threads", str(NUM_THREADS), 
+        "-out", blast_output
+    ], capture_output=True, check=True)
+    
+    # Build bipartite graph from BLAST results
+    graph = nx.Graph()
+    
+    # Add all nodes first
+    for record in SeqIO.parse(candidate_fasta, "fasta"):
+        graph.add_node(f"candidate_{record.id}", bipartite=0)
+    for record in SeqIO.parse(mgc_fasta, "fasta"):
+        graph.add_node(f"mgc_{record.id}", bipartite=1)
+    
+    # Add edges based on BLAST hits
+    with open(blast_output) as f:
+        for line in f:
+            parts = line.strip().split('\t')
+            if len(parts) >= 6:
+                qid, sid, pident, length, evalue, bitscore = parts[:6]
+                pident = float(pident)
+                evalue = float(evalue)
+                bitscore = float(bitscore)
+                
+                if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
+                    graph.add_edge(f"candidate_{qid}", f"mgc_{sid}", weight=bitscore)
+    
     return graph
 
 def check_identity(mgc_directory, candidate_directory, output_file):
@@ -113,29 +109,42 @@ def check_identity(mgc_directory, candidate_directory, output_file):
                 continue
 
             fasta_path = os.path.join(candidate_directory, fasta_filename)
-            candidate_sequences = read_sequences_from_fasta(fasta_path)
             all_match_found = False
 
             for csv_filename in os.listdir(mgc_directory):
                 if not csv_filename.endswith(".csv"):
                     continue
+                
                 csv_path = os.path.join(mgc_directory, csv_filename)
-                mgc_sequences = read_sequences_from_csv(csv_path)
-                graph = build_bipartite_graph(candidate_sequences, mgc_sequences)
-                matching = max_weight_matching(graph, maxcardinality=True)
-
-                if len(matching) == len(candidate_sequences):
-                    print(f"✅ All sequences in {fasta_path} matched to {csv_path}.")
-                    out_file.write(f"The candidate {fasta_path} is matched to {csv_path} cluster.\n")
-                    out_file.flush()
-                    all_match_found = True
-                    break
+                
+                # Convert CSV to temporary FASTA
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    mgc_fasta = os.path.join(temp_dir, "mgc_temp.fasta")
+                    csv_to_fasta(csv_path, mgc_fasta)
+                    
+                    # Build bipartite graph
+                    graph = build_bipartite_graph_fixed(fasta_path, mgc_fasta, temp_dir)
+                    
+                    # Find maximum matching
+                    matching = max_weight_matching(graph, maxcardinality=True)
+                    
+                    # Count candidate nodes to check if all matched
+                    candidate_nodes = {n for n in graph.nodes() if n.startswith("candidate_")}
+                    matched_candidates = {n for edge in matching for n in edge if n.startswith("candidate_")}
+                    
+                    if len(matched_candidates) == len(candidate_nodes) and len(candidate_nodes) > 0:
+                        print(f"✅ All sequences in {fasta_path} matched to {csv_path}.")
+                        out_file.write(f"The candidate {fasta_path} is matched to {csv_path} cluster.\n")
+                        out_file.flush()
+                        all_match_found = True
+                        break
 
             if not all_match_found:
-                print(f"❌ No matches found for {fasta_path} in any MGC CSV file.")
+                print(f"❌ No complete matches found for {fasta_path} in any MGC CSV file.")
                 out_file.write(f"Not all sequences in {fasta_path} have matches in any MGC CSV file.\n")
                 out_file.flush()
                 unmatched_candidates.append(fasta_path)
+                
     return unmatched_candidates
 
 def parse_and_filter_blast(blast_path):
@@ -143,9 +152,9 @@ def parse_and_filter_blast(blast_path):
     with open(blast_path) as f:
         for line in f:
             parts = line.strip().split('\t')
-            if len(parts) < 12:
+            if len(parts) < 6:
                 continue
-            qseqid, sseqid, pident, length, *_ , evalue, bitscore = parts[:12]
+            qseqid, sseqid, pident, length, evalue, bitscore = parts[:6]
             pident = float(pident)
             evalue = float(evalue)
             length = int(length)
@@ -163,32 +172,286 @@ def parse_and_filter_blast(blast_path):
     return results
 
 def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
-    file_graph = nx.Graph()
+    """
+    Efficient directed graph clustering implementation.
+    Time complexity: O(E + V log V) where E = edges, V = vertices
+    """
+    
+    # Pre-compute all file sizes once
     file_keys = {os.path.basename(v): k for k, v in fasta_map.items()}
-    for f in file_keys.values():
-        file_graph.add_node(f)
-
+    file_sizes = {}
+    
+    print("📏 Computing file sizes...")
+    for file_path, fasta_path in fasta_map.items():
+        try:
+            # Fast line counting for FASTA files
+            with open(fasta_path, 'r') as f:
+                file_sizes[file_keys[os.path.basename(fasta_path)]] = sum(1 for line in f if line.startswith('>'))
+        except:
+            file_sizes[file_keys[os.path.basename(fasta_path)]] = 0
+    
+    # Single pass: build best scores lookup and directed graph simultaneously
+    file_pair_best = defaultdict(lambda: {"score": -float('inf'), "data": None})
+    file_graph = nx.DiGraph()
+    
+    # Add all nodes upfront
+    file_graph.add_nodes_from(file_keys.values())
+    
+    print("🔍 Processing BLAST results...")
     for row in results:
         blast_file = row["file"]
-        q_base, _, t_base = blast_file.partition("_vs_")
-        q_file = file_keys.get(q_base + ".fasta") or file_keys.get(q_base + ".fa")
-        t_file = file_keys.get(t_base.replace(".txt", ".fasta")) or file_keys.get(t_base.replace(".txt", ".fa"))
-        if q_file and t_file:
-            file_graph.add_edge(q_file, t_file)
-
+        # Fix parsing: handle different filename formats
+        if "_vs_" in blast_file:
+            q_base, _, t_base = blast_file.partition("_vs_")
+            t_base = t_base.replace(".txt", "")
+        else:
+            # Fallback parsing for different formats
+            parts = blast_file.replace(".txt", "").split("_")
+            if len(parts) >= 2:
+                q_base = "_".join(parts[:-1])
+                t_base = parts[-1]
+            else:
+                continue
+        
+        # Try different extensions
+        q_file = None
+        t_file = None
+        for ext in [".fasta", ".fa"]:
+            q_candidate = file_keys.get(q_base + ext)
+            t_candidate = file_keys.get(t_base + ext)
+            if q_candidate:
+                q_file = q_candidate
+            if t_candidate:
+                t_file = t_candidate
+        
+        if q_file and t_file and q_file != t_file:
+            # Keep only the best score between each pair
+            pair_key = (q_file, t_file) if q_file < t_file else (t_file, q_file)
+            
+            if row["bitscore"] > file_pair_best[pair_key]["score"]:
+                file_pair_best[pair_key] = {
+                    "score": row["bitscore"],
+                    "data": row
+                }
+    
+    # Add directed edges efficiently
+    print("🔗 Building directed graph...")
+    edges_added = 0
+    for (file1, file2), best_match in file_pair_best.items():
+        size1 = file_sizes.get(file1, 0)
+        size2 = file_sizes.get(file2, 0)
+        
+        # Direction: smaller -> larger (or lexicographic if equal)
+        if size1 < size2 or (size1 == size2 and file1 < file2):
+            source, target = file1, file2
+        else:
+            source, target = file2, file1
+        
+        file_graph.add_edge(source, target, 
+                           weight=best_match["score"],
+                           identity=best_match["data"]["identity"],
+                           evalue=best_match["data"]["evalue"])
+        edges_added += 1
+    
+    print(f"🔗 Added {edges_added} edges to graph")
+    
+    # Efficient clustering using weakly connected components
+    print("🎯 Finding clusters and centrums...")
     unique_representatives = []
-    for component in nx.connected_components(file_graph):
-        representative = sorted(component)[0]
-        unique_representatives.append(representative)
-
+    cluster_info = []
+    
+    # Get weakly connected components (treats directed graph as undirected for connectivity)
+    for component in nx.weakly_connected_components(file_graph):
+        if len(component) == 1:
+            centrum = next(iter(component))
+            unique_representatives.append(centrum)
+            cluster_info.append({
+                "centrum": centrum,
+                "cluster_size": 1,
+                "members": [centrum],
+                "is_valid_centrum": True
+            })
+        else:
+            # Fast centrum detection using in-degree counting
+            subgraph = file_graph.subgraph(component)
+            component_list = list(component)
+            expected_in_degree = len(component_list) - 1
+            
+            # Find node with in-degree equal to (cluster_size - 1)
+            valid_centrum = None
+            max_in_degree = -1
+            fallback_centrum = None
+            
+            for node in component_list:
+                in_degree = subgraph.in_degree(node)
+                if in_degree > max_in_degree:
+                    max_in_degree = in_degree
+                    fallback_centrum = node
+                
+                if in_degree == expected_in_degree:
+                    valid_centrum = node
+                    break
+            
+            if valid_centrum:
+                unique_representatives.append(valid_centrum)
+                cluster_info.append({
+                    "centrum": valid_centrum,
+                    "cluster_size": len(component_list),
+                    "members": component_list,
+                    "is_valid_centrum": True
+                })
+            else:
+                # Use fallback
+                unique_representatives.append(fallback_centrum)
+                cluster_info.append({
+                    "centrum": fallback_centrum,
+                    "cluster_size": len(component_list),
+                    "members": component_list,
+                    "is_valid_centrum": False,
+                    "inbound_edges": max_in_degree
+                })
+    
+    # Efficient file writing
+    print("💾 Saving results...")
     dedup_file = os.path.join(blast_output_dir, "deduplicated_file_list.txt")
+    cluster_details_file = os.path.join(blast_output_dir, "cluster_details.txt")
+    
+    # Write files efficiently
     with open(dedup_file, 'w') as f:
-        for rep in unique_representatives:
-            f.write(f"{rep}\n")
-
-    print(f"\n🧬 Removed homologous redundancy: reduced {len(file_keys)} → {len(unique_representatives)} files.")
-    print(f"📄 Deduplicated file list saved to: {dedup_file}")
+        f.write('\n'.join(unique_representatives) + '\n')
+    
+    # Generate summary statistics
+    valid_centrums = sum(1 for info in cluster_info if info["is_valid_centrum"])
+    total_clusters = len(cluster_info)
+    
+    with open(cluster_details_file, 'w') as f:
+        # Write header
+        f.write(f"Cluster Analysis Results\n{'=' * 50}\n\n")
+        f.write(f"Total clusters: {total_clusters}\n")
+        f.write(f"Valid centrums: {valid_centrums}\n")
+        f.write(f"Invalid centrums: {total_clusters - valid_centrums}\n\n")
+        
+        # Write cluster details
+        for i, info in enumerate(cluster_info, 1):
+            f.write(f"Cluster {i}:\n")
+            f.write(f"  Centrum: {info['centrum']}\n")
+            f.write(f"  Size: {info['cluster_size']}\n")
+            f.write(f"  Valid centrum: {info['is_valid_centrum']}\n")
+            if not info['is_valid_centrum']:
+                f.write(f"  Inbound edges: {info.get('inbound_edges', 'N/A')}\n")
+            f.write(f"  Members: {', '.join(info['members'])}\n\n")
+    
+    print(f"\n🧬 Directed graph clustering complete:")
+    print(f"   Original files: {len(file_keys)}")
+    print(f"   Clusters found: {total_clusters}")
+    print(f"   Valid centrums: {valid_centrums}")
+    print(f"   Representatives: {len(unique_representatives)}")
+    print(f"📄 Results saved to: {dedup_file}")
+    print(f"📊 Cluster details saved to: {cluster_details_file}")
+    
     return unique_representatives
+
+def build_bipartite_graph_from_files(candidate_fasta, mgc_fasta):
+    """
+    Build bipartite graph using actual sequence IDs from FASTA files
+    """
+    with tempfile.TemporaryDirectory() as temp_dir:
+        db_prefix = os.path.join(temp_dir, "blast_db")
+        blast_output = os.path.join(temp_dir, "blast_results.txt")
+        
+        # Make BLAST database
+        subprocess.run(["makeblastdb", "-in", mgc_fasta, "-dbtype", "prot", "-out", db_prefix], 
+                       capture_output=True, check=True)
+        
+        # Run BLAST
+        subprocess.run([
+            "blastp", "-query", candidate_fasta, "-db", db_prefix,
+            "-outfmt", "6 qseqid sseqid pident length evalue bitscore",
+            "-evalue", str(EVALUE_THRESHOLD), "-num_threads", str(NUM_THREADS), 
+            "-out", blast_output
+        ], capture_output=True, check=True)
+        
+        # Build bipartite graph
+        graph = nx.Graph()
+        
+        # Add candidate nodes
+        for record in SeqIO.parse(candidate_fasta, "fasta"):
+            graph.add_node(record.id, bipartite=0)
+            
+        # Add MGC nodes  
+        for record in SeqIO.parse(mgc_fasta, "fasta"):
+            graph.add_node(record.id, bipartite=1)
+        
+        # Add edges from BLAST results
+        with open(blast_output) as f:
+            for line in f:
+                parts = line.strip().split('\t')
+                if len(parts) >= 6:
+                    qid, sid, pident, length, evalue, bitscore = parts[:6]
+                    pident = float(pident)
+                    evalue = float(evalue)
+                    bitscore = float(bitscore)
+                    
+                    if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
+                        graph.add_edge(qid, sid, weight=bitscore)
+        
+        return graph
+
+def check_identity_fixed(mgc_directory, candidate_directory, output_file):
+    """
+    Fixed version of check_identity that properly builds bipartite graphs
+    """
+    unmatched_candidates = []
+    with open(output_file, 'w') as out_file:
+        for fasta_filename in os.listdir(candidate_directory):
+            if not (fasta_filename.endswith(".fasta") or fasta_filename.endswith(".fa")):
+                continue
+            if "merged_mgc_candidartes.fasta" in fasta_filename:
+                continue
+
+            fasta_path = os.path.join(candidate_directory, fasta_filename)
+            all_match_found = False
+
+            # Count sequences in candidate file
+            candidate_count = sum(1 for _ in SeqIO.parse(fasta_path, "fasta"))
+
+            for csv_filename in os.listdir(mgc_directory):
+                if not csv_filename.endswith(".csv"):
+                    continue
+                
+                csv_path = os.path.join(mgc_directory, csv_filename)
+                
+                # Convert CSV to temporary FASTA
+                with tempfile.TemporaryDirectory() as temp_dir:
+                    mgc_fasta = os.path.join(temp_dir, "mgc_temp.fasta")
+                    csv_to_fasta(csv_path, mgc_fasta)
+                    
+                    # Build bipartite graph using actual sequence IDs
+                    graph = build_bipartite_graph_from_files(fasta_path, mgc_fasta)
+                    
+                    # Find maximum matching
+                    matching = max_weight_matching(graph, maxcardinality=True)
+                    
+                    # Count matched candidate sequences
+                    matched_candidates = {n for edge in matching for n in edge 
+                                        if graph.nodes[n].get('bipartite') == 0}
+                    
+                    print(f"🔍 {fasta_filename} vs {csv_filename}: {len(matched_candidates)}/{candidate_count} candidates matched")
+                    
+                    if len(matched_candidates) == candidate_count and candidate_count > 0:
+                        print(f"✅ All sequences in {fasta_path} matched to {csv_path}.")
+                        out_file.write(f"The candidate {fasta_path} is matched to {csv_path} cluster.\n")
+                        out_file.flush()
+                        all_match_found = True
+                        break
+
+            if not all_match_found:
+                print(f"❌ No complete matches found for {fasta_path} in any MGC CSV file.")
+                out_file.write(f"Not all sequences in {fasta_path} have matches in any MGC CSV file.\n")
+                out_file.flush()
+                unmatched_candidates.append(fasta_path)
+                
+    return unmatched_candidates
 
 def postprocess(blast_output_dir, merged_list, temp_dir):
     print("\n🧩 Running postprocessing...")
@@ -212,11 +475,13 @@ def postprocess(blast_output_dir, merged_list, temp_dir):
     summary_path = os.path.join(blast_output_dir, "blast_summary.csv")
     df.to_csv(summary_path, index=False)
     print(f"✅ Saved summary to {summary_path}")
+    
+    # Use the fixed clustering function
     group_and_filter_redundant_files(results, fasta_map, blast_output_dir)
 
 def blast_all_vs_all_slurm(merged_list, output_root):
     slurm_script = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/blast_with_params.sh"
-    blast_output_dir = os.path.join(output_root, "blast_all_vs_all")
+    blast_output_dir = os.path.join(output_root, "blast_all_vs_all_fixed")
     results_dir = os.path.join(blast_output_dir, "results_fixed")
     blast_db_dir = os.path.join(blast_output_dir, "blast_dbs")
     temp_dir = os.path.join(blast_output_dir, "temp_fastas")
@@ -255,6 +520,7 @@ def blast_all_vs_all_slurm(merged_list, output_root):
                 break
             print(f"⏳ Waiting: {running_jobs} jobs running for 'alongonda'. Sleeping 30s...")
             time.sleep(30)
+            
         sbatch_cmd = [
             "sbatch",
             "--job-name", job_name,
@@ -272,17 +538,29 @@ def blast_all_vs_all_slurm(merged_list, output_root):
             print(f"✅ Submitted SLURM job for {q_name}: {result.stdout.strip()}")
         else:
             print(f"❌ Failed to submit job for {q_name}: {result.stderr.strip()}")
+         
+def wait_till_blast_finish():
+    while True:
+        # Fixed command - need to use shell=True for pipe operations
+        squeue_cmd = "squeue -u alongonda | grep blast_"
+        squeue_result = subprocess.run(squeue_cmd, shell=True, capture_output=True, text=True)
+        running_jobs = len(squeue_result.stdout.strip().splitlines()) if squeue_result.stdout.strip() else 0
+        if running_jobs == 0:
+            break
+        print(f"⏳ Waiting: {running_jobs} blast jobs still running. Sleeping 30s...")
+        time.sleep(30)
 
 def main():
-    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/test/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
+    candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
     mgc_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
     merged_list_file = os.path.join(candidate_dir, "merged_list.txt")
-    blast_output_dir = os.path.join(candidate_dir, "blast_all_vs_all")
+    blast_output_dir = os.path.join(candidate_dir, "blast_all_vs_all_fixed")
     temp_dir = os.path.join(blast_output_dir, "temp_fastas")
 
     if not os.path.exists(merged_list_file):
         output_file = os.path.join(candidate_dir, "comparison_results.txt")
-        unmatched_candidates = check_identity(mgc_dir, candidate_dir, output_file)
+        # Use the fixed check_identity function
+        unmatched_candidates = check_identity_fixed(mgc_dir, candidate_dir, output_file)
 
         mgc_files = [
             os.path.join(mgc_dir, f) for f in os.listdir(mgc_dir)
@@ -298,6 +576,7 @@ def main():
             merged_list = [line.strip() for line in f]
 
     blast_all_vs_all_slurm(merged_list, candidate_dir)
+    wait_till_blast_finish()
     postprocess(blast_output_dir, merged_list, temp_dir)
 
 if __name__ == "__main__":

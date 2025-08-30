@@ -91,12 +91,14 @@ def compare_csvs_in_each_dir(root_dir, output_file, base_genes):
                 best_gene_strands
                 
             ])
-
-    # Save results to a CSV file
-    with open(output_file, mode="w", newline="", encoding="utf-8") as f:
-        writer = csv.writer(f)
-        writer.writerow(["Directory", "Largest Chromosome File", "Largest Chromosome Lines", "Cross Chromosome Lines", "Difference", "MGC Genes Order", "MGC Genes Strands"])
-        writer.writerows(results)
+    if os.path.exists(output_file):
+        print(f"Output file {output_file} already exists. Returning results.")
+    else:
+        # Save results to a CSV file
+        with open(output_file, mode="w", newline="", encoding="utf-8") as f:
+            writer = csv.writer(f)
+            writer.writerow(["Directory", "Largest Chromosome File", "Largest Chromosome Lines", "Cross Chromosome Lines", "Difference", "MGC Genes Order", "MGC Genes Strands"])
+            writer.writerows(results)
 
     print(f"Results saved to {output_file}")
     
@@ -156,8 +158,10 @@ def plot_results(results, output_dir, chunk_size=50):
 
         # Save plot in the new directory
         plot_filename = os.path.join(sub_dir, f"comparison_plot_part_{i+1}.png")
-        plt.savefig(plot_filename)
-        plt.close()  # Close the figure to save memory
+        if not os.path.exists(plot_filename):
+            print(f"Saving plot: {plot_filename}")
+            plt.savefig(plot_filename)
+            plt.close()  # Close the figure to save memory
 
     print(f"Plots saved in: {sub_dir}")
 
@@ -172,7 +176,8 @@ if __name__ == "__main__":
     best_hits_by_organism = os.path.join(example_mgc,"blast_results_chromosome_separated/best_hits_by_organism")  # Replace with the actual root directory
     output_filename = "comparison_results.csv"  # Output file name
     output_file = os.path.join(example_mgc, output_filename)
-
+    
+    
     results = compare_csvs_in_each_dir(best_hits_by_organism, output_file, base_genes)
     
     

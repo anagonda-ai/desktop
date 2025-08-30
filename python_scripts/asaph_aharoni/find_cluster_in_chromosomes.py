@@ -95,6 +95,9 @@ def process_organism(organism, file_paths, output_dir, all_distances):
         
         chrom_df = pd.DataFrame(rows)
         output_file = os.path.join(organism_output_dir, f"chromosome_{chrom}.csv")
+        if os.path.exists(output_file):
+            print(f"⚠️ Skipped existing file: {output_file}")
+            continue
         chrom_df.to_csv(output_file, index=False)
         print(f"Saved {output_file}")
         
@@ -144,6 +147,9 @@ def process_csv_files(root_dir):
         }
         stats_df = pd.DataFrame([stats])
         stats_output_file = os.path.join(root_dir, "general_summary_statistics.csv")
+        if os.path.exists(stats_output_file):
+            print(f"⚠️ Skipped existing summary statistics file: {stats_output_file}")
+            return
         stats_df.to_csv(stats_output_file, index=False)
         print(f"Saved general summary statistics: {stats_output_file}")
 
@@ -302,6 +308,9 @@ def compute_tightest_clusters_from_raw_blast(directory, output_dir, max_workers=
     for org, info in best_by_organism.items():
         org_dir = os.path.join(output_dir, org)
         best_file = os.path.join(org_dir, f"tightest_cluster_best_{org}.csv")
+        if os.path.exists(best_file):
+            print(f"⚠️ Skipped existing best tightest cluster file: {best_file}")
+            continue
         df = pd.read_csv(info['file'])
         df.to_csv(best_file, index=False)
         print(f"[Main] Saved best tightest cluster for organism {org}: {best_file}")
