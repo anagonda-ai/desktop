@@ -14,8 +14,8 @@ ESTIMATED SPEEDUP: 50-100x faster (weeks -> hours)
 ALL ORIGINAL FEATURES PRESERVED AND OPTIMIZED
 """
 
+import subprocess
 import os
-import argparse
 import pandas as pd
 from Bio import SeqIO
 from pathlib import Path
@@ -24,13 +24,11 @@ from functools import lru_cache
 from collections import defaultdict, Counter
 import concurrent.futures
 from threading import Lock
-import multiprocessing as mp
-from typing import Dict, List, Tuple, Optional
+from Bio import SeqIO
+from Bio.Seq import Seq
+from Bio.SeqRecord import SeqRecord
 import numpy as np
 import re
-from itertools import product
-import pickle
-import json
 from datetime import datetime
 import gc
 
@@ -357,26 +355,46 @@ class OptimizedBatchProcessor:
                 if cluster_df.empty:
                     return None
                 
-                # Try to match with annotation files
-                for organism, ann_info_list in self.organism_to_files.items():
-                    for ann_info in ann_info_list:
-                        ann_file = ann_info['file']
-                        ann_df = pd.read_csv(ann_file)
-                        if 'id' not in ann_df.columns:
-                            continue
+                cluster_file_str = str(cluster_file)
+                if "MGC_CANDIDATE_" in cluster_file_str or "RANDOM_MGC_" in cluster_file_str:
+                    # Try to match with annotation files
+                    for organism, ann_info_list in self.organism_to_files.items():
+                        for ann_info in ann_info_list:
+                            ann_file = ann_info['file']
+                            ann_df = pd.read_csv(ann_file)
+                            if 'id' not in ann_df.columns:
+                                continue
+                                
+                            # Quick intersection check
+                            gene_ids = set(cluster_df["gene_id"].astype(str).str.strip())
+                            ann_ids = set(ann_df["id"].astype(str).str.strip())
+                            overlap = len(gene_ids.intersection(ann_ids))
                             
-                        # Quick intersection check
-                        gene_ids = set(cluster_df["gene_id"].astype(str).str.strip())
-                        ann_ids = set(ann_df["id"].astype(str).str.strip())
-                        overlap = len(gene_ids.intersection(ann_ids))
-                        
-                        if overlap >= 2:  # Minimum overlap threshold
-                            return {
-                                'cluster_file': cluster_file,
-                                'organism': organism,
-                                'annotation_info': ann_info,
-                                'overlap': overlap
-                            }
+                            if overlap >= 2:  # Minimum overlap threshold
+                                return {
+                                    'cluster_file': cluster_file,
+                                    'organism': organism,
+                                    'annotation_info': ann_info,
+                                    'overlap': overlap
+                                }
+                elif "BGC000" in cluster_file_str:
+                    basename = os.path.basename(cluster_file)
+                    mibig_organisms = pd.read_csv("/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/gbk_files/organisms.csv")
+                    match = mibig_organisms[mibig_organisms['MGC'] == basename.replace(".csv","")]
+                    organism = match["Organism"].iloc[0]
+                    annotation_info = ""
+                    for organism_dict, ann_info_list in self.organism_to_files.items():
+                        for ann_info in ann_info_list:
+                            if organism_dict == organism.lower():
+                                # Found matching organism, use its annotation info
+                                annotation_info = ann_info
+                                break
+                    return {
+                        'cluster_file': cluster_file,
+                        'organism': organism,
+                        'annotation_info': annotation_info,
+                        'overlap': 0
+                    }
                 return None
             except Exception as e:
                 logger.debug(f"Error processing cluster {cluster_file}: {e}")
@@ -706,6 +724,24 @@ class OptimizedPromoterAnalyzer:
         self.annotation_cache = {}
         self._cache_lock = Lock()
         
+    def _parse_ensembl_chromosome_id(self, header_id):
+        """Parse chromosome ID from Ensembl headers ONLY"""
+        # Split on space to get the first part
+        chrom_part = header_id.split()[0]
+        
+        # If it's purely numeric or standard chromosome names, return as-is
+        if chrom_part.isdigit() or chrom_part in ['X', 'Y', 'MT', 'chloroplast', 'mitochondrion']:
+            return chrom_part
+        
+        # Handle prefixed chromosome names (ca1 -> 1, chr1 -> 1, etc.)
+        match = re.match(r'([a-zA-Z]+)(\d+|[IVXLCDM]+|[XYZ]|MT)$', chrom_part)
+        if match:
+            prefix, suffix = match.groups()
+            return suffix
+        
+        # If no clear pattern, return the original
+        return chrom_part
+        
     def find_fasta_file(self, dataset_id, organism_name):
         """Optimized fasta file finding with caching"""
         cache_key = f"{dataset_id}_{organism_name}"
@@ -723,12 +759,11 @@ class OptimizedPromoterAnalyzer:
                 if file_path.is_file() and file_path.suffix.lower() in ['.fa', '.fasta', '.fna']:
                     key_no_suffix = file_path.name.rsplit('.', 1)[0]
                     # Try to get organism by partial match (key_no_suffix in mapping keys)
+                    organism_file = ""
                     for fname, org in self.filename_to_organism.items():
                         if key_no_suffix in fname:
                             organism_file = org.lower()
                             break
-                    else:
-                        organism_file = self.filename_to_organism.get(file_path.name, "").lower()
                     if organism_file == organism_key:
                         return str(file_path)
         
@@ -750,7 +785,12 @@ class OptimizedPromoterAnalyzer:
                 for record in SeqIO.parse(handle, "fasta"):
                     # Only keep substantial chromosomes/contigs
                     if len(str(record.seq)) > 10000:  # 10kb minimum
-                        genome[record.id] = record.seq
+                        is_ensembl = 'ensembl' in fasta_file.lower()
+                        if is_ensembl:
+                            chrom_id = self._parse_ensembl_chromosome_id(record.id)
+                        else:
+                            chrom_id = record.id  # Keep original ID for non-Ensembl
+                        genome[chrom_id] = record.seq
                         total_size += len(str(record.seq))
             
             # Cache management
@@ -773,7 +813,106 @@ class OptimizedPromoterAnalyzer:
         
         return genome
     
-    def extract_promoters_batch(self, organism_clusters, annotation_info, genome, upstream=1000):
+    def get_hit(self, gene_df, current_id):
+        if isinstance(gene_df, pd.DataFrame):
+            hit_row = gene_df[gene_df["sequence"]==current_id["sequence"].iloc[0]]
+            chrom = str(hit_row["chromosome"].iloc[0])
+            strand = str(hit_row["strand"].iloc[0])
+            start = int(hit_row["start"].iloc[0])
+            end = int(hit_row["end"].iloc[0])
+        else:
+            hit_row = gene_df
+            chrom = str(hit_row["chromosome"])
+            strand = hit_row["strand"]
+            start = int(hit_row["start"])
+            end = int(hit_row["end"])
+        return chrom, strand, start, end
+    
+    def align_sequences_with_blast(self, gene_seq, ann_df, temp_dir="/tmp"):
+        """
+        Align gene sequences against annotation sequences using BLAST
+        Returns DataFrame with best matches and scores
+        """
+        
+        # Create temporary files
+        gene_fasta = os.path.join(temp_dir, "gene_sequences.fasta")
+        ann_fasta = os.path.join(temp_dir, "ann_sequences.fasta")
+        blast_db = os.path.join(temp_dir, "ann_db")
+        blast_results = os.path.join(temp_dir, "blast_results.txt")
+        
+        try:
+            # Write gene sequences to FASTA
+            gene_records = []
+            for i, seq in enumerate(gene_seq):
+                record = SeqRecord(Seq(str(seq)), id=f"gene_{i}", description="")
+                gene_records.append(record)
+            
+            with open(gene_fasta, "w") as f:
+                SeqIO.write(gene_records, f, "fasta")
+            
+            # Write annotation sequences to FASTA
+            ann_records = []
+            for i, seq in enumerate(ann_df["sequence"]):
+                record = SeqRecord(Seq(str(seq)), id=f"ann_{i}", description="")
+                ann_records.append(record)
+            
+            with open(ann_fasta, "w") as f:
+                SeqIO.write(ann_records, f, "fasta")
+            
+            # Create BLAST database
+            makedb_cmd = ["makeblastdb", "-in", ann_fasta, "-dbtype", "prot", "-out", blast_db]
+            subprocess.run(makedb_cmd, check=True, capture_output=True)
+            
+            # Run BLAST alignment
+            blast_cmd = [
+                "blastp",
+                "-query", gene_fasta,
+                "-db", blast_db,
+                "-outfmt", "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore",
+                "-out", blast_results,
+                "-max_target_seqs", "1"  # Only best match per query
+            ]
+            subprocess.run(blast_cmd, check=True, capture_output=True)
+            
+            # Parse BLAST results
+            blast_df = pd.read_csv(blast_results, sep="\t", names=[
+                "query_id", "subject_id", "percent_identity", "alignment_length",
+                "mismatches", "gap_opens", "q_start", "q_end", "s_start", "s_end",
+                "evalue", "bit_score"
+            ])
+            
+            # Map results back to original sequences
+            results = []
+            for _, row in blast_df.iterrows():
+                gene_idx = int(row["query_id"].split("_")[1])
+                ann_idx = int(row["subject_id"].split("_")[1])
+                
+                results.append({
+                    "gene_sequence": gene_seq.iloc[gene_idx],
+                    "matching_ann_sequence": ann_df["sequence"].iloc[ann_idx],
+                    "percent_identity": row["percent_identity"],
+                    "alignment_length": row["alignment_length"],
+                    "bit_score": row["bit_score"],
+                    "evalue": row["evalue"],
+                    "gene_index": gene_idx,
+                    "ann_index": ann_idx
+                })
+            
+            return pd.DataFrame(results)
+        
+        finally:
+            # Clean up temporary files
+            for temp_file in [gene_fasta, ann_fasta, blast_results]:
+                if os.path.exists(temp_file):
+                    os.remove(temp_file)
+            # Clean up BLAST DB files
+            for ext in [".nhr", ".nin", ".nsq"]:
+                db_file = blast_db + ext
+                if os.path.exists(db_file):
+                    os.remove(db_file)
+
+
+    def extract_promoters_batch(self, organism_clusters, annotation_info, genome, fasta_file, upstream=1000):
         """Extract promoters for multiple clusters from same organism at once"""
         all_promoters = {}
         
@@ -795,27 +934,62 @@ class OptimizedPromoterAnalyzer:
             
             try:
                 cluster_df = pd.read_csv(cluster_file)
-                gene_ids = cluster_df["gene_id"].astype(str).str.strip()
-                valid_genes = gene_ids[gene_ids.isin(ann_df.index)].tolist()
+                if "BGC00" in str(cluster_file):
+                    gene_seq = cluster_df["sequence"].astype(str).str.strip()
+                    alignment_results = self.align_sequences_with_blast(gene_seq, ann_df)
+                    valid_genes = ann_df[ann_df["sequence"].isin(alignment_results["matching_ann_sequence"])].index.to_list()
+                else:
+                    gene_ids = cluster_df["gene_id"].astype(str).str.strip()
+                    valid_genes = gene_ids[gene_ids.isin(ann_df.index)].tolist()
                 
                 cluster_promoters = {}
                 missing_chroms = set()
                 
                 for gene_id in valid_genes:
                     try:
-                        hit_row = ann_df.loc[gene_id]
-                        chrom = str(hit_row["chromosome"])
-                        strand = hit_row["strand"]
-                        start = int(hit_row["start"])
-                        end = int(hit_row["end"])
+                        # if "BGC00" in str(cluster_file):
+                        #     chrom, strand, start, end = gene_id["chrom"], gene_id["strand"], gene_id["start"], gene_id["end"]
+                        # else:
+                        current_id = cluster_df[cluster_df["gene_id"]==gene_id]
+                        chrom, strand, start, end = self.get_hit(ann_df.loc[gene_id], current_id)
 
-                        if chrom not in genome:
+                        # Try multiple chromosome name variations (Ensembl-specific handling)  
+                        if 'ensembl' in fasta_file.lower():
+                            # For Ensembl genomes, try parsed and original names
+                            chrom_variants = [
+                                chrom,  # Original annotation chromosome
+                                str(chrom),  # Ensure string
+                                self._parse_ensembl_chromosome_id(chrom)  # Parse Ensembl format
+                            ]
+                        else:
+                            # For non-Ensembl genomes, try standard variations
+                            chrom_variants = [
+                                chrom,  # Original
+                                str(chrom),  # Ensure string  
+                                chrom.lstrip('0'),  # Remove leading zeros
+                                f"chr{chrom}",  # Add chr prefix
+                                f"chromosome{chrom}"  # Add chromosome prefix
+                            ]
+
+                        # Remove duplicates while preserving order
+                        chrom_variants = list(dict.fromkeys(chrom_variants))
+
+                        found_seq = None
+                        used_chrom = None
+
+                        for chrom_variant in chrom_variants:
+                            if chrom_variant in genome:
+                                found_seq = genome[chrom_variant]
+                                used_chrom = chrom_variant
+                                break
+
+                        if found_seq is None:
                             missing_chroms.add(chrom)
                             continue
 
-                        seq = genome[chrom]
+                        seq = genome[chrom_variant]
                         
-                        if strand == "+":
+                        if strand == "+" or strand == "1":
                             promoter_start = max(0, start - upstream - 1)
                             promoter_end = start - 1
                             promoter_seq = seq[promoter_start:promoter_end]
@@ -832,6 +1006,8 @@ class OptimizedPromoterAnalyzer:
                 
                 all_promoters[cluster_name] = cluster_promoters
                 logger.info(f"Extracted {len(cluster_promoters)} promoters for {cluster_name}")
+                if missing_chroms:
+                    logger.warning(f"Missing chromosomes in genome for cluster {cluster_name}: {', '.join(missing_chroms)}")
                 
             except Exception as e:
                 logger.error(f"Error processing cluster {cluster_name}: {e}")
@@ -859,8 +1035,8 @@ class OptimizedPromoterAnalyzer:
             return False
         
         # Extract promoters for all clusters at once
-        all_promoters = self.extract_promoters_batch(organism_clusters, annotation_info, genome)
-        
+        all_promoters = self.extract_promoters_batch(organism_clusters, annotation_info, genome, fasta_file)
+
         if not all_promoters:
             logger.warning(f"No promoters extracted for {organism}")
             return False
@@ -942,14 +1118,15 @@ def main():
     """Optimized main function with complete functionality enabled"""
     
     # Configuration
-    cluster_csvs_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_csv_files")
+    cluster_csvs_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_csv_files")
+
     
-    output_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_promotor_analysis")
+    output_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_promotor_analysis")
     mapping_file = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/dataset_organism_mapping.csv"
-    annotation_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/kegg_verified_scanner_min_genes_3_overlap_merge/annotated_genomes_metabolic"
+    annotation_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/annotated_genomes_metabolic"
     fasta_dirs = [
         "/groups/itay_mayrose/alongonda/datasets/full_genomes/phytozome/phytozome_genomes/Phytozome",
-        "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/ensembl_genomes/dna",
+        "/groups/itay_mayrose/alongonda/datasets/full_genomes/ensembl/ensembl_genomes_updated",
         "/groups/itay_mayrose/alongonda/datasets/full_genomes/plaza/plaza_genomes"
     ]
     
