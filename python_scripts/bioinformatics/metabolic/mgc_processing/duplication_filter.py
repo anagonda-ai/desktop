@@ -1,13 +1,10 @@
 import os
 import csv
-from collections import defaultdict
 from Bio.Seq import Seq
 from Bio.SeqRecord import SeqRecord
 from Bio import SeqIO
-import tempfile
 import networkx as nx
 import subprocess
-from networkx.algorithms.matching import max_weight_matching
 import pandas as pd
 import time
 
@@ -15,23 +12,6 @@ import time
 EVALUE_THRESHOLD = 0.001
 IDENTITY_THRESHOLD = 70.0
 COVERAGE_THRESHOLD = 70.0
-NUM_THREADS = 26
-
-def read_sequences_from_csv(file_path):
-    sequences = set()
-    with open(file_path, mode='r') as file:
-        csv_reader = csv.DictReader(file)
-        for row in csv_reader:
-            sequence = row['Translation'].replace('*', '')
-            sequences.add(sequence)
-    return sequences
-
-def read_sequences_from_fasta(file_path):
-    sequences = set()
-    for record in SeqIO.parse(file_path, "fasta"):
-        sequence = str(record.seq).replace('*', '')
-        sequences.add(sequence)
-    return sequences
 
 def csv_to_fasta(csv_file, output_fasta):
     records = []
@@ -56,212 +36,298 @@ def prepare_fasta(file_path, temp_dir):
     else:
         return None
 
-def build_bipartite_graph_fixed(candidate_fasta, mgc_fasta, temp_dir):
+def parse_blast_results(blast_file_path):
     """
-    Fixed version that properly handles sequence IDs and creates a bipartite graph
+    Parse BLAST results and filter by identity threshold.
+    Returns list of valid hits for graph construction.
     """
-    db_prefix = os.path.join(temp_dir, "blast_db")
-    blast_output = os.path.join(temp_dir, "blast_results.txt")
+    hits = []
     
-    # Make BLAST database from MGC sequences
-    subprocess.run(["makeblastdb", "-in", mgc_fasta, "-dbtype", "prot", "-out", db_prefix], 
-                   capture_output=True, check=True)
-    
-    # Run BLAST
-    subprocess.run([
-        "blastp", "-query", candidate_fasta, "-db", db_prefix,
-        "-outfmt", "6 qseqid sseqid pident length evalue bitscore",
-        "-evalue", str(EVALUE_THRESHOLD), "-num_threads", str(NUM_THREADS), 
-        "-out", blast_output
-    ], capture_output=True, check=True)
-    
-    # Build bipartite graph from BLAST results
-    graph = nx.Graph()
-    
-    # Add all nodes first
-    for record in SeqIO.parse(candidate_fasta, "fasta"):
-        graph.add_node(f"candidate_{record.id}", bipartite=0)
-    for record in SeqIO.parse(mgc_fasta, "fasta"):
-        graph.add_node(f"mgc_{record.id}", bipartite=1)
-    
-    # Add edges based on BLAST hits
-    with open(blast_output) as f:
-        for line in f:
-            parts = line.strip().split('\t')
-            if len(parts) >= 6:
-                qid, sid, pident, length, evalue, bitscore = parts[:6]
-                pident = float(pident)
-                evalue = float(evalue)
-                bitscore = float(bitscore)
-                
-                if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
-                    graph.add_edge(f"candidate_{qid}", f"mgc_{sid}", weight=bitscore)
-    
-    return graph
-
-def check_identity(mgc_directory, candidate_directory, output_file):
-    unmatched_candidates = []
-    with open(output_file, 'w') as out_file:
-        for fasta_filename in os.listdir(candidate_directory):
-            if not (fasta_filename.endswith(".fasta") or fasta_filename.endswith(".fa")):
-                continue
-            if "merged_mgc_candidartes.fasta" in fasta_filename:
-                continue
-
-            fasta_path = os.path.join(candidate_directory, fasta_filename)
-            all_match_found = False
-
-            for csv_filename in os.listdir(mgc_directory):
-                if not csv_filename.endswith(".csv"):
+    try:
+        with open(blast_file_path, 'r') as f:
+            for line in f:
+                parts = line.strip().split('\t')
+                if len(parts) < 6:
                     continue
                 
-                csv_path = os.path.join(mgc_directory, csv_filename)
+                qseqid, sseqid, pident, length, evalue, bitscore = parts[:6]
                 
-                # Convert CSV to temporary FASTA
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    mgc_fasta = os.path.join(temp_dir, "mgc_temp.fasta")
-                    csv_to_fasta(csv_path, mgc_fasta)
-                    
-                    # Build bipartite graph
-                    graph = build_bipartite_graph_fixed(fasta_path, mgc_fasta, temp_dir)
-                    
-                    # Find maximum matching
-                    matching = max_weight_matching(graph, maxcardinality=True)
-                    
-                    # Count candidate nodes to check if all matched
-                    candidate_nodes = {n for n in graph.nodes() if n.startswith("candidate_")}
-                    matched_candidates = {n for edge in matching for n in edge if n.startswith("candidate_")}
-                    
-                    if len(matched_candidates) == len(candidate_nodes) and len(candidate_nodes) > 0:
-                        print(f"✅ All sequences in {fasta_path} matched to {csv_path}.")
-                        out_file.write(f"The candidate {fasta_path} is matched to {csv_path} cluster.\n")
-                        out_file.flush()
-                        all_match_found = True
-                        break
-
-            if not all_match_found:
-                print(f"❌ No complete matches found for {fasta_path} in any MGC CSV file.")
-                out_file.write(f"Not all sequences in {fasta_path} have matches in any MGC CSV file.\n")
-                out_file.flush()
-                unmatched_candidates.append(fasta_path)
+                try:
+                    pident = float(pident)
+                    evalue = float(evalue)
+                    length = int(length)
+                    bitscore = float(bitscore)
+                except ValueError:
+                    continue
                 
-    return unmatched_candidates
+                # Filter by identity threshold
+                if pident >= IDENTITY_THRESHOLD:
+                    hits.append({
+                        "query": qseqid,
+                        "subject": sseqid,
+                        "identity": pident,
+                        "length": length,
+                        "evalue": evalue,
+                        "bitscore": bitscore
+                    })
+    
+    except FileNotFoundError:
+        print(f"⚠️  BLAST file not found: {blast_file_path}")
+        return []
+    
+    return hits
 
-def parse_and_filter_blast(blast_path):
-    results = []
-    with open(blast_path) as f:
-        for line in f:
-            parts = line.strip().split('\t')
-            if len(parts) < 6:
-                continue
-            qseqid, sseqid, pident, length, evalue, bitscore = parts[:6]
-            pident = float(pident)
-            evalue = float(evalue)
-            length = int(length)
-            bitscore = float(bitscore)
-            if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
-                results.append({
-                    "query": qseqid,
-                    "subject": sseqid,
-                    "identity": pident,
-                    "length": length,
-                    "evalue": evalue,
-                    "bitscore": bitscore,
-                    "file": os.path.basename(blast_path)
-                })
-    return results
-
-def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
+def solve_maximum_weight_orthogonal_partitioning(query_genes, blast_hits):
     """
-    Efficient directed graph clustering implementation.
-    Time complexity: O(E + V log V) where E = edges, V = vertices
+    Solve Maximum Weight Orthogonal Partitioning problem.
+    
+    Input:
+    - query_genes: set of genes that must ALL be matched
+    - blast_hits: list of valid BLAST hits (already filtered by identity)
+    
+    Output:
+    - (total_score, matching_dict) if all query genes can be matched orthogonally
+    - (None, None) if no valid complete orthogonal matching exists
     """
+    from collections import defaultdict
     
-    # Pre-compute all file sizes once
-    file_keys = {os.path.basename(v): k for k, v in fasta_map.items()}
-    file_sizes = {}
+    # Build bipartite graph: query gene -> list of potential subject matches
+    gene_to_subjects = defaultdict(list)
     
-    print("📏 Computing file sizes...")
-    for file_path, fasta_path in fasta_map.items():
-        try:
-            # Fast line counting for FASTA files
-            with open(fasta_path, 'r') as f:
-                file_sizes[file_keys[os.path.basename(fasta_path)]] = sum(1 for line in f if line.startswith('>'))
-        except:
-            file_sizes[file_keys[os.path.basename(fasta_path)]] = 0
+    for hit in blast_hits:
+        query_gene = hit["query"]
+        if query_gene in query_genes:
+            gene_to_subjects[query_gene].append({
+                "subject": hit["subject"],
+                "score": hit["bitscore"],
+                "identity": hit["identity"],
+                "evalue": hit["evalue"]
+            })
     
-    # Single pass: build best scores lookup and directed graph simultaneously
-    file_pair_best = defaultdict(lambda: {"score": -float('inf'), "data": None})
-    file_graph = nx.DiGraph()
+    # Check if ALL query genes have at least one potential match
+    for query_gene in query_genes:
+        if query_gene not in gene_to_subjects or len(gene_to_subjects[query_gene]) == 0:
+            print(f"   ❌ Query gene '{query_gene}' has no valid matches (≥{IDENTITY_THRESHOLD}% identity)")
+            return None, None
     
-    # Add all nodes upfront
-    file_graph.add_nodes_from(file_keys.values())
+    # Greedy algorithm for maximum weight bipartite matching
+    # Sort query genes by number of options (most constrained first)
+    sorted_query_genes = sorted(query_genes, key=lambda g: len(gene_to_subjects[g]))
     
-    print("🔍 Processing BLAST results...")
-    for row in results:
-        blast_file = row["file"]
-        # Fix parsing: handle different filename formats
-        if "_vs_" in blast_file:
-            q_base, _, t_base = blast_file.partition("_vs_")
-            t_base = t_base.replace(".txt", "")
-        else:
-            # Fallback parsing for different formats
-            parts = blast_file.replace(".txt", "").split("_")
-            if len(parts) >= 2:
-                q_base = "_".join(parts[:-1])
-                t_base = parts[-1]
-            else:
-                continue
+    used_subjects = set()
+    final_matching = {}
+    total_score = 0.0
+    
+    print(f"   🧮 Solving orthogonal matching for {len(query_genes)} query genes...")
+    
+    for query_gene in sorted_query_genes:
+        # Find the best available subject (highest score among unused subjects)
+        best_match = None
+        best_score = -1.0
         
-        # Try different extensions
-        q_file = None
-        t_file = None
-        for ext in [".fasta", ".fa"]:
-            q_candidate = file_keys.get(q_base + ext)
-            t_candidate = file_keys.get(t_base + ext)
-            if q_candidate:
-                q_file = q_candidate
-            if t_candidate:
-                t_file = t_candidate
-        
-        if q_file and t_file and q_file != t_file:
-            # Keep only the best score between each pair
-            pair_key = (q_file, t_file) if q_file < t_file else (t_file, q_file)
+        for potential_match in gene_to_subjects[query_gene]:
+            subject_gene = potential_match["subject"]
+            score = potential_match["score"]
             
-            if row["bitscore"] > file_pair_best[pair_key]["score"]:
-                file_pair_best[pair_key] = {
-                    "score": row["bitscore"],
-                    "data": row
-                }
+            if subject_gene not in used_subjects and score > best_score:
+                best_match = potential_match
+                best_score = score
+        
+        if best_match is None:
+            print(f"   ❌ No available subject for query gene '{query_gene}' (all subjects already used)")
+            return None, None
+        
+        # Assign this orthogonal matching
+        final_matching[query_gene] = best_match
+        used_subjects.add(best_match["subject"])
+        total_score += best_match["score"]
+        
+        print(f"      {query_gene} → {best_match['subject']} (score: {best_match['score']:.1f})")
     
-    # Add directed edges efficiently
-    print("🔗 Building directed graph...")
+    # Verify complete orthogonal matching achieved
+    if len(final_matching) != len(query_genes):
+        print(f"   ❌ Incomplete matching: {len(final_matching)}/{len(query_genes)} genes matched")
+        return None, None
+    
+    print(f"   ✅ Complete orthogonal matching found! Total score: {total_score:.2f}")
+    return total_score, final_matching
+
+def calculate_cluster_homology_score(query_cluster_file, target_cluster_file, fasta_map, all_blast_results):
+    """
+    Calculate homology score between two clusters using Maximum Weight Orthogonal Partitioning.
+    
+    Returns:
+    - (score, matching_details) if clusters are homologous (all query genes matched orthogonally)
+    - (None, None) if not homologous
+    """
+    
+    # Get genes from query cluster
+    query_fasta = fasta_map[query_cluster_file]
+    query_genes = set()
+    
+    try:
+        with open(query_fasta, 'r') as f:
+            for line in f:
+                if line.startswith('>'):
+                    gene_id = line.strip()[1:].split(" | ")[1]
+                    query_genes.add(gene_id)
+    except:
+        return None, None
+    
+    if not query_genes:
+        return None, None
+    
+    # Find corresponding BLAST results file
+    query_base = os.path.splitext(os.path.basename(query_fasta))[0]
+    target_base = os.path.splitext(os.path.basename(fasta_map[target_cluster_file]))[0]
+    blast_filename = f"{query_base}_vs_{target_base}.txt"
+    
+    # Get BLAST hits for this cluster pair
+    cluster_blast_hits = []
+    for result in all_blast_results:
+        if result["file"] == blast_filename:
+            cluster_blast_hits.append(result)
+    
+    if not cluster_blast_hits:
+        print(f"   ⚠️  No BLAST results found for {blast_filename}")
+        return None, None
+    
+    print(f"🔍 Analyzing: {os.path.basename(query_cluster_file)} → {os.path.basename(target_cluster_file)}")
+    print(f"   Query genes: {len(query_genes)}, BLAST hits: {len(cluster_blast_hits)}")
+    
+    # Solve Maximum Weight Orthogonal Partitioning
+    total_score, matching = solve_maximum_weight_orthogonal_partitioning(query_genes, cluster_blast_hits)
+    
+    if total_score is None:
+        print(f"❌ NOT HOMOLOGOUS: {os.path.basename(query_cluster_file)} → {os.path.basename(target_cluster_file)}")
+        return None, None
+    
+    print(f"✅ HOMOLOGOUS: {os.path.basename(query_cluster_file)} → {os.path.basename(target_cluster_file)}")
+    print(f"   Orthogonal score: {total_score:.2f}")
+    
+    return total_score, matching
+
+def build_homology_graph_with_mwop(fasta_map, all_blast_results, blast_output_dir):
+    """
+    Build homology graph using Maximum Weight Orthogonal Partitioning.
+    Edge exists from A→B if ALL genes in A can be matched orthogonally to distinct genes in B.
+    """
+    
+    # Compute cluster sizes (gene counts)
+    cluster_sizes = {}
+    print("📏 Computing cluster sizes...")
+    
+    for cluster_file, fasta_path in fasta_map.items():
+        try:
+            with open(fasta_path, 'r') as f:
+                gene_count = sum(1 for line in f if line.startswith('>'))
+                cluster_sizes[cluster_file] = gene_count
+                print(f"   {os.path.basename(cluster_file)}: {gene_count} genes")
+        except:
+            cluster_sizes[cluster_file] = 0
+    
+    # Build directed homology graph
+    homology_graph = nx.DiGraph()
+    homology_graph.add_nodes_from(fasta_map.keys())
+    
+    print(f"\n🧬 Building homology graph with Maximum Weight Orthogonal Partitioning...")
+    
+    processed_pairs = set()
     edges_added = 0
-    for (file1, file2), best_match in file_pair_best.items():
-        size1 = file_sizes.get(file1, 0)
-        size2 = file_sizes.get(file2, 0)
-        
-        # Direction: smaller -> larger (or lexicographic if equal)
-        if size1 < size2 or (size1 == size2 and file1 < file2):
-            source, target = file1, file2
-        else:
-            source, target = file2, file1
-        
-        file_graph.add_edge(source, target, 
-                           weight=best_match["score"],
-                           identity=best_match["data"]["identity"],
-                           evalue=best_match["data"]["evalue"])
-        edges_added += 1
+    homology_details = []
     
-    print(f"🔗 Added {edges_added} edges to graph")
+    for query_cluster in fasta_map.keys():
+        for target_cluster in fasta_map.keys():
+            if query_cluster == target_cluster:
+                continue
+            
+            # Avoid duplicate work
+            pair_key = (query_cluster, target_cluster)
+            if pair_key in processed_pairs:
+                continue
+            processed_pairs.add(pair_key)
+            
+            # Test homology: query → target
+            score_q_to_t, matching_q_to_t = calculate_cluster_homology_score(
+                query_cluster, target_cluster, fasta_map, all_blast_results
+            )
+            
+            # Test homology: target → query
+            score_t_to_q, matching_t_to_q = calculate_cluster_homology_score(
+                target_cluster, query_cluster, fasta_map, all_blast_results
+            )
+            
+            # Add edges based on homology direction and cluster sizes
+            size_q = cluster_sizes.get(query_cluster, 0)
+            size_t = cluster_sizes.get(target_cluster, 0)
+            
+            # Case 1: Both directions are homologous
+            if score_q_to_t is not None and score_t_to_q is not None:
+                # Add edges from smaller to larger
+                if size_q <= size_t:
+                    homology_graph.add_edge(query_cluster, target_cluster, 
+                                          weight=score_q_to_t, 
+                                          type="bidirectional_homology",
+                                          matching_count=len(matching_q_to_t))
+                    edges_added += 1
+                
+                if size_t <= size_q:
+                    homology_graph.add_edge(target_cluster, query_cluster, 
+                                          weight=score_t_to_q, 
+                                          type="bidirectional_homology",
+                                          matching_count=len(matching_t_to_q))
+                    edges_added += 1
+                
+                print(f"🔄 Bidirectional homology: {os.path.basename(query_cluster)} ↔ {os.path.basename(target_cluster)}")
+                
+                homology_details.append({
+                    "query": os.path.basename(query_cluster),
+                    "target": os.path.basename(target_cluster),
+                    "type": "bidirectional",
+                    "score_q_to_t": score_q_to_t,
+                    "score_t_to_q": score_t_to_q
+                })
+            
+            # Case 2: Only one direction is homologous (smaller → larger)
+            elif score_q_to_t is not None and size_q <= size_t:
+                homology_graph.add_edge(query_cluster, target_cluster, 
+                                      weight=score_q_to_t, 
+                                      type="unidirectional_homology",
+                                      matching_count=len(matching_q_to_t))
+                edges_added += 1
+                print(f"➡️  Unidirectional homology: {os.path.basename(query_cluster)} → {os.path.basename(target_cluster)}")
+                
+                homology_details.append({
+                    "query": os.path.basename(query_cluster),
+                    "target": os.path.basename(target_cluster),
+                    "type": "unidirectional",
+                    "score": score_q_to_t
+                })
+            
+            elif score_t_to_q is not None and size_t <= size_q:
+                homology_graph.add_edge(target_cluster, query_cluster, 
+                                      weight=score_t_to_q, 
+                                      type="unidirectional_homology",
+                                      matching_count=len(matching_t_to_q))
+                edges_added += 1
+                print(f"➡️  Unidirectional homology: {os.path.basename(target_cluster)} → {os.path.basename(query_cluster)}")
+                
+                homology_details.append({
+                    "query": os.path.basename(target_cluster),
+                    "target": os.path.basename(query_cluster),
+                    "type": "unidirectional",
+                    "score": score_t_to_q
+                })
     
-    # Efficient clustering using weakly connected components
-    print("🎯 Finding clusters and centrums...")
+    print(f"\n🔗 Homology graph complete: {edges_added} homology edges found")
+    
+    # Find clusters and identify centrums
+    print("🎯 Identifying centrums in homology clusters...")
+    
     unique_representatives = []
     cluster_info = []
     
-    # Get weakly connected components (treats directed graph as undirected for connectivity)
-    for component in nx.weakly_connected_components(file_graph):
+    for component in nx.weakly_connected_components(homology_graph):
         if len(component) == 1:
             centrum = next(iter(component))
             unique_representatives.append(centrum)
@@ -269,15 +335,15 @@ def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
                 "centrum": centrum,
                 "cluster_size": 1,
                 "members": [centrum],
-                "is_valid_centrum": True
+                "is_valid_centrum": True,
+                "centrum_type": "singleton"
             })
         else:
-            # Fast centrum detection using in-degree counting
-            subgraph = file_graph.subgraph(component)
+            # Find centrum: node that receives edges from ALL other nodes in component
+            subgraph = homology_graph.subgraph(component)
             component_list = list(component)
             expected_in_degree = len(component_list) - 1
             
-            # Find node with in-degree equal to (cluster_size - 1)
             valid_centrum = None
             max_in_degree = -1
             fallback_centrum = None
@@ -288,6 +354,7 @@ def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
                     max_in_degree = in_degree
                     fallback_centrum = node
                 
+                # True centrum: receives edges from ALL other nodes
                 if in_degree == expected_in_degree:
                     valid_centrum = node
                     break
@@ -298,190 +365,123 @@ def group_and_filter_redundant_files(results, fasta_map, blast_output_dir):
                     "centrum": valid_centrum,
                     "cluster_size": len(component_list),
                     "members": component_list,
-                    "is_valid_centrum": True
+                    "is_valid_centrum": True,
+                    "centrum_type": "true_centrum"
                 })
+                print(f"🎯 True centrum: {os.path.basename(valid_centrum)} (receives {expected_in_degree} edges)")
             else:
-                # Use fallback
                 unique_representatives.append(fallback_centrum)
                 cluster_info.append({
                     "centrum": fallback_centrum,
                     "cluster_size": len(component_list),
                     "members": component_list,
                     "is_valid_centrum": False,
+                    "centrum_type": "fallback_centrum",
                     "inbound_edges": max_in_degree
                 })
+                print(f"⚠️  Fallback centrum: {os.path.basename(fallback_centrum)} ({max_in_degree}/{expected_in_degree} edges)")
     
-    # Efficient file writing
-    print("💾 Saving results...")
+    # Save comprehensive results
     dedup_file = os.path.join(blast_output_dir, "deduplicated_file_list.txt")
-    cluster_details_file = os.path.join(blast_output_dir, "cluster_details.txt")
+    cluster_details_file = os.path.join(blast_output_dir, "mwop_cluster_analysis.txt")
+    homology_details_file = os.path.join(blast_output_dir, "homology_relationships.csv")
     
-    # Write files efficiently
     with open(dedup_file, 'w') as f:
         f.write('\n'.join(unique_representatives) + '\n')
     
-    # Generate summary statistics
+    # Save homology details as CSV
+    if homology_details:
+        df_homology = pd.DataFrame(homology_details)
+        df_homology.to_csv(homology_details_file, index=False)
+    
+    # Generate detailed analysis report
     valid_centrums = sum(1 for info in cluster_info if info["is_valid_centrum"])
     total_clusters = len(cluster_info)
     
     with open(cluster_details_file, 'w') as f:
-        # Write header
-        f.write(f"Cluster Analysis Results\n{'=' * 50}\n\n")
-        f.write(f"Total clusters: {total_clusters}\n")
-        f.write(f"Valid centrums: {valid_centrums}\n")
-        f.write(f"Invalid centrums: {total_clusters - valid_centrums}\n\n")
+        f.write(f"Maximum Weight Orthogonal Partitioning (MWOP) Analysis\n{'=' * 70}\n\n")
+        f.write(f"Algorithm Details:\n")
+        f.write(f"- Identity threshold: ≥{IDENTITY_THRESHOLD}%\n")
+        f.write(f"- All query genes must be matched orthogonally\n")
+        f.write(f"- One-to-one matching (no gene reuse)\n")
+        f.write(f"- Maximum weight selection\n")
+        f.write(f"- Directed edges from smaller to larger clusters\n\n")
         
-        # Write cluster details
+        f.write(f"Results Summary:\n")
+        f.write(f"- Total input clusters: {len(fasta_map)}\n")
+        f.write(f"- Homology relationships found: {len(homology_details)}\n")
+        f.write(f"- Homology graph edges: {edges_added}\n")
+        f.write(f"- Final clusters after merging: {total_clusters}\n")
+        f.write(f"- True centrums: {valid_centrums}\n")
+        f.write(f"- Fallback centrums: {total_clusters - valid_centrums}\n")
+        f.write(f"- Representative clusters: {len(unique_representatives)}\n\n")
+        
+        # Detailed cluster information
         for i, info in enumerate(cluster_info, 1):
             f.write(f"Cluster {i}:\n")
-            f.write(f"  Centrum: {info['centrum']}\n")
-            f.write(f"  Size: {info['cluster_size']}\n")
+            f.write(f"  Centrum: {os.path.basename(info['centrum'])}\n")
+            f.write(f"  Type: {info['centrum_type']}\n")
+            f.write(f"  Size: {info['cluster_size']} original clusters\n")
+            f.write(f"  Gene counts: {[cluster_sizes.get(member, 0) for member in info['members']]}\n")
             f.write(f"  Valid centrum: {info['is_valid_centrum']}\n")
             if not info['is_valid_centrum']:
-                f.write(f"  Inbound edges: {info.get('inbound_edges', 'N/A')}\n")
-            f.write(f"  Members: {', '.join(info['members'])}\n\n")
+                f.write(f"  Inbound edges: {info.get('inbound_edges', 'N/A')}/{len(info['members'])-1}\n")
+            f.write(f"  Members: {[os.path.basename(m) for m in info['members']]}\n\n")
     
-    print(f"\n🧬 Directed graph clustering complete:")
-    print(f"   Original files: {len(file_keys)}")
-    print(f"   Clusters found: {total_clusters}")
-    print(f"   Valid centrums: {valid_centrums}")
-    print(f"   Representatives: {len(unique_representatives)}")
-    print(f"📄 Results saved to: {dedup_file}")
-    print(f"📊 Cluster details saved to: {cluster_details_file}")
+    print(f"\n🏁 Maximum Weight Orthogonal Partitioning Complete!")
+    print(f"   📊 Original clusters: {len(fasta_map)}")
+    print(f"   🔗 Homology edges: {edges_added}")
+    print(f"   🎯 Final clusters: {total_clusters}")
+    print(f"   ✅ Representatives: {len(unique_representatives)}")
+    print(f"   📄 Results: {dedup_file}")
+    print(f"   📋 Analysis: {cluster_details_file}")
+    print(f"   📈 Homology data: {homology_details_file}")
     
     return unique_representatives
 
-def build_bipartite_graph_from_files(candidate_fasta, mgc_fasta):
-    """
-    Build bipartite graph using actual sequence IDs from FASTA files
-    """
-    with tempfile.TemporaryDirectory() as temp_dir:
-        db_prefix = os.path.join(temp_dir, "blast_db")
-        blast_output = os.path.join(temp_dir, "blast_results.txt")
-        
-        # Make BLAST database
-        subprocess.run(["makeblastdb", "-in", mgc_fasta, "-dbtype", "prot", "-out", db_prefix], 
-                       capture_output=True, check=True)
-        
-        # Run BLAST
-        subprocess.run([
-            "blastp", "-query", candidate_fasta, "-db", db_prefix,
-            "-outfmt", "6 qseqid sseqid pident length evalue bitscore",
-            "-evalue", str(EVALUE_THRESHOLD), "-num_threads", str(NUM_THREADS), 
-            "-out", blast_output
-        ], capture_output=True, check=True)
-        
-        # Build bipartite graph
-        graph = nx.Graph()
-        
-        # Add candidate nodes
-        for record in SeqIO.parse(candidate_fasta, "fasta"):
-            graph.add_node(record.id, bipartite=0)
-            
-        # Add MGC nodes  
-        for record in SeqIO.parse(mgc_fasta, "fasta"):
-            graph.add_node(record.id, bipartite=1)
-        
-        # Add edges from BLAST results
-        with open(blast_output) as f:
-            for line in f:
-                parts = line.strip().split('\t')
-                if len(parts) >= 6:
-                    qid, sid, pident, length, evalue, bitscore = parts[:6]
-                    pident = float(pident)
-                    evalue = float(evalue)
-                    bitscore = float(bitscore)
-                    
-                    if pident >= IDENTITY_THRESHOLD and evalue <= EVALUE_THRESHOLD:
-                        graph.add_edge(qid, sid, weight=bitscore)
-        
-        return graph
-
-def check_identity_fixed(mgc_directory, candidate_directory, output_file):
-    """
-    Fixed version of check_identity that properly builds bipartite graphs
-    """
-    unmatched_candidates = []
-    with open(output_file, 'w') as out_file:
-        for fasta_filename in os.listdir(candidate_directory):
-            if not (fasta_filename.endswith(".fasta") or fasta_filename.endswith(".fa")):
-                continue
-            if "merged_mgc_candidartes.fasta" in fasta_filename:
-                continue
-
-            fasta_path = os.path.join(candidate_directory, fasta_filename)
-            all_match_found = False
-
-            # Count sequences in candidate file
-            candidate_count = sum(1 for _ in SeqIO.parse(fasta_path, "fasta"))
-
-            for csv_filename in os.listdir(mgc_directory):
-                if not csv_filename.endswith(".csv"):
-                    continue
-                
-                csv_path = os.path.join(mgc_directory, csv_filename)
-                
-                # Convert CSV to temporary FASTA
-                with tempfile.TemporaryDirectory() as temp_dir:
-                    mgc_fasta = os.path.join(temp_dir, "mgc_temp.fasta")
-                    csv_to_fasta(csv_path, mgc_fasta)
-                    
-                    # Build bipartite graph using actual sequence IDs
-                    graph = build_bipartite_graph_from_files(fasta_path, mgc_fasta)
-                    
-                    # Find maximum matching
-                    matching = max_weight_matching(graph, maxcardinality=True)
-                    
-                    # Count matched candidate sequences
-                    matched_candidates = {n for edge in matching for n in edge 
-                                        if graph.nodes[n].get('bipartite') == 0}
-                    
-                    print(f"🔍 {fasta_filename} vs {csv_filename}: {len(matched_candidates)}/{candidate_count} candidates matched")
-                    
-                    if len(matched_candidates) == candidate_count and candidate_count > 0:
-                        print(f"✅ All sequences in {fasta_path} matched to {csv_path}.")
-                        out_file.write(f"The candidate {fasta_path} is matched to {csv_path} cluster.\n")
-                        out_file.flush()
-                        all_match_found = True
-                        break
-
-            if not all_match_found:
-                print(f"❌ No complete matches found for {fasta_path} in any MGC CSV file.")
-                out_file.write(f"Not all sequences in {fasta_path} have matches in any MGC CSV file.\n")
-                out_file.flush()
-                unmatched_candidates.append(fasta_path)
-                
-    return unmatched_candidates
+def parse_and_filter_blast(blast_path):
+    """Parse individual BLAST file and return filtered results"""
+    results = parse_blast_results(blast_path)
+    # Add filename to each result
+    for result in results:
+        result["file"] = os.path.basename(blast_path)
+    return results
 
 def postprocess(blast_output_dir, merged_list, temp_dir):
-    print("\n🧩 Running postprocessing...")
+    print("\n🧩 Running postprocessing with Maximum Weight Orthogonal Partitioning...")
     results_dir = os.path.join(blast_output_dir, "results_fixed")
-    results = []
+    all_blast_results = []
 
+    # Prepare FASTA mapping
     fasta_map = {}
     for file_path in merged_list:
         fasta = prepare_fasta(file_path, temp_dir)
         if fasta:
             fasta_map[file_path] = fasta
 
+    # Parse all BLAST result files
+    print("📖 Parsing BLAST results...")
     for root, _, files in os.walk(results_dir):
         for file in files:
             if file.endswith(".txt"):
                 path = os.path.join(root, file)
                 filtered = parse_and_filter_blast(path)
-                results.extend(filtered)
+                all_blast_results.extend(filtered)
+                print(f"   Parsed {len(filtered)} hits from {file}")
 
-    df = pd.DataFrame(results)
-    summary_path = os.path.join(blast_output_dir, "blast_summary.csv")
-    df.to_csv(summary_path, index=False)
-    print(f"✅ Saved summary to {summary_path}")
+    # Save summary of all BLAST results
+    if all_blast_results:
+        df = pd.DataFrame(all_blast_results)
+        summary_path = os.path.join(blast_output_dir, "blast_summary.csv")
+        df.to_csv(summary_path, index=False)
+        print(f"✅ Saved BLAST summary: {summary_path} ({len(all_blast_results)} total hits)")
     
-    # Use the fixed clustering function
-    group_and_filter_redundant_files(results, fasta_map, blast_output_dir)
+    # Apply Maximum Weight Orthogonal Partitioning
+    build_homology_graph_with_mwop(fasta_map, all_blast_results, blast_output_dir)
 
 def blast_all_vs_all_slurm(merged_list, output_root):
     slurm_script = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/blast_with_params.sh"
-    blast_output_dir = os.path.join(output_root, "blast_all_vs_all_fixed")
+    blast_output_dir = os.path.join(output_root, "blast_test")
     results_dir = os.path.join(blast_output_dir, "results_fixed")
     blast_db_dir = os.path.join(blast_output_dir, "blast_dbs")
     temp_dir = os.path.join(blast_output_dir, "temp_fastas")
@@ -510,10 +510,9 @@ def blast_all_vs_all_slurm(merged_list, output_root):
                 f.write(f"{t}\n")
 
         job_name = f"blast_{q_id}"
-        # Wait until there are fewer than 100 running jobs for user 'alongonda'
-
+        
         while True:
-            squeue_cmd = ["squeue", "-u", "alongonda"]
+            squeue_cmd = ["squeue", "-u", "alongonda", "--partition", "itaym"]
             squeue_result = subprocess.run(squeue_cmd, capture_output=True, text=True)
             running_jobs = len(squeue_result.stdout.strip().splitlines())
             if running_jobs < 100:
@@ -541,7 +540,6 @@ def blast_all_vs_all_slurm(merged_list, output_root):
          
 def wait_till_blast_finish():
     while True:
-        # Fixed command - need to use shell=True for pipe operations
         squeue_cmd = "squeue -u alongonda | grep blast_"
         squeue_result = subprocess.run(squeue_cmd, shell=True, capture_output=True, text=True)
         running_jobs = len(squeue_result.stdout.strip().splitlines()) if squeue_result.stdout.strip() else 0
@@ -552,21 +550,21 @@ def wait_till_blast_finish():
 
 def main():
     candidate_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test"
-    mgc_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
+    mgc_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/fasta_files"
     merged_list_file = os.path.join(candidate_dir, "merged_list.txt")
-    blast_output_dir = os.path.join(candidate_dir, "blast_all_vs_all_fixed")
+    blast_output_dir = os.path.join(candidate_dir, "blast_test")
     temp_dir = os.path.join(blast_output_dir, "temp_fastas")
-
+    
     if not os.path.exists(merged_list_file):
-        output_file = os.path.join(candidate_dir, "comparison_results.txt")
-        # Use the fixed check_identity function
-        unmatched_candidates = check_identity_fixed(mgc_dir, candidate_dir, output_file)
-
+        candidate_files = [
+            os.path.join(candidate_dir, f) for f in os.listdir(mgc_dir)
+            if f.endswith(".fasta")
+        ]
         mgc_files = [
             os.path.join(mgc_dir, f) for f in os.listdir(mgc_dir)
-            if f.endswith(".csv")
+            if f.endswith(".fasta")
         ]
-        merged_list = unmatched_candidates + mgc_files
+        merged_list = candidate_files + mgc_files
 
         with open(merged_list_file, 'w') as f:
             for path in merged_list:
