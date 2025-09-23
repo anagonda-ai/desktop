@@ -1,12 +1,12 @@
 #!/bin/bash
-#SBATCH --job-name=colabfold_gpu
+#SBATCH --job-name=colabfold_gpu_%j
 #SBATCH --partition=gpu-itaymay
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=4
 #SBATCH --mem=16G
 #SBATCH --time=02:00:00
-#SBATCH --output=colabfold_gpu_%j.out
-#SBATCH --error=colabfold_gpu_%j.err
+#SBATCH --output=/groups/itay_mayrose/alongonda/desktop/example_jobs/colabfold_gpu_%j.out
+#SBATCH --error=/groups/itay_mayrose/alongonda/desktop/example_jobs/colabfold_gpu_%j.err
 
 # Get arguments
 FASTA_FILE=$1
@@ -30,7 +30,6 @@ colabfold_batch \
     --num-recycle 3 \
     --num-models 1 \
     --model-type auto \
-    --gpu \
     $FASTA_FILE \
     $OUTPUT_DIR
 

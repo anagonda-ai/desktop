@@ -25,6 +25,6 @@ while IFS= read -r target_fasta; do
     out_file="$output_dir/$(basename "$query_fasta")_vs_$(basename "$target_fasta").txt"
 
     if [ ! -f "$out_file" ]; then
-        blastp -query "$query_fasta" -db "$db_path" -evalue 0.001 -outfmt 6 -out "$out_file"
+        blastp -query "$query_fasta" -db "$db_path" -qcov_hsp_perc 70 -evalue 0.001 -outfmt 6 -out "$out_file"
     fi
 done < "$target_list_file"

@@ -1,27 +1,62 @@
 import pandas as pd
 from itertools import combinations
 import numpy as np
+import os
 from scipy.stats import zscore
 from scipy.cluster.hierarchy import linkage, fcluster
 
-def build_profile_matrix(blast_df, anchors, min_coverage=0.2):
+def build_profile_matrix(blast_df, anchors, output_dir, min_coverage=0.2):
+    print(f"🔍 Input blast_df shape: {blast_df.shape}")
+    print(f"🔍 Unique organisms in blast_df: {blast_df['organism'].nunique()}")
+    print(f"🔍 Organism list: {blast_df['organism'].unique()[:10]}")  # First 10
+    
     blast_df = blast_df[blast_df["origin_file"].isin(anchors)]
+    print(f"🔍 After anchor filtering: {blast_df.shape}")
+    print(f"🔍 Remaining organisms after anchor filter: {blast_df['organism'].nunique()}")
+    
     pivot = blast_df.pivot_table(
         index="origin_file",
         columns="organism",
         values="bit_score",
         aggfunc="max"
     ).fillna(0)
+    print(f"🔍 Pivot shape (genes x organisms): {pivot.shape}")
+    
     pivot[pivot < 24.6] = 0
-
+    print(f"🔍 After score threshold: {pivot.shape}")
+    
     min_orgs = int(min_coverage * pivot.shape[1])
+    print(f"🔍 Min organisms required per gene: {min_orgs} (of {pivot.shape[1]})")
+    
     filtered = pivot[(pivot > 0).sum(axis=1) >= min_orgs]
-    filtered.to_csv("matrix_raw.csv")
+    print(f"🔍 Final matrix shape after gene filtering: {filtered.shape}")
+    print(f"🔍 Final organism count: {filtered.shape[1]}")
+    
+    filtered.to_csv(os.path.join(output_dir, "matrix_raw.csv"))
     return filtered
 
-def normalize_npp(matrix):
-    npp = matrix.apply(zscore, axis=0).fillna(0)
-    npp.to_csv("matrix_npp.csv")
+def normalize_npp(matrix, output_dir):
+    from scipy.stats import zscore
+    
+    print(f"Input type: {type(matrix)}")
+    print(f"Input shape: {matrix.shape}")
+    
+    # Check if we have enough organisms for correlation
+    if matrix.shape[1] < 2:
+        raise ValueError(f"Need at least 2 organisms for correlation, got {matrix.shape[1]}")
+    
+    # Apply zscore directly on the numpy array to avoid pandas issues
+    # axis=1 means normalize each gene (row) across organisms (columns)
+    normalized_values = zscore(matrix.values, axis=1, nan_policy='omit')
+    
+    # Create new DataFrame with same structure
+    npp = pd.DataFrame(normalized_values, index=matrix.index, columns=matrix.columns)
+    npp = npp.fillna(0)
+    
+    print(f"Final type: {type(npp)}")
+    print(f"Final shape: {npp.shape}")
+    
+    npp.to_csv(os.path.join(output_dir, "matrix_npp.csv"))
     return npp
 
 def compute_clusters(npp_matrix, threshold):
