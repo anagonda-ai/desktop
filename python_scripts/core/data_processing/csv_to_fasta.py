@@ -1,18 +1,15 @@
-import csv
-import sys
 import os
 from concurrent.futures import ThreadPoolExecutor
-from Bio.Seq import Seq
+import pandas as pd
 
 def csv_to_fasta(csv_file, fasta_file):
-    with open(csv_file, 'r') as infile, open(fasta_file, 'w') as outfile:
-        reader = csv.DictReader(infile)
-        for row in reader:
-            first_part = row['Locus_Tag'] if row['Locus_Tag'] else row['Protein_ID'] if row['Protein_ID'] else row['Gene']
-            header = f">{first_part} | {os.path.basename(csv_file).replace('.csv', '')} | {row['Start']} | {row['End']}"
-            # Convert nucleotide sequence to protein sequence
-            protein_sequence = row['Translation']
-            outfile.write(f"{header}\n{protein_sequence}\n")
+    df = pd.read_csv(csv_file)
+    with open(fasta_file, 'w') as f:
+        for _, row in df.iterrows():
+            gene_id = str(row['gene_id'])
+            sequence = str(row['sequence'])
+            f.write(f">{gene_id}\n{sequence}\n")
+
 
 def process_file(csv_file, input_dir, output_dir):
     relative_path = os.path.relpath(os.path.dirname(csv_file), input_dir)
@@ -34,6 +31,6 @@ def process_directory(input_dir, output_dir):
 
 if __name__ == "__main__":
     
-    input_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/csv_files"
-    output_dir = "/groups/itay_mayrose/alongonda/datasets/MIBIG/plant_mgcs/fasta_files"
+    input_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/random_mgc_candidates_csv_files"
+    output_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/random_mgc_candidates_fasta_files"
     process_directory(input_dir, output_dir)
