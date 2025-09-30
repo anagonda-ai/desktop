@@ -12,8 +12,9 @@ import numpy as np
 from scipy import stats
 from scipy.stats import bootstrap
 from sklearn.metrics import roc_curve, auc, precision_recall_curve, f1_score
-from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor, as_completed
-from functools import partial
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
+from sklearn.linear_model import LogisticRegression
+from concurrent.futures import ThreadPoolExecutor, as_completed
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -551,6 +552,158 @@ class ConservationScoreAnalyzer:
         
         return threshold_results
     
+    def robust_threshold_optimization_with_validation(self, scores, labels, target_category, 
+                                                    test_size=0.3, n_splits=5, random_state=42):
+        """
+        Perform robust threshold optimization with proper train/test splits and cross-validation
+        to prevent overfitting and ensure generalizability.
+        """
+        print(f"\n{'='*70}")
+        print("ROBUST THRESHOLD OPTIMIZATION WITH VALIDATION")
+        print("="*70)
+        
+        # Convert to binary labels
+        binary_labels = (labels == target_category).astype(int)
+        
+        # Train/Test Split
+        X_train, X_test, y_train, y_test = train_test_split(
+            scores.reshape(-1, 1), binary_labels, 
+            test_size=test_size, stratify=binary_labels, 
+            random_state=random_state
+        )
+        
+        print(f"\nDataset Split:")
+        print(f"  Training set: {len(X_train)} samples ({np.sum(y_train)} positive, {len(y_train)-np.sum(y_train)} negative)")
+        print(f"  Test set: {len(X_test)} samples ({np.sum(y_test)} positive, {len(y_test)-np.sum(y_test)} negative)")
+        
+        # 1. Find optimal thresholds on training set
+        print(f"\n1. THRESHOLD OPTIMIZATION ON TRAINING SET")
+        print("-" * 50)
+        
+        train_results = self.find_optimal_threshold_binary(
+            X_train.flatten(), y_train, 1, metric='all'
+        )
+        
+        # Display training results
+        for metric_name in ['youden', 'f1', 'accuracy']:
+            if metric_name in train_results:
+                metric_data = train_results[metric_name]
+                print(f"\n{metric_name.upper()} optimization (Training):")
+                print(f"  Threshold: {metric_data['threshold']:.4f}")
+                if metric_name == 'youden':
+                    print(f"  Sensitivity: {metric_data['sensitivity']:.4f}")
+                    print(f"  Specificity: {metric_data['specificity']:.4f}")
+                elif metric_name == 'f1':
+                    print(f"  F1 Score: {metric_data['f1_score']:.4f}")
+                    print(f"  Precision: {metric_data['precision']:.4f}")
+                    print(f"  Recall: {metric_data['recall']:.4f}")
+        
+        # 2. Evaluate on test set using training thresholds
+        print(f"\n2. VALIDATION ON INDEPENDENT TEST SET")
+        print("-" * 50)
+        
+        test_results = {}
+        for metric_name in ['youden', 'f1', 'accuracy']:
+            if metric_name in train_results:
+                threshold = train_results[metric_name]['threshold']
+                
+                # Apply threshold to test set
+                y_pred_test = (X_test.flatten() >= threshold).astype(int)
+                
+                # Calculate test metrics
+                tn = np.sum((y_pred_test == 0) & (y_test == 0))
+                fp = np.sum((y_pred_test == 1) & (y_test == 0))
+                fn = np.sum((y_pred_test == 0) & (y_test == 1))
+                tp = np.sum((y_pred_test == 1) & (y_test == 1))
+                
+                test_sensitivity = tp / (tp + fn) if (tp + fn) > 0 else 0
+                test_specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+                test_precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+                test_recall = test_sensitivity
+                test_accuracy = (tp + tn) / len(y_test)
+                test_f1 = 2 * (test_precision * test_recall) / (test_precision + test_recall) if (test_precision + test_recall) > 0 else 0
+                
+                test_results[metric_name] = {
+                    'threshold': threshold,
+                    'sensitivity': test_sensitivity,
+                    'specificity': test_specificity,
+                    'precision': test_precision,
+                    'recall': test_recall,
+                    'accuracy': test_accuracy,
+                    'f1_score': test_f1
+                }
+                
+                print(f"\n{metric_name.upper()} threshold validation:")
+                print(f"  Threshold: {threshold:.4f}")
+                print(f"  Test Accuracy: {test_accuracy:.4f}")
+                print(f"  Test Sensitivity: {test_sensitivity:.4f}")
+                print(f"  Test Specificity: {test_specificity:.4f}")
+                print(f"  Test Precision: {test_precision:.4f}")
+                print(f"  Test F1 Score: {test_f1:.4f}")
+        
+        # 3. Cross-validation analysis
+        print(f"\n3. CROSS-VALIDATION ANALYSIS")
+        print("-" * 50)
+        
+        cv_results = self.cross_validation_analysis(scores, binary_labels, n_splits, random_state)
+        
+        # 4. Test set ROC analysis
+        fpr_test, tpr_test, _ = roc_curve(y_test, X_test.flatten())
+        roc_auc_test = auc(fpr_test, tpr_test)
+        
+        precision_test, recall_test, _ = precision_recall_curve(y_test, X_test.flatten())
+        pr_auc_test = auc(recall_test, precision_test)
+        
+        print(f"\n4. TEST SET PERFORMANCE")
+        print("-" * 50)
+        print(f"  Test ROC AUC: {roc_auc_test:.4f}")
+        print(f"  Test PR AUC: {pr_auc_test:.4f}")
+        
+        return {
+            'train_results': train_results,
+            'test_results': test_results,
+            'cv_results': cv_results,
+            'test_roc_auc': roc_auc_test,
+            'test_pr_auc': pr_auc_test,
+            'train_size': len(X_train),
+            'test_size': len(X_test)
+        }
+    
+    def cross_validation_analysis(self, scores, binary_labels, n_splits=5, random_state=42):
+        """
+        Perform k-fold cross-validation to assess model generalizability.
+        """
+        skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+        
+        # Simple logistic regression model
+        lr_model = LogisticRegression(random_state=random_state, max_iter=1000)
+        
+        # Cross-validation scores
+        cv_accuracy = cross_val_score(lr_model, scores.reshape(-1, 1), binary_labels, 
+                                    cv=skf, scoring='accuracy')
+        cv_precision = cross_val_score(lr_model, scores.reshape(-1, 1), binary_labels, 
+                                     cv=skf, scoring='precision')
+        cv_recall = cross_val_score(lr_model, scores.reshape(-1, 1), binary_labels, 
+                                  cv=skf, scoring='recall')
+        cv_f1 = cross_val_score(lr_model, scores.reshape(-1, 1), binary_labels, 
+                               cv=skf, scoring='f1')
+        cv_roc_auc = cross_val_score(lr_model, scores.reshape(-1, 1), binary_labels, 
+                                   cv=skf, scoring='roc_auc')
+        
+        print(f"\n{n_splits}-Fold Cross-Validation Results:")
+        print(f"  Accuracy:  {cv_accuracy.mean():.4f} ± {cv_accuracy.std():.4f}")
+        print(f"  Precision: {cv_precision.mean():.4f} ± {cv_precision.std():.4f}")
+        print(f"  Recall:    {cv_recall.mean():.4f} ± {cv_recall.std():.4f}")
+        print(f"  F1 Score:  {cv_f1.mean():.4f} ± {cv_f1.std():.4f}")
+        print(f"  ROC AUC:   {cv_roc_auc.mean():.4f} ± {cv_roc_auc.std():.4f}")
+        
+        return {
+            'accuracy': {'mean': cv_accuracy.mean(), 'std': cv_accuracy.std(), 'scores': cv_accuracy},
+            'precision': {'mean': cv_precision.mean(), 'std': cv_precision.std(), 'scores': cv_precision},
+            'recall': {'mean': cv_recall.mean(), 'std': cv_recall.std(), 'scores': cv_recall},
+            'f1': {'mean': cv_f1.mean(), 'std': cv_f1.std(), 'scores': cv_f1},
+            'roc_auc': {'mean': cv_roc_auc.mean(), 'std': cv_roc_auc.std(), 'scores': cv_roc_auc}
+        }
     
     def create_threshold_summary_table(self, threshold_results):
         """
@@ -724,109 +877,106 @@ class ConservationScoreAnalyzer:
         print(f"  Total positive samples: {np.sum(binary_labels == 'POSITIVE')}")
         print(f"  Total negative samples: {np.sum(binary_labels == 'NEGATIVE')}")
         
-        # Perform binary threshold optimization
-        threshold_results = self.find_optimal_threshold_binary(
-            scores, binary_labels, 'POSITIVE', metric='all'
+        # Perform robust threshold optimization with validation
+        validation_results = self.robust_threshold_optimization_with_validation(
+            scores, binary_labels, 'POSITIVE', test_size=0.3, n_splits=5, random_state=42
         )
         
-        # Print detailed binary classification results
+        # Extract results for summary
+        test_results = validation_results['test_results']
+        cv_results = validation_results['cv_results']
+        
+        # Print validation summary
         print(f"\n{'='*60}")
-        print("BINARY CLASSIFICATION THRESHOLD OPTIMIZATION")
+        print("VALIDATION SUMMARY")
         print("="*60)
         
-        print(f"\nROC Analysis:")
-        print(f"  ROC AUC: {threshold_results['roc_auc']:.4f}")
-        print(f"  PR AUC: {threshold_results['pr_auc']:.4f}")
+        print(f"\nModel Generalizability Assessment:")
+        print(f"  Training samples: {validation_results['train_size']}")
+        print(f"  Test samples: {validation_results['test_size']}")
+        print(f"  Test ROC AUC: {validation_results['test_roc_auc']:.4f}")
+        print(f"  Test PR AUC: {validation_results['test_pr_auc']:.4f}")
         
-        # Youden's J optimization
-        if 'youden' in threshold_results:
-            youden = threshold_results['youden']
-            print(f"\nYouden's J Optimization (Balanced Classification):")
-            print(f"  Optimal threshold: {youden['threshold']:.4f}")
-            print(f"  Sensitivity (True Positive Rate): {youden['sensitivity']:.4f}")
-            print(f"  Specificity (True Negative Rate): {youden['specificity']:.4f}")
-            print(f"  Youden's J statistic: {youden['youden_j']:.4f}")
-            print(f"  False Positive Rate: {youden['fpr']:.4f}")
+        # Cross-validation stability
+        print(f"\nCross-Validation Stability:")
+        print(f"  CV ROC AUC: {cv_results['roc_auc']['mean']:.4f} ± {cv_results['roc_auc']['std']:.4f}")
+        print(f"  CV F1 Score: {cv_results['f1']['mean']:.4f} ± {cv_results['f1']['std']:.4f}")
+        print(f"  CV Precision: {cv_results['precision']['mean']:.4f} ± {cv_results['precision']['std']:.4f}")
+        print(f"  CV Recall: {cv_results['recall']['mean']:.4f} ± {cv_results['recall']['std']:.4f}")
         
-        # F1 optimization
-        if 'f1' in threshold_results:
-            f1 = threshold_results['f1']
-            print(f"\nF1 Score Optimization (Precision-Recall Balance):")
-            print(f"  Optimal threshold: {f1['threshold']:.4f}")
-            print(f"  F1 score: {f1['f1_score']:.4f}")
-            print(f"  Precision: {f1['precision']:.4f}")
-            print(f"  Recall (Sensitivity): {f1['recall']:.4f}")
-            print(f"  Accuracy: {f1['accuracy']:.4f}")
+        # Test set performance for each threshold
+        print(f"\nTest Set Performance by Threshold:")
+        for metric_name in ['youden', 'f1', 'accuracy']:
+            if metric_name in test_results:
+                result = test_results[metric_name]
+                print(f"\n{metric_name.upper()} threshold ({result['threshold']:.4f}):")
+                print(f"  Test Accuracy: {result['accuracy']:.4f}")
+                print(f"  Test Precision: {result['precision']:.4f}")
+                print(f"  Test Recall: {result['recall']:.4f}")
+                print(f"  Test F1 Score: {result['f1_score']:.4f}")
         
-        # Accuracy optimization
-        if 'accuracy' in threshold_results:
-            acc = threshold_results['accuracy']
-            print(f"\nAccuracy Optimization:")
-            print(f"  Optimal threshold: {acc['threshold']:.4f}")
-            print(f"  Accuracy: {acc['accuracy']:.4f}")
-            print(f"  Sensitivity: {acc['sensitivity']:.4f}")
-            print(f"  Specificity: {acc['specificity']:.4f}")
+        # Model generalizability assessment
+        test_roc_auc = validation_results['test_roc_auc']
+        cv_roc_auc_mean = cv_results['roc_auc']['mean']
+        cv_roc_auc_std = cv_results['roc_auc']['std']
         
-        # Practical recommendations
         print(f"\n{'='*60}")
-        print("CLASSIFICATION RECOMMENDATIONS")
+        print("GENERALIZABILITY ASSESSMENT")
         print("="*60)
         
-        roc_auc = threshold_results['roc_auc']
-        if roc_auc < 0.6:
-            discriminative_power = "Poor"
-            recommendation = "Not suitable for classification"
-        elif roc_auc < 0.7:
-            discriminative_power = "Fair" 
-            recommendation = "Use with caution, consider additional features"
-        elif roc_auc < 0.8:
-            discriminative_power = "Good"
-            recommendation = "Suitable for classification"
-        elif roc_auc < 0.9:
-            discriminative_power = "Excellent"
-            recommendation = "Strong classifier"
+        if cv_roc_auc_std < 0.05:
+            stability = "Highly stable"
+        elif cv_roc_auc_std < 0.1:
+            stability = "Stable"
         else:
-            discriminative_power = "Outstanding"
-            recommendation = "Exceptional classifier"
+            stability = "Variable - consider more data or feature engineering"
         
-        print(f"\nDiscriminative Power: {discriminative_power} (AUC = {roc_auc:.3f})")
-        print(f"Recommendation: {recommendation}")
+        print(f"\nModel Stability: {stability}")
+        print(f"  CV ROC AUC variability: {cv_roc_auc_std:.4f}")
         
-        if roc_auc >= 0.7:
-            print(f"\nRecommended Thresholds:")
-            if 'youden' in threshold_results and 'f1' in threshold_results:
-                youden_thresh = threshold_results['youden']['threshold']
-                f1_thresh = threshold_results['f1']['threshold']
-                print(f"  Balanced classification: {youden_thresh:.4f} (Youden's J)")
-                print(f"  Precision-recall balance: {f1_thresh:.4f} (F1 optimization)")
-                
-                if abs(youden_thresh - f1_thresh) < 0.1:
-                    consensus_thresh = np.mean([youden_thresh, f1_thresh])
-                    print(f"  Consensus threshold: ~{consensus_thresh:.4f}")
-                else:
-                    print(f"  Choose based on cost of false positives vs false negatives")
+        if abs(test_roc_auc - cv_roc_auc_mean) < 0.05:
+            generalization = "Excellent generalization"
+        elif abs(test_roc_auc - cv_roc_auc_mean) < 0.1:
+            generalization = "Good generalization"
+        else:
+            generalization = "Potential overfitting - validate on additional data"
         
-        # Create simplified summary table
-        threshold_summary_table = pd.DataFrame([{
-            'Metric': 'Youden_J',
-            'Threshold': threshold_results.get('youden', {}).get('threshold', np.nan),
-            'Sensitivity': threshold_results.get('youden', {}).get('sensitivity', np.nan),
-            'Specificity': threshold_results.get('youden', {}).get('specificity', np.nan),
-            'ROC_AUC': threshold_results['roc_auc']
-        }, {
-            'Metric': 'F1_Score',
-            'Threshold': threshold_results.get('f1', {}).get('threshold', np.nan),
-            'F1_Score': threshold_results.get('f1', {}).get('f1_score', np.nan),
-            'Precision': threshold_results.get('f1', {}).get('precision', np.nan),
-            'Recall': threshold_results.get('f1', {}).get('recall', np.nan),
-            'ROC_AUC': threshold_results['roc_auc']
-        }, {
-            'Metric': 'Accuracy',
-            'Threshold': threshold_results.get('accuracy', {}).get('threshold', np.nan),
-            'Accuracy': threshold_results.get('accuracy', {}).get('accuracy', np.nan),
-            'Sensitivity': threshold_results.get('accuracy', {}).get('sensitivity', np.nan),
-            'Specificity': threshold_results.get('accuracy', {}).get('specificity', np.nan),
-            'ROC_AUC': threshold_results['roc_auc']
+        print(f"\nGeneralization Quality: {generalization}")
+        print(f"  Test vs CV AUC difference: {abs(test_roc_auc - cv_roc_auc_mean):.4f}")
+        
+        # Final recommendations
+        print(f"\n{'='*60}")
+        print("ROBUST THRESHOLD RECOMMENDATIONS")
+        print("="*60)
+        
+        if test_roc_auc >= 0.8 and cv_roc_auc_std < 0.1:
+            recommendation = "Highly recommended for production use"
+        elif test_roc_auc >= 0.7 and cv_roc_auc_std < 0.15:
+            recommendation = "Suitable for use with monitoring"
+        else:
+            recommendation = "Requires improvement before production use"
+        
+        print(f"\nOverall Recommendation: {recommendation}")
+        
+        if 'f1' in test_results:
+            best_threshold = test_results['f1']['threshold']
+            best_f1 = test_results['f1']['f1_score']
+            print(f"\nRecommended Production Threshold: {best_threshold:.4f}")
+            print(f"  Expected F1 Score: {best_f1:.4f}")
+            print(f"  Expected Precision: {test_results['f1']['precision']:.4f}")
+            print(f"  Expected Recall: {test_results['f1']['recall']:.4f}")
+        
+        # Create validation summary table
+        validation_summary_table = pd.DataFrame([{
+            'Metric': 'F1_Optimized',
+            'Train_Threshold': validation_results['train_results'].get('f1', {}).get('threshold', np.nan),
+            'Test_Threshold': test_results.get('f1', {}).get('threshold', np.nan),
+            'Test_F1': test_results.get('f1', {}).get('f1_score', np.nan),
+            'Test_Precision': test_results.get('f1', {}).get('precision', np.nan),
+            'Test_Recall': test_results.get('f1', {}).get('recall', np.nan),
+            'Test_ROC_AUC': validation_results['test_roc_auc'],
+            'CV_F1_Mean': cv_results['f1']['mean'],
+            'CV_F1_Std': cv_results['f1']['std']
         }]).round(4)
         
         # Final ranking
@@ -847,8 +997,8 @@ class ConservationScoreAnalyzer:
             'bootstrap_results': bootstrap_results,
             'effect_sizes': effect_sizes,
             'category_ranking': category_means,
-            'threshold_optimization': threshold_results,
-            'threshold_summary_table': threshold_summary_table
+            'validation_results': validation_results,
+            'validation_summary_table': validation_summary_table
         }
 
 def main():
@@ -900,62 +1050,29 @@ def main():
     print("BINARY CLASSIFICATION SUMMARY")
     print("="*80)
     
-    threshold_results = results['threshold_optimization']
-    print(f"\nBinary Classification Performance:")
-    print(f"  ROC AUC: {threshold_results['roc_auc']:.4f}")
-    print(f"  PR AUC: {threshold_results['pr_auc']:.4f}")
-    print(f"  Positive samples (BGC + MGC_CANDIDATE): {threshold_results['n_positive']}")
-    print(f"  Negative samples (RANDOM): {threshold_results['n_negative']}")
+    validation_results = results['validation_results']
+    print(f"\nRobust Binary Classification Performance:")
+    print(f"  Test ROC AUC: {validation_results['test_roc_auc']:.4f}")
+    print(f"  Test PR AUC: {validation_results['test_pr_auc']:.4f}")
+    print(f"  Training samples: {validation_results['train_size']}")
+    print(f"  Test samples: {validation_results['test_size']}")
     
-    print(f"\nDetailed Threshold Performance:")
-    print("-" * 60)
+    # Cross-validation results
+    cv_results = validation_results['cv_results']
+    print(f"\nCross-Validation Performance:")
+    print(f"  CV ROC AUC: {cv_results['roc_auc']['mean']:.4f} ± {cv_results['roc_auc']['std']:.4f}")
+    print(f"  CV F1 Score: {cv_results['f1']['mean']:.4f} ± {cv_results['f1']['std']:.4f}")
     
-    if 'youden' in threshold_results:
-        youden = threshold_results['youden']
-        print(f"\n1. BALANCED CLASSIFICATION (Youden's J):")
-        print(f"   Threshold: {youden['threshold']:.4f}")
-        print(f"   Sensitivity (True Positive Rate): {youden['sensitivity']:.4f}")
-        print(f"   Specificity (True Negative Rate): {youden['specificity']:.4f}")
-        print(f"   False Positive Rate: {youden['fpr']:.4f}")
-        print(f"   Youden's J statistic: {youden['youden_j']:.4f}")
-    
-    if 'f1' in threshold_results:
-        f1 = threshold_results['f1']
-        print(f"\n2. PRECISION-RECALL OPTIMIZATION (F1 Score):")
-        print(f"   Threshold: {f1['threshold']:.4f}")
-        print(f"   F1 Score: {f1['f1_score']:.4f}")
-        print(f"   Precision: {f1['precision']:.4f}")
-        print(f"   Recall (Sensitivity): {f1['recall']:.4f}")
-        print(f"   Accuracy: {f1['accuracy']:.4f}")
-    
-    if 'accuracy' in threshold_results:
-        acc = threshold_results['accuracy']
-        print(f"\n3. ACCURACY OPTIMIZATION:")
-        print(f"   Threshold: {acc['threshold']:.4f}")
-        print(f"   Accuracy: {acc['accuracy']:.4f}")
-        print(f"   Sensitivity: {acc['sensitivity']:.4f}")
-        print(f"   Specificity: {acc['specificity']:.4f}")
-    
-    # Best precision-recall summary
-    print(f"\n{'='*60}")
-    print("PRECISION-RECALL SUMMARY")
-    print("="*60)
-    
-    if 'f1' in threshold_results:
-        f1 = threshold_results['f1']
-        print(f"\nBest Precision-Recall Performance:")
-        print(f"  Optimal Threshold: {f1['threshold']:.4f}")
-        print(f"  At this threshold:")
-        print(f"    - Precision: {f1['precision']:.4f} ({f1['precision']*100:.1f}% of positive predictions are correct)")
-        print(f"    - Recall: {f1['recall']:.4f} ({f1['recall']*100:.1f}% of actual positives are found)")
-        print(f"    - F1 Score: {f1['f1_score']:.4f} (harmonic mean of precision and recall)")
-        
-        # Calculate additional metrics for interpretation
-        total_samples = threshold_results['n_positive'] + threshold_results['n_negative']
-        print(f"\n  Performance Interpretation:")
-        print(f"    - Out of {threshold_results['n_positive']} true positives, you'll find {int(f1['recall'] * threshold_results['n_positive'])}")
-        print(f"    - When you predict positive, you'll be right {f1['precision']*100:.1f}% of the time")
-        print(f"    - Overall accuracy: {f1['accuracy']*100:.1f}% of all {total_samples} samples")
+    # Test set results
+    test_results = validation_results['test_results']
+    if 'f1' in test_results:
+        f1_test = test_results['f1']
+        print(f"\nValidated F1-Optimized Threshold:")
+        print(f"  Threshold: {f1_test['threshold']:.4f}")
+        print(f"  Test F1 Score: {f1_test['f1_score']:.4f}")
+        print(f"  Test Precision: {f1_test['precision']:.4f}")
+        print(f"  Test Recall: {f1_test['recall']:.4f}")
+        print(f"  Test Accuracy: {f1_test['accuracy']:.4f}")
 
 if __name__ == "__main__":
     main()
