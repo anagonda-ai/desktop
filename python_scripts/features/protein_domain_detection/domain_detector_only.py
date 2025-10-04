@@ -5,14 +5,14 @@ No classification, just domain detection using Pfam and InterProScan
 """
 
 import subprocess
-import pandas as pd
 import json
-import os
-import tempfile
 from pathlib import Path
-from typing import Dict, List, Tuple, Optional
+from typing import Dict, List
 import logging
 from dataclasses import dataclass
+from concurrent.futures import ThreadPoolExecutor, as_completed
+import multiprocessing
+import time
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -359,31 +359,165 @@ class DomainDetector:
         
         return sum(weighted_scores) / len(weighted_scores) if weighted_scores else 0.0
 
-def main():
-    """Example usage of the DomainDetector"""
-    
-    # Initialize detector
+def process_single_fasta(detector, fasta_file, output_dir, file_index, total_files):
+    """Process a single FASTA file and return results"""
+    try:
+        print(f"[{file_index}/{total_files}] Processing: {fasta_file.name}")
+        
+        # Run domain detection
+        results = detector.detect_protein_domains(fasta_file)
+        
+        # Save results to JSON in output directory
+        output_file = output_dir / f"{fasta_file.stem}_domains.json"
+        with open(output_file, 'w') as f:
+            json.dump(results, f, indent=2, default=str)
+        
+        # Return results for summary
+        result_info = {
+            'fasta_file': str(fasta_file),
+            'fasta_name': fasta_file.name,
+            'fasta_stem': fasta_file.stem,
+            'domain_hits': len(results['domain_hits']),
+            'domains': ', '.join(results.get('all_domains', [])),
+            'confidence_score': results['confidence_score'],
+            'analysis_methods': ', '.join(results['analysis_methods']),
+            'output_file': str(output_file),
+            'success': True
+        }
+        
+        print(f"  ✓ [{file_index}/{total_files}] {fasta_file.name}: {len(results['domain_hits'])} domains, confidence: {results['confidence_score']:.3f}")
+        return result_info
+        
+    except Exception as e:
+        print(f"  ✗ [{file_index}/{total_files}] Error processing {fasta_file.name}: {e}")
+        return {
+            'fasta_file': str(fasta_file),
+            'fasta_name': fasta_file.name,
+            'fasta_stem': fasta_file.stem,
+            'domain_hits': 0,
+            'domains': '',
+            'confidence_score': 0.0,
+            'analysis_methods': '',
+            'output_file': '',
+            'success': False,
+            'error': str(e)
+        }
+
+def process_all_fasta_directories():
+    """Process all FASTA files in both directories"""
     detector = DomainDetector()
     
-    # Check dependencies
+    # Check dependencies first
     deps = detector.check_dependencies()
     print("Dependency check:")
     for tool, available in deps.items():
         print(f"  {tool}: {'✓' if available else '✗'}")
     
-    # Example analysis
-    example_fasta = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_fasta_files/BGC0000669.fasta"
+    # Set up output directory (same pattern as e2p2)
+    base_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test")
+    output_dir = base_dir / "domain_detection_results"
+    output_dir.mkdir(exist_ok=True)
     
-    if Path(example_fasta).exists():
-        print(f"\nAnalyzing {example_fasta}...")
-        results = detector.detect_protein_domains(example_fasta)
+    fasta_directories = [
+        base_dir / "mgc_candidates_fasta_files",
+        base_dir / "random_mgc_candidates_fasta_files"
+    ]
+    
+    all_results = []
+    all_fasta_files = []
+    
+    # Collect all FASTA files from both directories
+    for fasta_dir in fasta_directories:
+        if not fasta_dir.exists():
+            print(f"Directory not found: {fasta_dir}")
+            continue
         
-        print(f"Domain hits found: {len(results['domain_hits'])}")
-        print(f"All domains: {results['all_domains']}")
-        print(f"Confidence score: {results['confidence_score']:.3f}")
-        print(f"Analysis methods: {', '.join(results['analysis_methods'])}")
-    else:
-        print("Example FASTA file not found. Please provide a valid FASTA file for testing.")
+        print(f"\n=== Scanning FASTA directory: {fasta_dir.name} ===")
+        
+        # Collect FASTA files
+        fasta_files = list(fasta_dir.glob("*.fasta"))
+        
+        if not fasta_files:
+            print(f"No FASTA files found in {fasta_dir.name}")
+            continue
+        
+        print(f"Found {len(fasta_files)} FASTA files")
+        all_fasta_files.extend(fasta_files)
+    
+    if not all_fasta_files:
+        print("No FASTA files found in any directory!")
+        return
+    
+    print(f"\n=== Processing {len(all_fasta_files)} FASTA files with concurrency ===")
+    
+    # Process files with concurrency (use CPU count as max workers)
+    max_workers = min(multiprocessing.cpu_count(), len(all_fasta_files))
+    print(f"Using {max_workers} parallel workers (CPU count: {multiprocessing.cpu_count()})")
+    
+    start_time = time.time()
+    successful_jobs = 0
+    failed_jobs = 0
+    
+    with ThreadPoolExecutor(max_workers=max_workers) as executor:
+        # Submit all jobs
+        future_to_fasta = {
+            executor.submit(process_single_fasta, detector, fasta_file, output_dir, i+1, len(all_fasta_files)): fasta_file 
+            for i, fasta_file in enumerate(all_fasta_files)
+        }
+        
+        # Collect results as they complete
+        for future in as_completed(future_to_fasta):
+            fasta_file = future_to_fasta[future]
+            try:
+                result = future.result()
+                all_results.append(result)
+                
+                if result['success']:
+                    successful_jobs += 1
+                else:
+                    failed_jobs += 1
+                    
+            except Exception as e:
+                print(f"  ✗ Unexpected error processing {fasta_file.name}: {e}")
+                failed_jobs += 1
+                all_results.append({
+                    'fasta_file': str(fasta_file),
+                    'fasta_name': fasta_file.name,
+                    'fasta_stem': fasta_file.stem,
+                    'domain_hits': 0,
+                    'domains': '',
+                    'confidence_score': 0.0,
+                    'analysis_methods': '',
+                    'output_file': '',
+                    'success': False,
+                    'error': str(e)
+                })
+    
+    elapsed_time = time.time() - start_time
+    print(f"\n=== Processing Complete ===")
+    print(f"✓ Successful: {successful_jobs}")
+    print(f"✗ Failed: {failed_jobs}")
+    print(f"⏱️  Total time: {elapsed_time:.1f} seconds")
+    print(f"⚡ Average time per file: {elapsed_time/len(all_fasta_files):.1f} seconds")
+    
+    # Save summary CSV
+    if all_results:
+        import pandas as pd
+        summary_df = pd.DataFrame(all_results)
+        summary_file = output_dir / "domain_detection_summary.csv"
+        summary_df.to_csv(summary_file, index=False)
+        print(f"\n✓ Summary saved: {summary_file}")
+        print(f"✓ Total files processed: {len(all_results)}")
+        print(f"✓ Results directory: {output_dir}")
+
+def main():
+    """Process all FASTA files in both directories"""
+    print("Domain Detection Batch Processor")
+    print("=" * 40)
+    
+    process_all_fasta_directories()
+    
+    print("\nAll domain detection complete!")
 
 if __name__ == "__main__":
     main()
