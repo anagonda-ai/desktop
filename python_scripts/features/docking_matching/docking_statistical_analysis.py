@@ -11,6 +11,72 @@ from pathlib import Path
 from scipy import stats
 from multiprocessing import Pool, cpu_count
 from sklearn.linear_model import HuberRegressor
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, GridSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, confusion_matrix, classification_report, precision_score, recall_score, f1_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+try:
+    from imblearn.over_sampling import SMOTE
+    from imblearn.under_sampling import RandomUnderSampler
+    from imblearn.pipeline import Pipeline as ImbPipeline
+    IMBLEARN_AVAILABLE = True
+except ImportError:
+    print("Warning: imblearn not available. Using basic class balancing.")
+    IMBLEARN_AVAILABLE = False
+    # Create sklearn-compatible dummy classes
+    class SMOTE:
+        def __init__(self, random_state=None, **kwargs):
+            self.random_state = random_state
+        def fit_resample(self, X, y):
+            return X, y
+        def get_params(self, deep=True):
+            return {'random_state': self.random_state}
+        def set_params(self, **params):
+            for key, value in params.items():
+                setattr(self, key, value)
+            return self
+    
+    class RandomUnderSampler:
+        def __init__(self, random_state=None, **kwargs):
+            self.random_state = random_state
+        def fit_resample(self, X, y):
+            return X, y
+        def get_params(self, deep=True):
+            return {'random_state': self.random_state}
+        def set_params(self, **params):
+            for key, value in params.items():
+                setattr(self, key, value)
+            return self
+    
+    class ImbPipeline:
+        def __init__(self, steps):
+            self.steps = steps
+            self.named_steps = dict(steps)
+        def fit(self, X, y):
+            return self
+        def predict(self, X):
+            return np.zeros(len(X))
+        def predict_proba(self, X):
+            return np.column_stack([np.ones(len(X)), np.zeros(len(X))])
+        def get_params(self, deep=True):
+            params = {}
+            for name, step in self.steps:
+                if hasattr(step, 'get_params'):
+                    params[f'{name}__'] = step.get_params(deep=deep)
+                else:
+                    params[f'{name}__'] = {}
+            return params
+        def set_params(self, **params):
+            for param_name, param_value in params.items():
+                step_name = param_name.split('__')[0]
+                if step_name in self.named_steps:
+                    step = self.named_steps[step_name]
+                    if hasattr(step, 'set_params'):
+                        step.set_params(**{param_name.split('__', 1)[1]: param_value})
+            return self
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -485,6 +551,592 @@ def print_detailed_results(df, group_stats, test_results):
     
     print("\n" + "=" * 80)
 
+def advanced_cross_validation_analysis(scores, binary_labels, n_splits=5, random_state=42):
+    """
+    Perform advanced k-fold cross-validation with multiple algorithms and class balancing.
+    """
+    skf = StratifiedKFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+    
+    # Create feature matrix with additional engineered features
+    X = np.column_stack([
+        scores,
+        scores**2,  # Quadratic term
+        np.log(np.abs(scores) + 1),  # Log transformation
+        np.sqrt(np.abs(scores))  # Square root transformation
+    ])
+    
+    # Standardize features
+    scaler = StandardScaler()
+    X_scaled = scaler.fit_transform(X)
+    
+    # Define multiple algorithms with hyperparameter tuning
+    algorithms = {
+        'LogisticRegression': Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', LogisticRegression(random_state=random_state, max_iter=1000))
+        ]),
+        'RandomForest': Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', RandomForestClassifier(
+                n_estimators=100, 
+                max_depth=10, 
+                min_samples_split=5,
+                min_samples_leaf=2,
+                random_state=random_state
+            ))
+        ]),
+        'GradientBoosting': Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', GradientBoostingClassifier(
+                n_estimators=100,
+                max_depth=6,
+                learning_rate=0.1,
+                random_state=random_state
+            ))
+        ]),
+        'SVM': Pipeline([
+            ('scaler', StandardScaler()),
+            ('classifier', SVC(
+                kernel='rbf',
+                C=1.0,
+                gamma='scale',
+                probability=True,
+                random_state=random_state
+            ))
+        ])
+    }
+    
+    # Class balancing pipeline (only if imblearn is available)
+    all_algorithms = algorithms.copy()
+    
+    if IMBLEARN_AVAILABLE:
+        balanced_algorithms = {}
+        for name, pipeline in algorithms.items():
+            balanced_algorithms[f'{name}_Balanced'] = ImbPipeline([
+                ('sampler', SMOTE(random_state=random_state)),
+                ('classifier', pipeline)
+            ])
+        all_algorithms.update(balanced_algorithms)
+    else:
+        print("Skipping balanced algorithms - imblearn not available")
+    
+    results = {}
+    
+    for name, model in all_algorithms.items():
+        try:
+            # Cross-validation scores
+            cv_accuracy = cross_val_score(model, X_scaled, binary_labels, 
+                                        cv=skf, scoring='accuracy')
+            cv_precision = cross_val_score(model, X_scaled, binary_labels, 
+                                         cv=skf, scoring='precision')
+            cv_recall = cross_val_score(model, X_scaled, binary_labels, 
+                                      cv=skf, scoring='recall')
+            cv_f1 = cross_val_score(model, X_scaled, binary_labels, 
+                                   cv=skf, scoring='f1')
+            cv_roc_auc = cross_val_score(model, X_scaled, binary_labels, 
+                                       cv=skf, scoring='roc_auc')
+            
+            results[name] = {
+                'accuracy': {'mean': cv_accuracy.mean(), 'std': cv_accuracy.std()},
+                'precision': {'mean': cv_precision.mean(), 'std': cv_precision.std()},
+                'recall': {'mean': cv_recall.mean(), 'std': cv_recall.std()},
+                'f1': {'mean': cv_f1.mean(), 'std': cv_f1.std()},
+                'roc_auc': {'mean': cv_roc_auc.mean(), 'std': cv_roc_auc.std()}
+            }
+            
+        except Exception as e:
+            print(f"Error with {name}: {e}")
+            continue
+    
+    # Print results
+    print(f"\n{n_splits}-Fold Cross-Validation Results (Multiple Algorithms):")
+    print(f"{'Algorithm':<20} {'Accuracy':<12} {'Precision':<12} {'Recall':<12} {'F1':<12} {'ROC AUC':<12}")
+    print("-" * 80)
+    
+    for name, metrics in results.items():
+        print(f"{name:<20} {metrics['accuracy']['mean']:.4f}±{metrics['accuracy']['std']:.3f} "
+              f"{metrics['precision']['mean']:.4f}±{metrics['precision']['std']:.3f} "
+              f"{metrics['recall']['mean']:.4f}±{metrics['recall']['std']:.3f} "
+              f"{metrics['f1']['mean']:.4f}±{metrics['f1']['std']:.3f} "
+              f"{metrics['roc_auc']['mean']:.4f}±{metrics['roc_auc']['std']:.3f}")
+    
+    # Find best algorithm
+    best_algorithm = max(results.keys(), 
+                        key=lambda x: results[x]['roc_auc']['mean'])
+    
+    print(f"\nBest Algorithm: {best_algorithm}")
+    print(f"  ROC AUC: {results[best_algorithm]['roc_auc']['mean']:.4f} ± {results[best_algorithm]['roc_auc']['std']:.4f}")
+    print(f"  F1 Score: {results[best_algorithm]['f1']['mean']:.4f} ± {results[best_algorithm]['f1']['std']:.4f}")
+    
+    return results, best_algorithm
+
+def advanced_threshold_optimization_with_validation(df, score_column='mean_score_non_self', 
+                                                test_size=0.3, n_splits=5, random_state=42):
+    """
+    Perform advanced threshold optimization with ensemble methods, hyperparameter tuning,
+    and class balancing to prevent overfitting/underfitting.
+    """
+    print(f"\n{'='*70}")
+    print("ADVANCED THRESHOLD OPTIMIZATION WITH VALIDATION")
+    print("="*70)
+    
+    # Create binary labels: 1 for positives (MIBiG + MGC), 0 for negatives (RANDOM)
+    binary_labels = df['category'].isin(['BGC (MIBiG)', 'MGC (KEGG)']).astype(int)
+    scores = df[score_column].values
+    
+    # Remove any NaN values
+    valid_mask = ~np.isnan(scores)
+    scores = scores[valid_mask]
+    binary_labels = binary_labels[valid_mask]
+    
+    if len(np.unique(binary_labels)) < 2:
+        print(f"Warning: Not enough classes for {score_column}")
+        return None
+    
+    print(f"\nBinary Classification Setup:")
+    print(f"  Positive class: BGC (MIBiG) + MGC (KEGG)")
+    print(f"  Negative class: RANDOM")
+    print(f"  Total positive samples: {np.sum(binary_labels)}")
+    print(f"  Total negative samples: {len(binary_labels) - np.sum(binary_labels)}")
+    print(f"  Class balance ratio: {np.sum(binary_labels) / len(binary_labels):.3f}")
+    
+    # Create enhanced feature matrix
+    X = np.column_stack([
+        scores,
+        scores**2,  # Quadratic term
+        np.log(np.abs(scores) + 1),  # Log transformation
+        np.sqrt(np.abs(scores))  # Square root transformation
+    ])
+    
+    # Train/Test Split with stratification
+    X_train, X_test, y_train, y_test = train_test_split(
+        X, binary_labels, 
+        test_size=test_size, stratify=binary_labels, 
+        random_state=random_state
+    )
+    
+    print(f"\nDataset Split:")
+    print(f"  Training set: {len(X_train)} samples ({np.sum(y_train)} positive, {len(y_train)-np.sum(y_train)} negative)")
+    print(f"  Test set: {len(X_test)} samples ({np.sum(y_test)} positive, {len(y_test)-np.sum(y_test)} negative)")
+    
+    # 1. Advanced Cross-Validation with Multiple Algorithms
+    print(f"\n1. ADVANCED CROSS-VALIDATION ANALYSIS")
+    print("-" * 50)
+    
+    cv_results, best_algorithm = advanced_cross_validation_analysis(scores, binary_labels, n_splits, random_state)
+    
+    # 2. Hyperparameter Tuning for Best Algorithm
+    print(f"\n2. HYPERPARAMETER TUNING")
+    print("-" * 50)
+    
+    # Define parameter grids for different algorithms
+    param_grids = {
+        'LogisticRegression': {
+            'classifier__C': [0.1, 1.0, 10.0, 100.0],
+            'classifier__penalty': ['l1', 'l2'],
+            'classifier__solver': ['liblinear', 'saga']
+        },
+        'RandomForest': {
+            'classifier__n_estimators': [50, 100, 200],
+            'classifier__max_depth': [5, 10, 15, None],
+            'classifier__min_samples_split': [2, 5, 10],
+            'classifier__min_samples_leaf': [1, 2, 4]
+        },
+        'GradientBoosting': {
+            'classifier__n_estimators': [50, 100, 200],
+            'classifier__max_depth': [3, 6, 10],
+            'classifier__learning_rate': [0.01, 0.1, 0.2]
+        },
+        'SVM': {
+            'classifier__C': [0.1, 1.0, 10.0, 100.0],
+            'classifier__gamma': ['scale', 'auto', 0.001, 0.01, 0.1, 1.0],
+            'classifier__kernel': ['rbf', 'poly', 'sigmoid']
+        }
+    }
+    
+    # Get base algorithm name (remove _Balanced suffix)
+    base_algorithm = best_algorithm.replace('_Balanced', '')
+    
+    if base_algorithm in param_grids:
+        print(f"Tuning hyperparameters for {base_algorithm}...")
+        
+        # Create the base pipeline
+        if 'Balanced' in best_algorithm:
+            base_pipeline = ImbPipeline([
+                ('sampler', SMOTE(random_state=random_state)),
+                ('scaler', StandardScaler()),
+                ('classifier', None)  # Will be set by GridSearchCV
+            ])
+        else:
+            base_pipeline = Pipeline([
+                ('scaler', StandardScaler()),
+                ('classifier', None)  # Will be set by GridSearchCV
+            ])
+        
+        # Set the classifier
+        if base_algorithm == 'LogisticRegression':
+            base_pipeline.set_params(classifier=LogisticRegression(random_state=random_state, max_iter=1000))
+        elif base_algorithm == 'RandomForest':
+            base_pipeline.set_params(classifier=RandomForestClassifier(random_state=random_state))
+        elif base_algorithm == 'GradientBoosting':
+            base_pipeline.set_params(classifier=GradientBoostingClassifier(random_state=random_state))
+        elif base_algorithm == 'SVM':
+            base_pipeline.set_params(classifier=SVC(probability=True, random_state=random_state))
+        
+        # Grid search with cross-validation
+        grid_search = GridSearchCV(
+            base_pipeline, 
+            param_grids[base_algorithm], 
+            cv=StratifiedKFold(n_splits=3, shuffle=True, random_state=random_state),
+            scoring='roc_auc',
+            n_jobs=-1,
+            verbose=0
+        )
+        
+        grid_search.fit(X_train, y_train)
+        
+        print(f"Best parameters: {grid_search.best_params_}")
+        print(f"Best CV score: {grid_search.best_score_:.4f}")
+        
+        best_model = grid_search.best_estimator_
+    else:
+        print(f"Using default parameters for {best_algorithm}")
+        # Use the best algorithm from CV without tuning
+        best_model = None  # Will be handled in the next section
+    
+    # 3. Ensemble Method
+    print(f"\n3. ENSEMBLE METHOD")
+    print("-" * 50)
+    
+    # Create ensemble of best performing algorithms
+    ensemble_models = []
+    for name, metrics in cv_results.items():
+        if metrics['roc_auc']['mean'] > 0.6:  # Only include decent performers
+            if 'Balanced' in name and IMBLEARN_AVAILABLE:
+                base_name = name.replace('_Balanced', '')
+                if base_name == 'LogisticRegression':
+                    model = ImbPipeline([
+                        ('sampler', SMOTE(random_state=random_state)),
+                        ('scaler', StandardScaler()),
+                        ('classifier', LogisticRegression(random_state=random_state, max_iter=1000))
+                    ])
+                elif base_name == 'RandomForest':
+                    model = ImbPipeline([
+                        ('sampler', SMOTE(random_state=random_state)),
+                        ('scaler', StandardScaler()),
+                        ('classifier', RandomForestClassifier(random_state=random_state))
+                    ])
+                elif base_name == 'GradientBoosting':
+                    model = ImbPipeline([
+                        ('sampler', SMOTE(random_state=random_state)),
+                        ('scaler', StandardScaler()),
+                        ('classifier', GradientBoostingClassifier(random_state=random_state))
+                    ])
+                elif base_name == 'SVM':
+                    model = ImbPipeline([
+                        ('sampler', SMOTE(random_state=random_state)),
+                        ('scaler', StandardScaler()),
+                        ('classifier', SVC(probability=True, random_state=random_state))
+                    ])
+            else:
+                if name == 'LogisticRegression':
+                    model = Pipeline([
+                        ('scaler', StandardScaler()),
+                        ('classifier', LogisticRegression(random_state=random_state, max_iter=1000))
+                    ])
+                elif name == 'RandomForest':
+                    model = Pipeline([
+                        ('scaler', StandardScaler()),
+                        ('classifier', RandomForestClassifier(random_state=random_state))
+                    ])
+                elif name == 'GradientBoosting':
+                    model = Pipeline([
+                        ('scaler', StandardScaler()),
+                        ('classifier', GradientBoostingClassifier(random_state=random_state))
+                    ])
+                elif name == 'SVM':
+                    model = Pipeline([
+                        ('scaler', StandardScaler()),
+                        ('classifier', SVC(probability=True, random_state=random_state))
+                    ])
+            
+            ensemble_models.append((name, model))
+    
+    if len(ensemble_models) > 1:
+        # Create voting classifier
+        voting_classifier = VotingClassifier(
+            estimators=ensemble_models,
+            voting='soft'  # Use predicted probabilities
+        )
+        
+        print(f"Created ensemble with {len(ensemble_models)} models")
+        
+        # Train ensemble
+        voting_classifier.fit(X_train, y_train)
+        
+        # Evaluate ensemble
+        ensemble_pred = voting_classifier.predict(X_test)
+        ensemble_pred_proba = voting_classifier.predict_proba(X_test)[:, 1]
+        
+        # Calculate ensemble metrics
+        tn = np.sum((ensemble_pred == 0) & (y_test == 0))
+        fp = np.sum((ensemble_pred == 1) & (y_test == 0))
+        fn = np.sum((ensemble_pred == 0) & (y_test == 1))
+        tp = np.sum((ensemble_pred == 1) & (y_test == 1))
+        
+        ensemble_accuracy = (tp + tn) / len(y_test)
+        ensemble_precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        ensemble_recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        ensemble_f1 = 2 * (ensemble_precision * ensemble_recall) / (ensemble_precision + ensemble_recall) if (ensemble_precision + ensemble_recall) > 0 else 0
+        
+        # ROC AUC for ensemble
+        fpr_ensemble, tpr_ensemble, _ = roc_curve(y_test, ensemble_pred_proba)
+        ensemble_roc_auc = auc(fpr_ensemble, tpr_ensemble)
+        
+        print(f"\nEnsemble Performance:")
+        print(f"  Accuracy: {ensemble_accuracy:.4f}")
+        print(f"  Precision: {ensemble_precision:.4f}")
+        print(f"  Recall: {ensemble_recall:.4f}")
+        print(f"  F1 Score: {ensemble_f1:.4f}")
+        print(f"  ROC AUC: {ensemble_roc_auc:.4f}")
+        
+        # Use ensemble as final model
+        final_model = voting_classifier
+        final_pred_proba = ensemble_pred_proba
+    else:
+        # Use single best model
+        if best_model is not None:
+            final_model = best_model
+        else:
+            # Fallback to simple logistic regression
+            final_model = Pipeline([
+                ('scaler', StandardScaler()),
+                ('classifier', LogisticRegression(random_state=random_state, max_iter=1000))
+            ])
+            final_model.fit(X_train, y_train)
+        
+        final_pred_proba = final_model.predict_proba(X_test)[:, 1]
+    
+    # 4. Threshold Optimization on Final Model
+    print(f"\n4. THRESHOLD OPTIMIZATION")
+    print("-" * 50)
+    
+    # Get training probabilities for threshold optimization
+    train_pred_proba = final_model.predict_proba(X_train)[:, 1]
+    
+    # Calculate ROC curve on training data
+    fpr_train, tpr_train, thresholds_train = roc_curve(y_train, train_pred_proba)
+    roc_auc_train = auc(fpr_train, tpr_train)
+    
+    # Calculate precision-recall curve on training data
+    precision_train, recall_train, pr_thresholds_train = precision_recall_curve(y_train, train_pred_proba)
+    pr_auc_train = auc(recall_train, precision_train)
+    
+    # Find optimal thresholds
+    # Youden's J
+    youden_j = tpr_train - fpr_train
+    optimal_idx_youden = np.argmax(youden_j)
+    optimal_threshold_youden = thresholds_train[optimal_idx_youden]
+    
+    # F1 score
+    f1_scores = 2 * (precision_train * recall_train) / (precision_train + recall_train + 1e-8)
+    optimal_idx_f1 = np.argmax(f1_scores)
+    optimal_threshold_f1 = pr_thresholds_train[optimal_idx_f1]
+    
+    # Balanced accuracy
+    tnr_train = 1 - fpr_train
+    balanced_acc = (tpr_train + tnr_train) / 2
+    optimal_idx_balanced = np.argmax(balanced_acc)
+    optimal_threshold_balanced = thresholds_train[optimal_idx_balanced]
+    
+    print(f"\nTraining Performance:")
+    print(f"  ROC AUC: {roc_auc_train:.4f}")
+    print(f"  PR AUC: {pr_auc_train:.4f}")
+    print(f"\nOptimal thresholds:")
+    print(f"  Youden's J: {optimal_threshold_youden:.4f}")
+    print(f"  F1-optimized: {optimal_threshold_f1:.4f}")
+    print(f"  Accuracy-optimized: {optimal_threshold_balanced:.4f}")
+    
+    # 5. Test Set Evaluation
+    print(f"\n5. TEST SET EVALUATION")
+    print("-" * 50)
+    
+    # Test set ROC analysis
+    fpr_test, tpr_test, _ = roc_curve(y_test, final_pred_proba)
+    roc_auc_test = auc(fpr_test, tpr_test)
+    
+    precision_test, recall_test, _ = precision_recall_curve(y_test, final_pred_proba)
+    pr_auc_test = auc(recall_test, precision_test)
+    
+    print(f"Test Set Performance:")
+    print(f"  ROC AUC: {roc_auc_test:.4f}")
+    print(f"  PR AUC: {pr_auc_test:.4f}")
+    
+    # Evaluate different thresholds on test set
+    test_results = {}
+    thresholds_to_test = {
+        'youden': optimal_threshold_youden,
+        'f1': optimal_threshold_f1,
+        'accuracy': optimal_threshold_balanced
+    }
+    
+    for metric_name, threshold in thresholds_to_test.items():
+        y_pred_test = (final_pred_proba >= threshold).astype(int)
+        
+        # Calculate metrics
+        tn = np.sum((y_pred_test == 0) & (y_test == 0))
+        fp = np.sum((y_pred_test == 1) & (y_test == 0))
+        fn = np.sum((y_pred_test == 0) & (y_test == 1))
+        tp = np.sum((y_pred_test == 1) & (y_test == 1))
+        
+        test_accuracy = (tp + tn) / len(y_test)
+        test_precision = tp / (tp + fp) if (tp + fp) > 0 else 0
+        test_recall = tp / (tp + fn) if (tp + fn) > 0 else 0
+        test_specificity = tn / (tn + fp) if (tn + fp) > 0 else 0
+        test_f1 = 2 * (test_precision * test_recall) / (test_precision + test_recall) if (test_precision + test_recall) > 0 else 0
+        
+        test_results[metric_name] = {
+            'threshold': threshold,
+            'accuracy': test_accuracy,
+            'precision': test_precision,
+            'recall': test_recall,
+            'specificity': test_specificity,
+            'f1_score': test_f1
+        }
+        
+        print(f"\n{metric_name.upper()} threshold:")
+        print(f"  Threshold: {threshold:.4f}")
+        print(f"  Accuracy: {test_accuracy:.4f}")
+        print(f"  Precision: {test_precision:.4f}")
+        print(f"  Recall: {test_recall:.4f}")
+        print(f"  Specificity: {test_specificity:.4f}")
+        print(f"  F1 Score: {test_f1:.4f}")
+    
+    # 6. Overfitting/Underfitting Assessment
+    print(f"\n6. OVERFITTING/UNDERFITTING ASSESSMENT")
+    print("-" * 50)
+    
+    # Calculate training performance
+    train_pred = final_model.predict(X_train)
+    train_pred_proba = final_model.predict_proba(X_train)[:, 1]
+    
+    # Training metrics
+    train_accuracy = (train_pred == y_train).mean()
+    train_precision = precision_score(y_train, train_pred)
+    train_recall = recall_score(y_train, train_pred)
+    train_f1 = f1_score(y_train, train_pred)
+    
+    # Test metrics (using F1 threshold)
+    test_pred = (final_pred_proba >= optimal_threshold_f1).astype(int)
+    test_accuracy = (test_pred == y_test).mean()
+    test_precision = precision_score(y_test, test_pred)
+    test_recall = recall_score(y_test, test_pred)
+    test_f1 = f1_score(y_test, test_pred)
+    
+    print(f"Training vs Test Performance:")
+    print(f"  Accuracy:  {train_accuracy:.4f} vs {test_accuracy:.4f} (diff: {abs(train_accuracy - test_accuracy):.4f})")
+    print(f"  Precision: {train_precision:.4f} vs {test_precision:.4f} (diff: {abs(train_precision - test_precision):.4f})")
+    print(f"  Recall:    {train_recall:.4f} vs {test_recall:.4f} (diff: {abs(train_recall - test_recall):.4f})")
+    print(f"  F1 Score:  {train_f1:.4f} vs {test_f1:.4f} (diff: {abs(train_f1 - test_f1):.4f})")
+    
+    # Assess overfitting/underfitting
+    accuracy_diff = abs(train_accuracy - test_accuracy)
+    f1_diff = abs(train_f1 - test_f1)
+    
+    if accuracy_diff < 0.05 and f1_diff < 0.05:
+        fit_assessment = "Well-fitted model - no significant overfitting or underfitting"
+    elif train_accuracy > test_accuracy + 0.1 or train_f1 > test_f1 + 0.1:
+        fit_assessment = "Potential overfitting - training performance much better than test"
+    elif test_accuracy < 0.6 and test_f1 < 0.6:
+        fit_assessment = "Potential underfitting - both training and test performance are low"
+    else:
+        fit_assessment = "Moderate fit - some performance difference between train and test"
+    
+    print(f"\nFit Assessment: {fit_assessment}")
+    
+    # 7. Final Recommendations
+    print(f"\n7. FINAL RECOMMENDATIONS")
+    print("-" * 50)
+    
+    # Determine recommendation based on performance and fit
+    if roc_auc_test >= 0.8 and accuracy_diff < 0.05:
+        recommendation = "Excellent model - highly recommended for production"
+    elif roc_auc_test >= 0.7 and accuracy_diff < 0.1:
+        recommendation = "Good model - suitable for production with monitoring"
+    elif roc_auc_test >= 0.6:
+        recommendation = "Moderate model - consider additional features or more data"
+    else:
+        recommendation = "Poor model - requires significant improvement"
+    
+    print(f"Overall Recommendation: {recommendation}")
+    
+    if 'f1' in test_results:
+        best_threshold = test_results['f1']['threshold']
+        best_f1 = test_results['f1']['f1_score']
+        print(f"\nRecommended Production Threshold: {best_threshold:.4f}")
+        print(f"  Expected F1 Score: {best_f1:.4f}")
+        print(f"  Expected Precision: {test_results['f1']['precision']:.4f}")
+        print(f"  Expected Recall: {test_results['f1']['recall']:.4f}")
+    
+    return {
+        'cv_results': cv_results,
+        'best_algorithm': best_algorithm,
+        'test_results': test_results,
+        'test_roc_auc': roc_auc_test,
+        'test_pr_auc': pr_auc_test,
+        'fit_assessment': fit_assessment,
+        'recommendation': recommendation,
+        'final_model': final_model
+    }
+
+def evaluate_all_scores_with_validation(df):
+    """
+    Evaluate advanced threshold optimization for all available score columns.
+    """
+    score_columns = ['mean_score_non_self', 'enrichment_score', 'z_score', 'effect_size']
+    all_results = {}
+    
+    print("\n" + "="*80)
+    print("ADVANCED THRESHOLD OPTIMIZATION WITH VALIDATION")
+    print("="*80)
+    
+    for score_col in score_columns:
+        if score_col not in df.columns:
+            print(f"Skipping {score_col} - not available in data")
+            continue
+            
+        print(f"\n{'='*60}")
+        print(f"ANALYZING SCORE: {score_col.upper()}")
+        print("="*60)
+        
+        try:
+            result = advanced_threshold_optimization_with_validation(df, score_col)
+            if result:
+                all_results[score_col] = result
+            else:
+                print(f"Failed to analyze {score_col}")
+        except Exception as e:
+            print(f"Error analyzing {score_col}: {e}")
+    
+    # Summary comparison
+    print(f"\n{'='*80}")
+    print("SCORE COMPARISON SUMMARY")
+    print("="*80)
+    
+    if all_results:
+        print(f"{'Score':<20} {'Test ROC AUC':<12} {'Test F1':<10} {'Fit Assessment':<30} {'Recommendation':<25}")
+        print("-" * 100)
+        
+        for score_col, result in all_results.items():
+            if 'test_results' in result and 'f1' in result['test_results']:
+                roc_auc = result['test_roc_auc']
+                f1 = result['test_results']['f1']['f1_score']
+                fit = result['fit_assessment'][:30] + "..." if len(result['fit_assessment']) > 30 else result['fit_assessment']
+                rec = result['recommendation'][:25] + "..." if len(result['recommendation']) > 25 else result['recommendation']
+                print(f"{score_col:<20} {roc_auc:<12.4f} {f1:<10.4f} {fit:<30} {rec:<25}")
+    
+    return all_results
+
 def main():
     base_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test")
     
@@ -556,6 +1208,14 @@ def main():
     # Print comprehensive results
     print_detailed_results(df, group_stats, test_results)
     
+    # ML Threshold Analysis
+    print("\n" + "="*80)
+    print("MACHINE LEARNING THRESHOLD ANALYSIS")
+    print("="*80)
+    
+    # Perform ML threshold optimization with validation
+    ml_results = evaluate_all_scores_with_validation(df)
+    
     # Save results to files
     print("\nSaving results to files...")
     
@@ -573,9 +1233,28 @@ def main():
         comparisons_df.to_csv(base_dir / 'lightdock_statistical_comparisons.csv', index=False)
         print(f"Saved: lightdock_statistical_comparisons.csv ({len(comparisons_df)} comparisons)")
     
+    # Export ML results
+    if ml_results:
+        ml_summary = {}
+        for score_col, result in ml_results.items():
+            if 'test_results' in result and 'f1' in result['test_results']:
+                ml_summary[score_col] = {
+                    'threshold': result['test_results']['f1']['threshold'],
+                    'test_roc_auc': result['test_roc_auc'],
+                    'test_f1': result['test_results']['f1']['f1_score'],
+                    'test_precision': result['test_results']['f1']['precision'],
+                    'test_recall': result['test_results']['f1']['recall'],
+                    'recommendation': result['recommendation']
+                }
+        
+        if ml_summary:
+            ml_df = pd.DataFrame(ml_summary).T
+            ml_df.to_csv(base_dir / 'lightdock_ml_thresholds.csv')
+            print(f"Saved: lightdock_ml_thresholds.csv ({len(ml_df)} score types)")
+    
     print(f"\nAll files saved to: {base_dir}")
     
-    return df, group_stats, test_results
+    return df, group_stats, test_results, ml_results
 
 if __name__ == "__main__":
-    df, group_stats, test_results = main()
+    df, group_stats, test_results, ml_results = main()

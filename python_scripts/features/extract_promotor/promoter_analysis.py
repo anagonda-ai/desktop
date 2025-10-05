@@ -10,6 +10,16 @@ import os
 import glob
 from concurrent.futures import ProcessPoolExecutor, as_completed
 import time
+from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score, GridSearchCV
+from sklearn.linear_model import LogisticRegression
+from sklearn.ensemble import RandomForestClassifier, GradientBoostingClassifier, VotingClassifier
+from sklearn.svm import SVC
+from sklearn.metrics import roc_curve, auc, precision_recall_curve, confusion_matrix, precision_score, recall_score, f1_score
+from sklearn.preprocessing import StandardScaler
+from sklearn.pipeline import Pipeline
+from scipy import stats
+import warnings
+warnings.filterwarnings('ignore')
 
 class PromoterSimilarityAnalyzer:
     def __init__(self):
@@ -553,6 +563,267 @@ def main():
                 print(f"Saved {group} results to: {filename}")
         
         print(f"Complete results saved to: promoter_similarity_results.csv")
+        
+        # Simple Threshold Analysis
+        if len(successful) > 0:
+            threshold_results = perform_simple_threshold_analysis(successful)
+            
+            if threshold_results:
+                # Save threshold results
+                threshold_summary = {}
+                for score_col, result in threshold_results.items():
+                    threshold_summary[score_col] = {
+                        'roc_auc': result['roc_auc'],
+                        'pr_auc': result['pr_auc'],
+                        'best_threshold': result['best_threshold'],
+                        'best_f1': result['best_f1'],
+                        'best_precision': result['best_precision'],
+                        'best_recall': result['best_recall'],
+                        'best_method': result['best_method']
+                    }
+                
+                if threshold_summary:
+                    threshold_df = pd.DataFrame(threshold_summary).T
+                    threshold_df.to_csv('promoter_threshold_analysis.csv', index=True)
+                    print(f"Threshold analysis results saved to: promoter_threshold_analysis.csv")
+        
+        return df, threshold_results if 'threshold_results' in locals() else None
+
+
+def simple_threshold_optimization(df, score_column='normalized_similarity'):
+    """Simple threshold optimization using ROC and Precision-Recall curves without train/test splits"""
+    print(f"\n{'='*70}")
+    print(f"SIMPLE THRESHOLD OPTIMIZATION: {score_column.upper()}")
+    print("="*70)
+    
+    # Create binary labels: 1 for positives (MIBiG + KEGG), 0 for negatives (RANDOM)
+    binary_labels = df['dataset_group'].isin(['MiBIG', 'KEGG']).astype(int)
+    scores = df[score_column].values
+    
+    # Remove any NaN values
+    valid_mask = ~np.isnan(scores)
+    scores = scores[valid_mask]
+    binary_labels = binary_labels[valid_mask]
+    
+    if len(np.unique(binary_labels)) < 2:
+        print(f"Warning: Not enough classes for {score_column}")
+        return None
+    
+    print(f"\nDataset Overview:")
+    print(f"  Positive class: MiBIG + KEGG ({np.sum(binary_labels)} samples)")
+    print(f"  Negative class: Random ({len(binary_labels) - np.sum(binary_labels)} samples)")
+    print(f"  Class balance: {np.sum(binary_labels) / len(binary_labels):.3f}")
+    print(f"  Score range: {scores.min():.2f} - {scores.max():.2f}")
+    print(f"  Score mean: {scores.mean():.2f} ± {scores.std():.2f}")
+    
+    # Calculate ROC curve
+    fpr, tpr, roc_thresholds = roc_curve(binary_labels, scores)
+    roc_auc = auc(fpr, tpr)
+    
+    # Calculate Precision-Recall curve
+    precision, recall, pr_thresholds = precision_recall_curve(binary_labels, scores)
+    pr_auc = auc(recall, precision)
+    
+    print(f"\nOverall Performance:")
+    print(f"  ROC AUC: {roc_auc:.4f}")
+    print(f"  PR AUC: {pr_auc:.4f}")
+    
+    # Find optimal thresholds using different criteria
+    optimal_thresholds = {}
+    
+    # 1. Youden's J statistic (maximizes TPR - FPR)
+    youden_j = tpr - fpr
+    optimal_idx_youden = np.argmax(youden_j)
+    optimal_thresholds['youden'] = {
+        'threshold': roc_thresholds[optimal_idx_youden],
+        'tpr': tpr[optimal_idx_youden],
+        'fpr': fpr[optimal_idx_youden],
+        'youden_j': youden_j[optimal_idx_youden]
+    }
+    
+    # 2. F1 Score optimization
+    f1_scores = 2 * (precision * recall) / (precision + recall + 1e-8)
+    optimal_idx_f1 = np.argmax(f1_scores)
+    optimal_thresholds['f1'] = {
+        'threshold': pr_thresholds[optimal_idx_f1],
+        'precision': precision[optimal_idx_f1],
+        'recall': recall[optimal_idx_f1],
+        'f1_score': f1_scores[optimal_idx_f1]
+    }
+    
+    # 3. Balanced accuracy (maximizes (TPR + TNR) / 2)
+    tnr = 1 - fpr  # True Negative Rate = Specificity
+    balanced_acc = (tpr + tnr) / 2
+    optimal_idx_balanced = np.argmax(balanced_acc)
+    optimal_thresholds['balanced'] = {
+        'threshold': roc_thresholds[optimal_idx_balanced],
+        'tpr': tpr[optimal_idx_balanced],
+        'tnr': tnr[optimal_idx_balanced],
+        'balanced_accuracy': balanced_acc[optimal_idx_balanced]
+    }
+    
+    # 4. Geometric mean (maximizes sqrt(TPR * TNR))
+    geometric_mean = np.sqrt(tpr * tnr)
+    optimal_idx_geometric = np.argmax(geometric_mean)
+    optimal_thresholds['geometric'] = {
+        'threshold': roc_thresholds[optimal_idx_geometric],
+        'tpr': tpr[optimal_idx_geometric],
+        'tnr': tnr[optimal_idx_geometric],
+        'geometric_mean': geometric_mean[optimal_idx_geometric]
+    }
+    
+    # Calculate all metrics for each optimal threshold
+    print(f"\nOptimal Thresholds:")
+    print("-" * 70)
+    print(f"{'Method':<12} {'Threshold':<10} {'Precision':<10} {'Recall':<8} {'F1':<8} {'Accuracy':<9} {'Specificity':<11}")
+    print("-" * 70)
+    
+    for method, data in optimal_thresholds.items():
+        threshold = data['threshold']
+        
+        # Calculate predictions at this threshold
+        y_pred = (scores >= threshold).astype(int)
+        
+        # Calculate confusion matrix
+        tn = np.sum((y_pred == 0) & (binary_labels == 0))
+        fp = np.sum((y_pred == 1) & (binary_labels == 0))
+        fn = np.sum((y_pred == 0) & (binary_labels == 1))
+        tp = np.sum((y_pred == 1) & (binary_labels == 1))
+        
+        # Calculate metrics
+        precision_val = tp / (tp + fp) if (tp + fp) > 0 else 0
+        recall_val = tp / (tp + fn) if (tp + fn) > 0 else 0
+        f1_val = 2 * (precision_val * recall_val) / (precision_val + recall_val) if (precision_val + recall_val) > 0 else 0
+        accuracy_val = (tp + tn) / len(binary_labels)
+        specificity_val = tn / (tn + fp) if (tn + fp) > 0 else 0
+        
+        print(f"{method.upper():<12} {threshold:<10.4f} {precision_val:<10.4f} {recall_val:<8.4f} {f1_val:<8.4f} {accuracy_val:<9.4f} {specificity_val:<11.4f}")
+        
+        # Store calculated metrics
+        optimal_thresholds[method].update({
+            'precision': precision_val,
+            'recall': recall_val,
+            'f1_score': f1_val,
+            'accuracy': accuracy_val,
+            'specificity': specificity_val,
+            'tp': tp, 'tn': tn, 'fp': fp, 'fn': fn
+        })
+    
+    # Find the best overall threshold (highest F1 score)
+    best_method = max(optimal_thresholds.keys(), 
+                     key=lambda x: optimal_thresholds[x]['f1_score'])
+    best_threshold_data = optimal_thresholds[best_method]
+    
+    print(f"\nBest Threshold (F1-optimized):")
+    print(f"  Method: {best_method.upper()}")
+    print(f"  Threshold: {best_threshold_data['threshold']:.4f}")
+    print(f"  Precision: {best_threshold_data['precision']:.4f}")
+    print(f"  Recall: {best_threshold_data['recall']:.4f}")
+    print(f"  F1 Score: {best_threshold_data['f1_score']:.4f}")
+    print(f"  Accuracy: {best_threshold_data['accuracy']:.4f}")
+    print(f"  Specificity: {best_threshold_data['specificity']:.4f}")
+    
+    # Performance interpretation
+    print(f"\nPerformance Interpretation:")
+    if roc_auc >= 0.9:
+        auc_interpretation = "Excellent discrimination"
+    elif roc_auc >= 0.8:
+        auc_interpretation = "Good discrimination"
+    elif roc_auc >= 0.7:
+        auc_interpretation = "Fair discrimination"
+    else:
+        auc_interpretation = "Poor discrimination"
+    
+    print(f"  ROC AUC: {roc_auc:.4f} - {auc_interpretation}")
+    
+    if best_threshold_data['f1_score'] >= 0.8:
+        f1_interpretation = "Excellent classification performance"
+    elif best_threshold_data['f1_score'] >= 0.6:
+        f1_interpretation = "Good classification performance"
+    elif best_threshold_data['f1_score'] >= 0.4:
+        f1_interpretation = "Moderate classification performance"
+    else:
+        f1_interpretation = "Poor classification performance"
+    
+    print(f"  F1 Score: {best_threshold_data['f1_score']:.4f} - {f1_interpretation}")
+    
+    return {
+        'roc_auc': roc_auc,
+        'pr_auc': pr_auc,
+        'optimal_thresholds': optimal_thresholds,
+        'best_method': best_method,
+        'best_threshold': best_threshold_data['threshold'],
+        'best_f1': best_threshold_data['f1_score'],
+        'best_precision': best_threshold_data['precision'],
+        'best_recall': best_threshold_data['recall']
+    }
+
+def perform_simple_threshold_analysis(df):
+    """Perform simple threshold analysis for promoter similarity scores without complex ML"""
+    
+    # Add size normalization features
+    df = df.copy()
+    
+    # Size normalization: adjust scores based on number of promoters
+    df['size_normalized_similarity'] = df.apply(lambda row: 
+        row['normalized_similarity'] * (1 + np.log(row['num_promoters']) / 10), axis=1)
+    
+    # Score columns to analyze
+    score_columns = [
+        'similarity_score', 'normalized_similarity', 'size_normalized_similarity',
+        'mean_proximal_similarity', 'mean_distal_similarity'
+    ]
+    
+    all_results = {}
+    
+    print("\n" + "="*80)
+    print("SIMPLE THRESHOLD OPTIMIZATION ANALYSIS")
+    print("="*80)
+    
+    for score_col in score_columns:
+        if score_col not in df.columns:
+            print(f"Skipping {score_col} - not available in data")
+            continue
+            
+        try:
+            result = simple_threshold_optimization(df, score_col)
+            if result:
+                all_results[score_col] = result
+            else:
+                print(f"Failed to analyze {score_col}")
+        except Exception as e:
+            print(f"Error analyzing {score_col}: {e}")
+    
+    # Summary comparison
+    print(f"\n{'='*80}")
+    print("THRESHOLD COMPARISON SUMMARY")
+    print("="*80)
+    
+    if all_results:
+        print(f"{'Score':<25} {'ROC AUC':<10} {'Best F1':<10} {'Best Threshold':<15} {'Best Method':<12}")
+        print("-" * 80)
+        
+        for score_col, result in all_results.items():
+            roc_auc = result['roc_auc']
+            f1 = result['best_f1']
+            threshold = result['best_threshold']
+            method = result['best_method']
+            print(f"{score_col:<25} {roc_auc:<10.4f} {f1:<10.4f} {threshold:<15.4f} {method:<12}")
+        
+        # Find the best overall score
+        best_score = max(all_results.keys(), 
+                        key=lambda x: all_results[x]['best_f1'])
+        best_result = all_results[best_score]
+        
+        print(f"\nRECOMMENDED SCORE AND THRESHOLD:")
+        print(f"  Best Score Type: {best_score}")
+        print(f"  Optimal Threshold: {best_result['best_threshold']:.4f}")
+        print(f"  Expected F1 Score: {best_result['best_f1']:.4f}")
+        print(f"  Expected Precision: {best_result['best_precision']:.4f}")
+        print(f"  Expected Recall: {best_result['best_recall']:.4f}")
+        print(f"  ROC AUC: {best_result['roc_auc']:.4f}")
+    
+    return all_results
 
 if __name__ == "__main__":
     main()
