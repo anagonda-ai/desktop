@@ -1,26 +1,27 @@
 #!/usr/bin/env python3
 """
-Dynamic Enzyme Classification System
-====================================
+Database-Driven Enzyme Classification via Reference Proteins
+===========================================================
 
-This module provides real-time enzyme classification by querying scientific databases
-instead of relying on hard-coded patterns. It integrates multiple data sources to
-provide accurate, up-to-date classifications.
+Classification strategy:
+1. Use curated reference proteins (polyketide synthases, methyltransferases, etc.)
+2. Extract their GO term profiles
+3. Compare query enzymes to reference profiles statistically
+4. NO keyword matching - pure profile similarity
 
-Author: AI Assistant
-Date: 2024
+Author: Scientific Analysis System
 """
 
 import requests
 import json
 import time
 import logging
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List, Optional, Set, Tuple
 from dataclasses import dataclass
 from enum import Enum
-import re
+from collections import Counter
+import math
 
-# Configure logging
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
@@ -31,418 +32,385 @@ class ClassificationResult(Enum):
     UNKNOWN = "unknown"
 
 @dataclass
+class Evidence:
+    source: str
+    classification: str
+    confidence: float
+    details: str
+
+@dataclass
 class ClassificationInfo:
-    """Container for classification results"""
     result: ClassificationResult
     confidence: float
-    source: str
-    ec_info: Optional[Dict] = None
-    domain_info: Optional[Dict] = None
-    reasoning: Optional[str] = None
+    evidence: List[Evidence]
+    reasoning: str
 
-class DynamicEnzymeClassifier:
+class DatabaseDrivenClassifier:
     """
-    Dynamic enzyme classifier that queries scientific databases in real-time
+    Classifier using reference protein GO profiles
     """
     
-    def __init__(self, cache_duration: int = 3600):
-        """
-        Initialize the dynamic classifier
-        
-        Args:
-            cache_duration: Cache duration in seconds (default: 1 hour)
-        """
-        self.cache_duration = cache_duration
-        self.cache = {}
+    def __init__(self):
         self.session = requests.Session()
-        self.session.headers.update({
-            'User-Agent': 'DynamicEnzymeClassifier/1.0 (Scientific Research)'
-        })
+        self.session.headers.update({'User-Agent': 'DatabaseDrivenClassifier/1.0'})
         
-        # API endpoints
         self.uniprot_base = "https://rest.uniprot.org"
-        self.interpro_base = "https://www.ebi.ac.uk/interpro/api"
+        self.quickgo_base = "https://www.ebi.ac.uk/QuickGO/services"
         
-        # Fallback patterns (minimal set for when APIs fail)
-        self.signature_keywords = [
-            'synthase', 'synthetase', 'polymerase', 'elongase', 'transferase',
-            'acyltransferase', 'carboxylase', 'dehydrogenase', 'reductase'
-        ]
-        
-        self.tailoring_keywords = [
-            'methyltransferase', 'hydroxylase', 'glycosyltransferase',
-            'acetyltransferase', 'phosphorylase', 'kinase', 'phosphatase'
-        ]
-    
-    def classify_enzyme(self, ec_number: str, domains: List[str]) -> ClassificationInfo:
-        """
-        Classify an enzyme based on EC number and domains
-        
-        Args:
-            ec_number: Enzyme Commission number (e.g., "3.1.1.31")
-            domains: List of protein domains
-            
-        Returns:
-            ClassificationInfo with classification result and metadata
-        """
-        logger.info(f"Classifying enzyme: EC={ec_number}, Domains={domains}")
-        
-        # Check cache first
-        cache_key = f"{ec_number}:{':'.join(sorted(domains))}"
-        if cache_key in self.cache:
-            cached_result, timestamp = self.cache[cache_key]
-            if time.time() - timestamp < self.cache_duration:
-                logger.info("Using cached result")
-                return cached_result
-        
-        # Get EC information
-        ec_info = self._get_ec_information(ec_number)
-        
-        # Get domain information
-        domain_info = self._classify_domains(domains)
-        
-        # Combine information for final classification
-        result = self._combine_classifications(ec_info, domain_info)
-        
-        # Cache the result
-        self.cache[cache_key] = (result, time.time())
-        
-        return result
-    
-    def _get_ec_information(self, ec_number: str) -> Optional[Dict]:
-        """Get detailed information about an EC number from UniProt"""
-        try:
-            # Query UniProt for enzymes with this EC number
-            url = f"{self.uniprot_base}/uniprotkb/search"
-            params = {
-                'query': f'ec:{ec_number}',
-                'format': 'json',
-                'size': 1
-            }
-            
-            logger.info(f"Querying UniProt API: {url} with params: {params}")
-            response = self.session.get(url, params=params, timeout=10)
-            response.raise_for_status()
-            
-            data = response.json()
-            
-            if data.get('results'):
-                result = data['results'][0]
-                
-                # Extract protein name from the complex structure
-                protein_name = ""
-                if 'proteinDescription' in result:
-                    protein_desc = result['proteinDescription']
-                    if 'recommendedName' in protein_desc:
-                        rec_name = protein_desc['recommendedName']
-                        if 'fullName' in rec_name:
-                            protein_name = rec_name['fullName'].get('value', '')
-                
-                # Extract keywords
-                keywords = []
-                if 'keywords' in result:
-                    keywords = [kw.get('name', '') for kw in result['keywords']]
-                
-                logger.info(f"UniProt found: {protein_name} with keywords: {keywords}")
-                
-                return {
-                    'ec_number': ec_number,
-                    'name': protein_name,
-                    'function': result.get('comments', []),
-                    'keywords': keywords,
-                    'source': 'uniprot'
-                }
-            else:
-                logger.info(f"No UniProt results found for EC {ec_number}")
-        except Exception as e:
-            logger.warning(f"Failed to get EC information from UniProt: {e}")
-        
-        # Fallback to EC number pattern analysis
-        return self._analyze_ec_number(ec_number)
-    
-    def _analyze_ec_number(self, ec_number: str) -> Dict:
-        """Analyze EC number using known patterns"""
-        # Known EC number classifications
-        ec_classifications = {
-            '3.1.1.31': {
-                'name': 'glucosamine-6-phosphate synthase',
-                'classification': 'signature',
-                'source': 'ec_pattern'
-            },
-            '2.1.1.104': {
-                'name': 'methyltransferase',
-                'classification': 'tailoring',
-                'source': 'ec_pattern'
-            },
-            '4.2.1.18': {
-                'name': 'enoyl-CoA hydratase',
-                'classification': 'signature',
-                'source': 'ec_pattern'
-            },
-            '2.3.1.199': {
-                'name': 'acyltransferase',
-                'classification': 'signature',
-                'source': 'ec_pattern'
-            }
+        # Reference EC numbers with known classifications (from scientific literature)
+        self.biosynthetic_references = {
+            '2.3.1.85',   # Fatty acid synthase
+            '2.3.1.41',   # Malonate CoA-transferase  
+            '6.2.1.3',    # Long-chain fatty acid-CoA ligase
+            '4.2.1.17',   # Enoyl-CoA hydratase
+            '2.3.1.16',   # Acetyl-CoA acetyltransferase
         }
         
-        if ec_number in ec_classifications:
-            return ec_classifications[ec_number]
+        self.modification_references = {
+            '2.1.1.37',   # DNA methyltransferase
+            '2.1.1.43',   # Histone-lysine N-methyltransferase
+            '1.14.13.39', # Cytochrome P450 hydroxylase
+            '2.4.1.17',   # Glucosyltransferase
+            '2.3.1.48',   # Acetyltransferase
+        }
         
-        # Pattern-based classification
-        if ec_number.startswith('2.1.1.'):
-            return {'name': 'methyltransferase', 'classification': 'tailoring', 'source': 'ec_pattern'}
-        elif ec_number.startswith('1.14.14.'):
-            return {'name': 'cytochrome P450', 'classification': 'tailoring', 'source': 'ec_pattern'}
-        elif ec_number.startswith('2.3.1.'):
-            return {'name': 'acyltransferase', 'classification': 'signature', 'source': 'ec_pattern'}
-        elif ec_number.startswith('4.2.1.'):
-            return {'name': 'lyase', 'classification': 'signature', 'source': 'ec_pattern'}
-        elif ec_number.startswith('6.4.1.'):
-            return {'name': 'carboxylase', 'classification': 'signature', 'source': 'ec_pattern'}
-        else:
-            return {'name': 'unknown enzyme', 'classification': 'unknown', 'source': 'ec_pattern'}
+        # Build reference GO profiles
+        logger.info("Building reference GO profiles from curated proteins...")
+        self.biosynthetic_go_profile = self._build_reference_profile(self.biosynthetic_references)
+        self.modification_go_profile = self._build_reference_profile(self.modification_references)
+        logger.info(f"Biosynthetic profile: {len(self.biosynthetic_go_profile)} GO terms")
+        logger.info(f"Modification profile: {len(self.modification_go_profile)} GO terms")
     
-    def _classify_domains(self, domains: List[str]) -> Dict:
-        """Classify protein domains using InterPro/Pfam information"""
-        domain_classifications = {}
+    def _build_reference_profile(self, ec_numbers: Set[str]) -> Counter:
+        """Build GO term frequency profile from reference EC numbers"""
+        go_profile = Counter()
+        
+        for ec in ec_numbers:
+            try:
+                # Get proteins for this EC
+                url = f"{self.uniprot_base}/uniprotkb/search"
+                params = {'query': f'ec:{ec}', 'format': 'json', 'size': 20}
+                
+                response = self.session.get(url, params=params, timeout=10)
+                if response.status_code != 200:
+                    continue
+                
+                data = response.json()
+                results = data.get('results', [])
+                
+                # Extract GO terms
+                for protein in results:
+                    go_refs = protein.get('uniProtKBCrossReferences', [])
+                    for xref in go_refs:
+                        if xref.get('database') == 'GO':
+                            go_id = xref.get('id', '')
+                            if go_id:
+                                go_profile[go_id] += 1
+                
+                time.sleep(0.5)  # Rate limiting
+                
+            except Exception as e:
+                logger.warning(f"Failed to process reference EC {ec}: {e}")
+        
+        return go_profile
+    
+    def classify_enzyme(self, ec_number: str, domains: List[str]) -> ClassificationInfo:
+        """Classify enzyme by comparing to reference profiles"""
+        logger.info(f"Classifying: EC={ec_number}, Domains={domains}")
+        
+        evidence = []
+        
+        # 1. GO profile similarity
+        go_evidence = self._classify_by_go_similarity(ec_number)
+        if go_evidence:
+            evidence.append(go_evidence)
+        
+        # 2. Domain profile similarity
+        domain_evidence = self._classify_by_domain_similarity(domains)
+        evidence.extend(domain_evidence)
+        
+        # 3. EC number structural similarity
+        ec_evidence = self._classify_by_ec_structure(ec_number)
+        if ec_evidence:
+            evidence.append(ec_evidence)
+        
+        # Statistical consensus
+        return self._calculate_consensus(evidence)
+    
+    def _classify_by_go_similarity(self, ec_number: str) -> Optional[Evidence]:
+        """Classify by GO term profile similarity to references"""
+        try:
+            # Get GO profile for query EC
+            url = f"{self.uniprot_base}/uniprotkb/search"
+            params = {'query': f'ec:{ec_number}', 'format': 'json', 'size': 30}
+            
+            response = self.session.get(url, params=params, timeout=15)
+            if response.status_code != 200:
+                return None
+            
+            data = response.json()
+            results = data.get('results', [])
+            
+            if not results:
+                return None
+            
+            # Build query GO profile
+            query_profile = Counter()
+            for protein in results:
+                go_refs = protein.get('uniProtKBCrossReferences', [])
+                for xref in go_refs:
+                    if xref.get('database') == 'GO':
+                        go_id = xref.get('id', '')
+                        if go_id:
+                            query_profile[go_id] += 1
+            
+            if not query_profile:
+                return None
+            
+            # Calculate similarity to each reference profile
+            bio_similarity = self._cosine_similarity(query_profile, self.biosynthetic_go_profile)
+            mod_similarity = self._cosine_similarity(query_profile, self.modification_go_profile)
+            
+            logger.info(f"GO similarity - Biosynthetic: {bio_similarity:.3f}, Modification: {mod_similarity:.3f}")
+            
+            # Require minimum similarity threshold
+            if max(bio_similarity, mod_similarity) < 0.1:
+                return None
+            
+            if bio_similarity > mod_similarity * 1.2:  # 20% margin
+                classification = "signature"
+                confidence = min(0.9, bio_similarity * 1.5)
+            elif mod_similarity > bio_similarity * 1.2:
+                classification = "tailoring"
+                confidence = min(0.9, mod_similarity * 1.5)
+            else:
+                classification = "mixed"
+                confidence = 0.5
+            
+            return Evidence(
+                source="go_profile",
+                classification=classification,
+                confidence=confidence,
+                details=f"GO similarity: bio={bio_similarity:.2f}, mod={mod_similarity:.2f}"
+            )
+        
+        except Exception as e:
+            logger.warning(f"GO similarity analysis failed: {e}")
+            return None
+    
+    def _cosine_similarity(self, profile1: Counter, profile2: Counter) -> float:
+        """Calculate cosine similarity between two GO profiles"""
+        # Get common terms
+        common = set(profile1.keys()) & set(profile2.keys())
+        
+        if not common:
+            return 0.0
+        
+        # Calculate dot product
+        dot_product = sum(profile1[term] * profile2[term] for term in common)
+        
+        # Calculate magnitudes
+        mag1 = math.sqrt(sum(count**2 for count in profile1.values()))
+        mag2 = math.sqrt(sum(count**2 for count in profile2.values()))
+        
+        if mag1 == 0 or mag2 == 0:
+            return 0.0
+        
+        return dot_product / (mag1 * mag2)
+    
+    def _classify_by_domain_similarity(self, domains: List[str]) -> List[Evidence]:
+        """Classify by comparing domain annotations to reference proteins"""
+        evidence = []
         
         for domain in domains:
             try:
-                # Check if it's a Pfam family name (like Methyltransf_2) vs PF ID (like PF00001)
-                if domain.startswith('PF'):
-                    # Standard Pfam ID format
-                    url = f"{self.interpro_base}/entry/pfam/{domain}"
-                else:
-                    # Pfam family name - try Pfam search API
-                    url = f"{self.interpro_base}/entry/pfam/search"
-                    params = {'query': domain}
-                    logger.info(f"Searching Pfam for family name: {domain}")
-                    response = self.session.get(url, params=params, timeout=10)
-                    if response.status_code == 200:
-                        data = response.json()
-                        if data.get('results') and len(data['results']) > 0:
-                            # Found matching Pfam entry
-                            pfam_id = data['results'][0]['metadata']['accession']
-                            url = f"{self.interpro_base}/entry/pfam/{pfam_id}"
-                            logger.info(f"Found Pfam ID {pfam_id} for family {domain}")
-                        else:
-                            # No Pfam match, use pattern matching
-                            logger.info(f"No Pfam match found for {domain}, using pattern matching")
-                            domain_classifications[domain] = self._classify_domain_by_pattern(domain)
-                            continue
-                    else:
-                        logger.warning(f"Pfam search failed for {domain}, using pattern matching")
-                        domain_classifications[domain] = self._classify_domain_by_pattern(domain)
-                        continue
+                # Search for proteins with this domain
+                url = f"{self.uniprot_base}/uniprotkb/search"
+                params = {'query': f'family:{domain}', 'format': 'json', 'size': 50}
                 
-                logger.info(f"Querying InterPro Pfam API: {url}")
-                response = self.session.get(url, timeout=10)
-                if response.status_code == 200:
-                    data = response.json()
-                    logger.info(f"InterPro Pfam API response for {domain}: {data}")
-                    
-                    # Extract classification information
-                    domain_classifications[domain] = {
-                        'name': data.get('name', ''),
-                        'description': data.get('description', ''),
-                        'type': data.get('type', ''),
-                        'source': 'interpro_pfam'
-                    }
+                response = self.session.get(url, params=params, timeout=10)
+                if response.status_code != 200:
+                    continue
+                
+                data = response.json()
+                results = data.get('results', [])
+                
+                if not results:
+                    continue
+                
+                # Build domain GO profile
+                domain_profile = Counter()
+                for protein in results:
+                    go_refs = protein.get('uniProtKBCrossReferences', [])
+                    for xref in go_refs:
+                        if xref.get('database') == 'GO':
+                            go_id = xref.get('id', '')
+                            if go_id:
+                                domain_profile[go_id] += 1
+                
+                if not domain_profile:
+                    continue
+                
+                # Compare to references
+                bio_sim = self._cosine_similarity(domain_profile, self.biosynthetic_go_profile)
+                mod_sim = self._cosine_similarity(domain_profile, self.modification_go_profile)
+                
+                if max(bio_sim, mod_sim) < 0.05:
+                    continue
+                
+                if bio_sim > mod_sim * 1.2:
+                    classification = "signature"
+                    confidence = min(0.8, bio_sim * 1.5)
+                elif mod_sim > bio_sim * 1.2:
+                    classification = "tailoring"
+                    confidence = min(0.8, mod_sim * 1.5)
                 else:
-                    # Try InterPro entry
-                    url = f"{self.interpro_base}/entry/interpro/{domain}"
-                    logger.info(f"Querying InterPro Entry API: {url}")
-                    response = self.session.get(url, timeout=10)
-                    
-                    if response.status_code == 200:
-                        data = response.json()
-                        logger.info(f"InterPro Entry API response for {domain}: {data}")
-                        
-                        domain_classifications[domain] = {
-                            'name': data.get('name', ''),
-                            'description': data.get('description', ''),
-                            'type': data.get('type', ''),
-                            'source': 'interpro_entry'
-                        }
-                    else:
-                        logger.warning(f"Both InterPro APIs returned status {response.status_code} for domain {domain}")
-                        # Fallback to pattern matching
-                        domain_classifications[domain] = self._classify_domain_by_pattern(domain)
-                    
+                    classification = "mixed"
+                    confidence = 0.4
+                
+                evidence.append(Evidence(
+                    source=f"domain_{domain}",
+                    classification=classification,
+                    confidence=confidence,
+                    details=f"Domain profile: bio={bio_sim:.2f}, mod={mod_sim:.2f}"
+                ))
+                
             except Exception as e:
-                logger.warning(f"Failed to classify domain {domain}: {e}")
-                domain_classifications[domain] = self._classify_domain_by_pattern(domain)
+                logger.debug(f"Domain analysis failed for {domain}: {e}")
         
-        return domain_classifications
+        return evidence
     
-    def _classify_domain_by_pattern(self, domain: str) -> Dict:
-        """Fallback domain classification using pattern matching"""
-        domain_lower = domain.lower()
-        
-        # Known domain classifications
-        domain_classifications = {
-            'glucosamine_iso': 'signature',
-            'methyltransf_3': 'tailoring',
-            'ech': 'signature',
-            'fae1_cut1_rppa': 'signature',
-            'carboxyl_trans': 'signature',
-            'cpsase_l_d2': 'signature',
-            'biotin_carb_c': 'signature',
-            'atp_grasp': 'signature',
-            'acyl_coa_dh_1': 'signature',
-            'p450': 'tailoring',
-            'cytochrome_p450': 'tailoring',
-            'glycos_transf_1': 'tailoring',
-            'glycos_transf_2': 'tailoring',
-            'acetyltransf_1': 'tailoring',
-            'acetyltransf_2': 'tailoring',
-            'duf223': 'tailoring',
-            'epimerase': 'tailoring',
-            '3beta_hsd': 'tailoring',
-            'nad_binding_10': 'tailoring',
-            'nmra': 'tailoring',
-            'adh_short': 'tailoring',
-            'polysacc_synt_2': 'tailoring',
-            'transferase': 'tailoring'
-        }
-        
-        if domain_lower in domain_classifications:
-            classification = domain_classifications[domain_lower]
-        else:
-            # Signature domain patterns
-            signature_patterns = [
-                'pks_', 'nrps_', 'terpene', 'synth', 'acyl_', 'carboxyl',
-                'dehydrogenase', 'reductase', 'elongase', 'transferase',
-                'fae1', 'cpsase', 'biotin', 'atp_grasp', 'ech'
-            ]
+    def _classify_by_ec_structure(self, ec_number: str) -> Optional[Evidence]:
+        """Classify by EC number pattern similarity to references"""
+        try:
+            parts = ec_number.split('.')
+            if len(parts) != 4:
+                return None
             
-            # Tailoring domain patterns
-            tailoring_patterns = [
-                'methyl', 'hydroxyl', 'glycosyl', 'acetyl', 'phospho',
-                'kinase', 'phosphatase', 'oxidase', 'epimerase', 'duf',
-                '3beta', 'nad_binding', 'nmr', 'adh', 'polysacc'
-            ]
+            main_class = parts[0]
+            subclass = f"{parts[0]}.{parts[1]}"
             
-            classification = 'unknown'
-            if any(pattern in domain_lower for pattern in signature_patterns):
-                classification = 'signature'
-            elif any(pattern in domain_lower for pattern in tailoring_patterns):
-                classification = 'tailoring'
+            # Count how many reference ECs share main class/subclass
+            bio_main_matches = sum(1 for ec in self.biosynthetic_references if ec.startswith(f"{main_class}."))
+            mod_main_matches = sum(1 for ec in self.modification_references if ec.startswith(f"{main_class}."))
+            
+            bio_sub_matches = sum(1 for ec in self.biosynthetic_references if ec.startswith(f"{subclass}."))
+            mod_sub_matches = sum(1 for ec in self.modification_references if ec.startswith(f"{subclass}."))
+            
+            # Weight subclass matches more heavily
+            bio_score = bio_main_matches * 0.5 + bio_sub_matches * 2.0
+            mod_score = mod_main_matches * 0.5 + mod_sub_matches * 2.0
+            
+            total = bio_score + mod_score
+            if total < 0.5:
+                return None
+            
+            bio_ratio = bio_score / total
+            mod_ratio = mod_score / total
+            
+            if bio_ratio > 0.65:
+                classification = "signature"
+                confidence = bio_ratio * 0.6
+            elif mod_ratio > 0.65:
+                classification = "tailoring"
+                confidence = mod_ratio * 0.6
+            else:
+                classification = "mixed"
+                confidence = 0.3
+            
+            return Evidence(
+                source="ec_structure",
+                classification=classification,
+                confidence=confidence,
+                details=f"EC pattern: bio={bio_score:.1f}, mod={mod_score:.1f}"
+            )
         
-        return {
-            'name': domain,
-            'classification': classification,
-            'source': 'pattern_matching'
-        }
+        except Exception as e:
+            logger.debug(f"EC structure analysis failed: {e}")
+            return None
     
-    def _combine_classifications(self, ec_info: Optional[Dict], domain_info: Dict) -> ClassificationInfo:
-        """Combine EC and domain information to make final classification"""
-        ec_classification = None
-        domain_classifications = []
+    def _calculate_consensus(self, evidence: List[Evidence]) -> ClassificationInfo:
+        """Calculate weighted consensus from evidence"""
+        if not evidence:
+            return ClassificationInfo(
+                result=ClassificationResult.UNKNOWN,
+                confidence=0.0,
+                evidence=[],
+                reasoning="No evidence from any source"
+            )
         
-        # Analyze EC information
-        if ec_info:
-            ec_classification = ec_info.get('classification')
+        # Weight evidence by confidence
+        sig_score = sum(e.confidence for e in evidence if e.classification == "signature")
+        tail_score = sum(e.confidence for e in evidence if e.classification == "tailoring")
+        mix_score = sum(e.confidence for e in evidence if e.classification == "mixed")
         
-        # Analyze domain information
-        for domain, info in domain_info.items():
-            if 'classification' in info:
-                domain_classifications.append(info['classification'])
+        total = sig_score + tail_score + mix_score
         
-        # Combine results
-        if ec_classification and domain_classifications:
-            # Both EC and domain evidence available
-            if ec_classification in domain_classifications:
-                result = ClassificationResult(ec_classification)
-                confidence = 0.9
-                source = "ec_and_domains"
-                reasoning = f"EC {ec_info.get('ec_number', 'unknown')} and domains agree on {ec_classification}"
-            else:
-                result = ClassificationResult.MIXED
-                confidence = 0.7
-                source = "ec_and_domains"
-                reasoning = f"EC suggests {ec_classification}, domains suggest {domain_classifications}"
+        if total == 0:
+            return ClassificationInfo(
+                result=ClassificationResult.UNKNOWN,
+                confidence=0.0,
+                evidence=evidence,
+                reasoning="All evidence inconclusive"
+            )
         
-        elif ec_classification:
-            # Only EC evidence
-            result = ClassificationResult(ec_classification)
-            confidence = 0.7
-            source = "ec_only"
-            reasoning = f"EC {ec_info.get('ec_number', 'unknown')} suggests {ec_classification}"
+        sig_ratio = sig_score / total
+        tail_ratio = tail_score / total
+        mix_ratio = mix_score / total
         
-        elif domain_classifications:
-            # Only domain evidence
-            if len(set(domain_classifications)) == 1:
-                result = ClassificationResult(domain_classifications[0])
-                confidence = 0.6
-                source = "domains_only"
-                reasoning = f"Domains consistently suggest {domain_classifications[0]}"
-            else:
-                result = ClassificationResult.MIXED
-                confidence = 0.5
-                source = "domains_only"
-                reasoning = f"Domains suggest mixed classification: {domain_classifications}"
-        
+        # Decision logic
+        if sig_ratio > 0.6:
+            result = ClassificationResult.SIGNATURE
+            confidence = sig_ratio
+            reasoning = f"Strong signature similarity ({sig_ratio:.1%} weighted)"
+        elif tail_ratio > 0.6:
+            result = ClassificationResult.TAILORING
+            confidence = tail_ratio
+            reasoning = f"Strong tailoring similarity ({tail_ratio:.1%} weighted)"
+        elif sig_ratio > tail_ratio and sig_ratio > 0.4:
+            result = ClassificationResult.SIGNATURE
+            confidence = sig_ratio * 0.85
+            reasoning = f"Moderate signature similarity ({sig_ratio:.1%} vs {tail_ratio:.1%})"
+        elif tail_ratio > sig_ratio and tail_ratio > 0.4:
+            result = ClassificationResult.TAILORING
+            confidence = tail_ratio * 0.85
+            reasoning = f"Moderate tailoring similarity ({tail_ratio:.1%} vs {sig_ratio:.1%})"
         else:
-            # No evidence
-            result = ClassificationResult.UNKNOWN
-            confidence = 0.0
-            source = "no_evidence"
-            reasoning = "No classification evidence available"
+            result = ClassificationResult.MIXED
+            confidence = max(sig_ratio, tail_ratio, mix_ratio)
+            reasoning = f"Mixed: sig={sig_ratio:.1%}, tail={tail_ratio:.1%}, mix={mix_ratio:.1%}"
         
         return ClassificationInfo(
             result=result,
             confidence=confidence,
-            source=source,
-            ec_info=ec_info,
-            domain_info=domain_info,
+            evidence=evidence,
             reasoning=reasoning
         )
-    
-    def _classify_ec_by_content(self, ec_info: Dict) -> str:
-        """Classify EC number based on its name and function"""
-        name = ec_info.get('name', '').lower()
-        keywords = ' '.join(ec_info.get('keywords', [])).lower()
-        text = f"{name} {keywords}"
-        
-        # Count signature vs tailoring keywords
-        signature_score = sum(1 for keyword in self.signature_keywords if keyword in text)
-        tailoring_score = sum(1 for keyword in self.tailoring_keywords if keyword in text)
-        
-        if signature_score > tailoring_score:
-            return 'signature'
-        elif tailoring_score > signature_score:
-            return 'tailoring'
-        else:
-            # Default classification based on EC class
-            ec_number = ec_info.get('ec_number', '')
-            if ec_number.startswith(('2.3.1', '6.1.1', '4.2.1', '6.4.1')):
-                return 'signature'
-            elif ec_number.startswith(('2.1.1', '1.14.14', '2.4.1')):
-                return 'tailoring'
-            else:
-                return 'unknown'
 
-# Example usage and testing
 def test_classifier():
-    """Test the dynamic classifier with example cases"""
-    classifier = DynamicEnzymeClassifier()
+    """Test the classifier"""
+    classifier = DatabaseDrivenClassifier()
     
     test_cases = [
-        ("3.1.1.31", ["Glucosamine_iso"]),
+        ("2.3.1.199", ["Acyl_transf_3"]),
         ("2.1.1.104", ["Methyltransf_3"]),
-        ("4.2.1.18", ["ECH"]),
-        ("2.3.1.199", ["FAE1_CUT1_RppA"])
+        ("3.1.1.31", ["Abhydrolase_1"]),
     ]
     
     for ec, domains in test_cases:
-        print(f"\nTesting: EC {ec}, Domains {domains}")
+        print(f"\n{'='*60}")
+        print(f"Testing: EC {ec}, Domains: {domains}")
+        print('='*60)
+        
         result = classifier.classify_enzyme(ec, domains)
-        print(f"Result: {result.result.value}")
-        print(f"Confidence: {result.confidence}")
-        print(f"Source: {result.source}")
+        
+        print(f"\nResult: {result.result.value.upper()}")
+        print(f"Confidence: {result.confidence:.2%}")
         print(f"Reasoning: {result.reasoning}")
+        print(f"\nEvidence ({len(result.evidence)} sources):")
+        for i, ev in enumerate(result.evidence, 1):
+            print(f"  {i}. {ev.source}: {ev.classification} ({ev.confidence:.2%})")
+            print(f"     {ev.details}")
 
 if __name__ == "__main__":
     test_classifier()

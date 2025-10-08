@@ -46,7 +46,7 @@ class ClusterIntegrationManager:
         # Find all E2P2 result files
         e2p2_files = list(self.e2p2_dir.glob("*/MGC_CANDIDATE_*.default.pf")) + \
                      list(self.e2p2_dir.glob("*/RANDOM_MGC_*.default.pf")) + \
-                     list(self.e2p2_dir.glob("*/BGC_*.default.pf"))
+                     list(self.e2p2_dir.glob("*/BGC*.default.pf"))
         
         for e2p2_file in e2p2_files:
             # Extract cluster name from file path
