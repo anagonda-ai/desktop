@@ -25,11 +25,11 @@ FOLDSEEK_FEATURES = [
 ]
 
 FEATURE_DESCRIPTIONS = {
-    'mean_score_non_self': 'Mean structural similarity score',
-    'enrichment_score': 'Enrichment vs. random',
-    'z_score': 'Statistical significance',
-    'effect_size': 'Magnitude of effect',
-    'foldseek_match_coverage': 'Fraction of protein pairs with structural matches',
+    'mean_score_non_self': 'Mean TM-score from all-vs-all Foldseek structural alignments, excluding self-comparisons. Aggregates pairwise 3D structure similarity across all protein pairs in the cluster. Higher values indicate globally similar protein structures',
+    'enrichment_score': 'Fold-enrichment of observed mean structural similarity vs. expected random baseline (computed from cluster size). Values >>1 indicate structural cohesion beyond random chance. Formula: mean_score_non_self / expected_random',
+    'z_score': 'Standardized score measuring how many standard deviations the cluster\'s mean structural similarity deviates from a size-matched random distribution. Indicates statistical significance of structural clustering',
+    'effect_size': 'Cohen\'s d-like metric quantifying the magnitude of structural similarity effect. Measures practical significance independent of sample size. High values indicate strong biological signal',
+    'foldseek_match_coverage': 'Fraction of proteins in the cluster that have strong structural matches (fraction_strong_binders, proxy for proteins with high-confidence structural similarity to at least one other member). Indicates breadth of structural conservation',
     # 'foldseek_core_module_fraction': 'Size of largest structural module',
     # 'foldseek_network_density': 'Structural similarity network density',
     # 'foldseek_multi_match_fraction': 'Fraction of proteins with multiple matches'

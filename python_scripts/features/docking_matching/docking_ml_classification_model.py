@@ -21,10 +21,10 @@ DOCKING_FEATURES = [
 ]
 
 FEATURE_DESCRIPTIONS = {
-    'mean_score_non_self': 'Mean docking score (excluding self-interactions)',
-    'enrichment_score': 'Docking enrichment vs. random',
-    'z_score': 'Statistical significance of docking pattern',
-    'effect_size': 'Magnitude of docking effect'
+    'mean_score_non_self': 'Mean LightDock binding energy from all-vs-all protein-protein docking simulations, excluding self-interactions. More negative values indicate stronger predicted binding affinity. Aggregates pairwise binding potential across all protein pairs in the cluster',
+    'enrichment_score': 'Fold-enrichment of observed mean binding energy vs. expected random baseline (computed from cluster size). Values with large absolute magnitude indicate non-random binding patterns. Formula: mean_score_non_self / expected_random',
+    'z_score': 'Standardized score measuring how many standard deviations the cluster\'s mean binding energy deviates from a size-matched random distribution. Indicates statistical significance of coordinated binding patterns. Negative z-scores suggest functionally interacting protein complexes',
+    'effect_size': 'Cohen\'s d-like metric quantifying the magnitude of binding energy effect. Measures practical significance of physical interactions independent of sample size. High absolute values indicate strong protein-protein interaction signals'
 }
 
 def train_model(df, features, feature_name=None, test_size=0.3, random_state=42):

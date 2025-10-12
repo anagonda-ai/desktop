@@ -22,14 +22,18 @@ warnings.filterwarnings('ignore')
 # ============================================================================
 E2P2_FEATURES = [
     'num_distinct_enzyme_classes',
+    'num_distinct_enzyme_subclasses',
+    'num_distinct_enzyme_families',
     'num_distinct_enzyme_subfamilies',
     'total_ec_numbers'
 ]
 
 FEATURE_DESCRIPTIONS = {
-    'num_distinct_enzyme_classes': 'Number of distinct EC classes (1-6)',
-    'num_distinct_enzyme_subfamilies': 'Number of distinct EC subfamilies',
-    'total_ec_numbers': 'Total enzymatic annotations'
+    'num_distinct_enzyme_classes': 'Count of distinct first-level EC numbers (format: X.-.-.-). Represents diversity across the 6 main enzyme classes: 1=Oxidoreductases, 2=Transferases, 3=Hydrolases, 4=Lyases, 5=Isomerases, 6=Ligases. Low values suggest pathway-specific enzymatic function',
+    'num_distinct_enzyme_subclasses': 'Count of distinct second-level EC numbers (format: X.Y.-.-). Represents diversity of enzyme subclasses within main categories. Measures functional breadth at intermediate specificity',
+    'num_distinct_enzyme_families': 'Count of distinct third-level EC numbers (format: X.Y.Z.-). Represents diversity of enzyme families with specific reaction types. Higher granularity than subclasses, indicates mechanistic diversity',
+    'num_distinct_enzyme_subfamilies': 'Count of distinct fourth-level EC numbers (format: X.Y.Z.W). Most specific enzyme classification level, representing exact substrate-specific enzymes. High diversity suggests metabolically promiscuous clusters; low diversity suggests pathway specialization',
+    'total_ec_numbers': 'Total count of all E2P2 enzyme predictions including duplicates. High counts with low diversity indicate gene duplications and pathway amplification typical of MGCs. Positive predictor: more enzymes = higher MGC likelihood'
 }
 
 def load_data(feature_file):
@@ -449,7 +453,7 @@ def main():
     })
     
     summary_df = pd.DataFrame(summary_data)
-    output_file = "/groups/itay_mayrose/alongonda/desktop/e2p2_classification_models_summary.csv"
+    output_file = "/groups/itay_mayrose/alongonda/desktop/random_kegg_e2p2_classification_models_summary.csv"
     summary_df.to_csv(output_file, index=False)
     
     print(f"\n💾 Summary results saved to: {output_file}")
@@ -461,7 +465,7 @@ def main():
         'abs_importance': np.abs(multi_result['weights'])
     }).sort_values('abs_importance', ascending=False)
     
-    weights_output = "/groups/itay_mayrose/alongonda/desktop/e2p2_multi_feature_weights.csv"
+    weights_output = "/groups/itay_mayrose/alongonda/desktop/random_kegg_e2p2_multi_feature_weights.csv"
     weights_df.to_csv(weights_output, index=False)
     print(f"💾 Multi-feature weights saved to: {weights_output}")
     

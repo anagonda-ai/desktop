@@ -17,8 +17,8 @@ class E2P2FeatureExtractor:
         else:
             self.base_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test")
         
-        self.e2p2_results_dir = self.base_dir / "e2p2_results"
-        self.output_dir = self.base_dir / "feature_extraction_results"
+        self.e2p2_results_dir = self.base_dir / "random_kegg_e2p2_results"
+        self.output_dir = self.base_dir / "random_kegg_e2p2_feature_extraction_results"
         self.output_dir.mkdir(exist_ok=True)
     
     def parse_e2p2_default_pf(self, e2p2_file):
@@ -72,7 +72,11 @@ class E2P2FeatureExtractor:
         
         # Extract enzyme classes (first level: X)
         enzyme_classes = set()
-        # Extract enzyme subfamilies (first two levels: X.Y)
+        # Extract enzyme subclasses (first two levels: X.Y)
+        enzyme_subclasses = set()
+        # Extract enzyme families (first three levels: X.Y.Z)
+        enzyme_families = set()
+        # Extract enzyme subfamilies (all levels: X.Y.Z.W)
         enzyme_subfamilies = set()
         
         for ec in all_ec_numbers:
@@ -80,12 +84,20 @@ class E2P2FeatureExtractor:
             if len(parts) >= 1:
                 enzyme_classes.add(parts[0])
             if len(parts) >= 2:
-                enzyme_subfamilies.add(f"{parts[0]}.{parts[1]}")
+                enzyme_subclasses.add(f"{parts[0]}.{parts[1]}")
+            if len(parts) >= 3:
+                enzyme_families.add(f"{parts[0]}.{parts[1]}.{parts[2]}")
+            if len(parts) >= 4:
+                enzyme_subfamilies.add(f"{parts[0]}.{parts[1]}.{parts[2]}.{parts[3]}")
         
         return {
             'num_distinct_enzyme_classes': len(enzyme_classes),
+            'num_distinct_enzyme_subclasses': len(enzyme_subclasses),
+            'num_distinct_enzyme_families': len(enzyme_families),
             'num_distinct_enzyme_subfamilies': len(enzyme_subfamilies),
             'enzyme_classes': sorted(list(enzyme_classes)),
+            'enzyme_subclasses': sorted(list(enzyme_subclasses)),
+            'enzyme_families': sorted(list(enzyme_families)),
             'enzyme_subfamilies': sorted(list(enzyme_subfamilies)),
             'total_ec_numbers': len(all_ec_numbers),
             'all_ec_numbers': all_ec_numbers
@@ -126,9 +138,13 @@ class E2P2FeatureExtractor:
                 'cluster_name': cluster_name,
                 'classification_label': classification_label,
                 'num_distinct_enzyme_classes': ec_features['num_distinct_enzyme_classes'],
+                'num_distinct_enzyme_subclasses': ec_features['num_distinct_enzyme_subclasses'],
+                'num_distinct_enzyme_families': ec_features['num_distinct_enzyme_families'],
                 'num_distinct_enzyme_subfamilies': ec_features['num_distinct_enzyme_subfamilies'],
                 'total_ec_numbers': ec_features['total_ec_numbers'],
                 'enzyme_classes': ';'.join(ec_features['enzyme_classes']),
+                'enzyme_subclasses': ';'.join(ec_features['enzyme_subclasses']),
+                'enzyme_families': ';'.join(ec_features['enzyme_families']),
                 'enzyme_subfamilies': ';'.join(ec_features['enzyme_subfamilies']),
                 'all_ec_numbers': ';'.join(ec_features['all_ec_numbers']),
                 'e2p2_file': str(default_pf_file)
@@ -194,6 +210,8 @@ class E2P2FeatureExtractor:
         # Calculate summary statistics
         total_clusters = len(results_df)
         avg_enzyme_classes = results_df['num_distinct_enzyme_classes'].mean()
+        avg_enzyme_subclasses = results_df['num_distinct_enzyme_subclasses'].mean()
+        avg_enzyme_families = results_df['num_distinct_enzyme_families'].mean()
         avg_enzyme_subfamilies = results_df['num_distinct_enzyme_subfamilies'].mean()
         avg_total_ec = results_df['total_ec_numbers'].mean()
         
@@ -205,6 +223,8 @@ class E2P2FeatureExtractor:
         summary = {
             'total_clusters_analyzed': total_clusters,
             'avg_distinct_enzyme_classes': round(avg_enzyme_classes, 2),
+            'avg_distinct_enzyme_subclasses': round(avg_enzyme_subclasses, 2),
+            'avg_distinct_enzyme_families': round(avg_enzyme_families, 2),
             'avg_distinct_enzyme_subfamilies': round(avg_enzyme_subfamilies, 2),
             'avg_total_ec_numbers': round(avg_total_ec, 2),
             'bgc_mgc_candidate_clusters': bgc_mgc_count,
@@ -219,7 +239,10 @@ class E2P2FeatureExtractor:
         
         print(f"  ✓ Summary saved to: {summary_file}")
         print(f"    - Average distinct enzyme classes: {avg_enzyme_classes:.2f}")
+        print(f"    - Average distinct enzyme subclasses: {avg_enzyme_subclasses:.2f}")
+        print(f"    - Average distinct enzyme families: {avg_enzyme_families:.2f}")
         print(f"    - Average distinct enzyme subfamilies: {avg_enzyme_subfamilies:.2f}")
+        print(f"    - Average total EC number: {avg_total_ec:.2f}")
         print(f"    - BGC/MGC_CANDIDATE clusters: {bgc_mgc_count}")
         print(f"    - RANDOM clusters: {random_count}")
 
@@ -250,8 +273,11 @@ def main():
     if results_df is not None:
         print(f"\nKey features extracted:")
         print(f"  1. Number of distinct enzyme classes (X): {results_df['num_distinct_enzyme_classes'].mean():.2f} average")
-        print(f"  2. Number of distinct enzyme subfamilies (X.Y): {results_df['num_distinct_enzyme_subfamilies'].mean():.2f} average")
-        print(f"  3. Classification labels: 1=BGC/MGC_CANDIDATE, 0=RANDOM")
+        print(f"  2. Number of distinct enzyme subclasses (X.Y): {results_df['num_distinct_enzyme_subclasses'].mean():.2f} average")
+        print(f"  3. Number of distinct enzyme families (X.Y.Z): {results_df['num_distinct_enzyme_families'].mean():.2f} average")
+        print(f"  4. Number of distinct enzyme subfamilies (X.Y.Z.W): {results_df['num_distinct_enzyme_subfamilies'].mean():.2f} average")
+        print(f"  5. Total EC numbers: {results_df['total_ec_numbers'].mean():.2f} average")
+        print(f"  6. Classification labels: 1=BGC/MGC_CANDIDATE, 0=RANDOM")
         print(f"     - BGC/MGC_CANDIDATE: {len(results_df[results_df['classification_label'] == 1])}")
         print(f"     - RANDOM: {len(results_df[results_df['classification_label'] == 0])}")
 

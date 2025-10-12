@@ -36,7 +36,7 @@ def sample_genes_from_file(csv_file, group_size, sample_index):
             return None
         
         # Filter rows with valid data
-        valid_df = df.dropna(subset=['id', 'sequence'])
+        valid_df = df.dropna(subset=['id', 'kegg_ids','sequence'])
         valid_df = valid_df[valid_df['sequence'].str.len() > 20]  # Filter short sequences
         
         if len(valid_df) < group_size:
@@ -65,14 +65,16 @@ def sample_genes_from_file(csv_file, group_size, sample_index):
         print(f"Error processing {csv_file.name}: {e}")
         return None
 
-def process_file_batch(file_batch_info):
+def process_file_batch(file_batch_info, validated_file_sizes):
     """Process a batch of samples for concurrent execution"""
     csv_file, num_samples_for_file, start_index = file_batch_info
     results = []
     
     for i in range(num_samples_for_file):
         sample_index = start_index + i
-        group_size = random.choice([3, 4, 5])
+
+        # Randomly sample a group_size from the list of file sizes
+        group_size = random.choice(validated_file_sizes) if validated_file_sizes else 3
         
         sampled_genes = sample_genes_from_file(csv_file, group_size, sample_index)
         
@@ -82,7 +84,7 @@ def process_file_batch(file_batch_info):
     return results
 
 def create_random_mgc_samples(annotated_dir, output_dir, target_samples=10000, max_workers=None):
-    """Create 10,000 random MGC samples"""
+    """Create 10,0000 random MGC samples"""
     
     print(f"Creating {target_samples} random MGC samples...")
     print(f"Input directory: {annotated_dir}")
@@ -98,6 +100,28 @@ def create_random_mgc_samples(annotated_dir, output_dir, target_samples=10000, m
     if not csv_files:
         print("No annotated CSV files found!")
         return
+    
+    # All validated csv files are in the specified directory. 
+    # Randomly sample a group size from the list of sizes (number of data rows, i.e. lines - 1)
+    validated_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_csv_files"
+    import glob
+
+    # Collect all .csv file paths in the validated directory
+    validated_csv_files = glob.glob(f"{validated_dir}/*.csv")
+    
+    # Create a list of file sizes (number of rows excluding header) for each file
+    validated_file_sizes = []
+    for fpath in validated_csv_files:
+        try:
+            with open(fpath, 'r') as f:
+                n_lines = sum(1 for _ in f)
+                validated_file_sizes.append(n_lines - 1 if n_lines > 0 else 0)
+        except Exception as e:
+            print(f"Error reading {fpath}: {e}")
+            validated_file_sizes.append(0)
+    
+    # Filter out any files with no data rows
+    validated_file_sizes = [sz for sz in validated_file_sizes if sz > 0]
     
     # Calculate how many samples to generate from each file
     samples_per_file = target_samples // len(csv_files)
@@ -136,7 +160,7 @@ def create_random_mgc_samples(annotated_dir, output_dir, target_samples=10000, m
     
     with ProcessPoolExecutor(max_workers=max_workers) as executor:
         # Submit all batch jobs
-        future_to_file = {executor.submit(process_file_batch, batch): batch[0] 
+        future_to_file = {executor.submit(process_file_batch, batch, validated_file_sizes): batch[0] 
                          for batch in file_batches}
         
         # Process results as they complete
@@ -180,7 +204,7 @@ def main():
                        default='/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/annotated_genomes_metabolic',
                        help='Directory containing annotated CSV files')
     parser.add_argument('--output_dir',
-                       default='/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/random_mgc_candidates_csv_files',
+                       default='/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/kegg_random_mgc_candidates_csv_files',
                        help='Output directory for random samples')
     parser.add_argument('--num_samples', type=int, default=10000,
                        help='Number of random samples to create')

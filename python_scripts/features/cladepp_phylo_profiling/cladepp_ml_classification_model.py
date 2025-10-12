@@ -24,13 +24,13 @@ CLADEPP_FEATURES = [
 ]
 
 FEATURE_DESCRIPTIONS = {
-    'mean_cladepp_score': 'Mean conservation across clades',
-    'weighted_cladepp_score': 'Phylo-weighted conservation',
-    'positive_correlation_ratio': 'Fraction of positively correlated pairs',
-    'cladepp_multi_clade_high': 'Fraction of clades with score > 0.8',
-    'cladepp_multi_clade_medium': 'Fraction of clades with score > 0.6',
-    'cladepp_conservation_consistency': 'Conservation uniformity (1 - CV)',
-    'cladepp_max_pair_score': 'Maximum pairwise co-evolution score'
+    'mean_cladepp_score': 'Mean of per-clade co-evolution scores across phylogenetic tree. Each clade score is the average Pearson correlation between anchor gene pairs computed on z-score normalized presence profiles (NPP) within that clade',
+    'weighted_cladepp_score': 'Clade-size weighted mean co-evolution score. Larger clades (more organisms) contribute proportionally more to the final score, reducing bias from small, potentially noisy clades',
+    'positive_correlation_ratio': 'Fraction of all anchor gene pairs across all clades showing positive correlation (r > 0). Measures phylogenetic breadth of co-conservation patterns',
+    'cladepp_multi_clade_high': 'Fraction of analyzed clades with mean pairwise correlation > 0.8. Indicates strong, consistent co-evolution across multiple phylogenetic lineages',
+    'cladepp_multi_clade_medium': 'Fraction of analyzed clades with mean pairwise correlation > 0.6. Captures moderate-to-strong conservation signal distributed across the tree',
+    'cladepp_conservation_consistency': 'Conservation uniformity metric: 1 - (std/mean) of clade scores, clipped to [0,1]. High values indicate uniform co-evolution across clades; low values suggest clade-specific or sporadic patterns',
+    'cladepp_max_pair_score': 'Maximum mean pairwise correlation observed in any single clade. Identifies the strongest local co-evolution signal regardless of phylogenetic breadth'
 }
 
 def train_model(df, features, feature_name=None, test_size=0.3, random_state=42):
