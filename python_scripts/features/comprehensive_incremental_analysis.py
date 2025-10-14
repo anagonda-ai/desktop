@@ -16,7 +16,7 @@ warnings.filterwarnings('ignore')
 
 class ComprehensiveMLAnalyzer:
     def __init__(self):
-        BASE_DIR = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data"
+        BASE_DIR = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/actual_random/"
         
         # Feature configurations (cleaned - no approximations)
         self.feature_configs = {
@@ -48,10 +48,24 @@ class ComprehensiveMLAnalyzer:
                 'cluster_col': 'cluster_name',
                 'features': [
                     'num_distinct_enzyme_classes',
+                    'num_distinct_enzyme_subclasses',
+                    'num_distinct_enzyme_families',
                     'num_distinct_enzyme_subfamilies',
                     'total_ec_numbers'
                 ],
                 'name': 'E2P2'
+            },
+            'promotor_similarity': {
+                'path': f'{BASE_DIR}/promoter_similarity_results.csv',
+                'cluster_col': 'group_name',
+                'features': [
+                    'similarity_score',
+                    'normalized_similarity',
+                    'mean_proximal_similarity',
+                    'mean_distal_similarity',
+                    'num_tfbs_types_found'
+                                ],
+                'name': 'Promoter Similarity'
             },
             'cladepp': {
                 'path': f'{BASE_DIR}/cladepp_cluster_metrics_enhanced.csv',
@@ -95,6 +109,8 @@ class ComprehensiveMLAnalyzer:
                 df['label'] = df['category'].apply(lambda x: 0 if x == 'RANDOM' else 1)
             elif 'classification_label' in df.columns:
                 df['label'] = df['classification_label'].astype(int)
+            elif 'dataset_group' in df.columns:
+                df['label'] = df['dataset_group'].apply(lambda x: 0 if x == 'Random' else 1)
             else:
                 raise ValueError(f"No label column found in {key}")
             
