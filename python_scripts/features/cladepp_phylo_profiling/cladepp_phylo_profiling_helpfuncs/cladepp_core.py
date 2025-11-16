@@ -2,10 +2,8 @@ import pandas as pd
 from itertools import combinations
 import numpy as np
 import os
-from scipy.stats import zscore
-from scipy.cluster.hierarchy import linkage, fcluster
 
-def build_profile_matrix(blast_df, anchors, output_dir, min_coverage=0.2):
+def build_profile_matrix(blast_df, anchors, output_dir, min_coverage=0.2, clade_id=None):
     print(f"🔍 Input blast_df shape: {blast_df.shape}")
     print(f"🔍 Unique organisms in blast_df: {blast_df['organism'].nunique()}")
     print(f"🔍 Organism list: {blast_df['organism'].unique()[:10]}")  # First 10
@@ -32,11 +30,10 @@ def build_profile_matrix(blast_df, anchors, output_dir, min_coverage=0.2):
     print(f"🔍 Final matrix shape after gene filtering: {filtered.shape}")
     print(f"🔍 Final organism count: {filtered.shape[1]}")
     
-    filtered.to_csv(os.path.join(output_dir, "matrix_raw.csv"))
+    filtered.to_csv(os.path.join(output_dir, f"matrix_raw_{clade_id}.csv"))
     return filtered
 
-def normalize_npp(matrix, output_dir):
-    from scipy.stats import zscore
+def normalize_npp(matrix, output_dir, clade_id, self_alignment_scores):
     
     print(f"Input type: {type(matrix)}")
     print(f"Input shape: {matrix.shape}")
@@ -47,35 +44,26 @@ def normalize_npp(matrix, output_dir):
     
     # Apply zscore directly on the numpy array to avoid pandas issues
     # axis=1 means normalize each gene (row) across organisms (columns)
-    normalized_values = zscore(matrix.values, axis=1, nan_policy='omit')
-    
-    # Create new DataFrame with same structure
-    npp = pd.DataFrame(normalized_values, index=matrix.index, columns=matrix.columns)
-    npp = npp.fillna(0)
-    
-    print(f"Final type: {type(npp)}")
-    print(f"Final shape: {npp.shape}")
-    
-    npp.to_csv(os.path.join(output_dir, "matrix_npp.csv"))
-    return npp
+    # Normalize each value in each row (gene) by the self-alignment score for that gene
+    # self_alignment_scores: dict mapping origin_file (gene) to its self-bitscore
+    # matrix: DataFrame (genes x organisms)
 
-def compute_clusters(npp_matrix, threshold):
-    linkage_matrix = linkage(npp_matrix, method="average", metric="correlation")
-    cluster_ids = fcluster(linkage_matrix, t=threshold, criterion='distance')
-    return pd.Series(cluster_ids, index=npp_matrix.index), linkage_matrix
-
-def coevolution_score(cluster_series, anchor_names):
-    scores = {}
-    clusters = cluster_series.groupby(cluster_series)
-    for clust_id, genes in clusters:
-        in_cluster = list(genes.index)
-        n_anchors = len([g for g in in_cluster if g in anchor_names])
-        if n_anchors >= 2:
-            for g in in_cluster:
-                scores[g] = n_anchors / len(in_cluster)
-    return scores
-
-from Bio import Phylo
+    denominator = matrix.index.map(lambda g: self_alignment_scores.get(g, np.nan))
+    # Reshape denominator for broadcasting (as a column vector)
+    denominator = pd.Series(denominator, index=matrix.index)
+    # Avoid division by zero or nan
+    with np.errstate(divide='ignore', invalid='ignore'):
+        normalized_values = matrix.div(denominator, axis=0)
+    
+        # Create new DataFrame with same structure
+        npp = pd.DataFrame(normalized_values, index=matrix.index, columns=matrix.columns)
+        npp = npp.fillna(0)
+        
+        print(f"Final type: {type(npp)}")
+        print(f"Final shape: {npp.shape}")
+        
+        npp.to_csv(os.path.join(output_dir, f"matrix_npp_{clade_id}.csv"))
+        return npp
 
 def compute_gain_loss_coevolution_copap_style(presence_absence_matrix, tree):
     """

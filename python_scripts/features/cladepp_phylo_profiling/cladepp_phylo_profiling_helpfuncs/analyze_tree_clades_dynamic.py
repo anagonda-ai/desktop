@@ -66,7 +66,7 @@ def compute_cladepp_score(npp_matrix, anchor_genes):
 def normalize_name(name):
     return name.strip().lower().replace(" ", "_").replace("-", "_").replace(".", "").replace("(", "").replace(")", "")
 
-def process_single_clade(clade_data, output_dir):
+def process_single_clade(clade_data, output_dir, self_alignment_scores):
     """
     Process a single clade - designed for concurrent execution.
     """
@@ -77,7 +77,7 @@ def process_single_clade(clade_data, output_dir):
         sub_df = pd.DataFrame(sub_comparisons)
 
         blast_df = load_selected_blast_results(sub_df)
-        raw_matrix = build_profile_matrix(blast_df, anchor_genes, output_dir)
+        raw_matrix = build_profile_matrix(blast_df, anchor_genes, output_dir, min_coverage=0.2, clade_id=clade_id)
         
         if raw_matrix.shape[1] < 2:  # Less than 2 organisms
             return {
@@ -86,7 +86,7 @@ def process_single_clade(clade_data, output_dir):
                 "reason": f"only {raw_matrix.shape[1]} organism(s)"
             }
         
-        npp_matrix = normalize_npp(raw_matrix, output_dir)
+        npp_matrix = normalize_npp(raw_matrix, output_dir, clade_id=clade_id, self_alignment_scores=self_alignment_scores)
         corr_stats, anchor_corrs = compute_anchor_corr_stats(npp_matrix, anchor_genes=anchor_genes)
         cladepp_score = compute_cladepp_score(npp_matrix, anchor_genes)
 
@@ -155,6 +155,113 @@ def get_anchor_genes_from_comparison_dir(comparison_csv):
     ]
     return anchor_genes
 
+def get_self_alignment_scores_from_comparison_dir(anchor_genes, comparison_csv):
+    """
+    For each fasta file in the directory (all are anchor genes), run BLAST on itself 
+    and extract the self-alignment bit score (BS_ii). Returns a dictionary mapping 
+    gene names to their self-alignment bit scores.
+    
+    Parameters:
+    -----------
+    anchor_genes : list
+        List of anchor gene names (without extension) - not used, kept for compatibility
+    comparison_csv : str
+        Path to comparison CSV file (used to get the directory containing fasta files)
+    
+    Returns:
+    --------
+    dict
+        Dictionary mapping gene names to their self-alignment bit scores
+    """
+    comp_dir = os.path.dirname(comparison_csv)
+    self_alignment_scores = {}
+    
+    # Find all fasta files in the directory (all are anchor genes)
+    fasta_extensions = [".fasta", ".fa", ".faa"]
+    fasta_files = [
+        f for f in os.listdir(comp_dir)
+        if any(f.endswith(ext) for ext in fasta_extensions)
+    ]
+    
+    for fasta_file in fasta_files:
+        fasta_path = os.path.join(comp_dir, fasta_file)
+        # Get gene name without extension
+        gene_name = os.path.splitext(fasta_file)[0]
+        
+        try:
+            # Create a temporary directory for BLAST database and output
+            temp_dir = os.path.join(comp_dir, ".blast_temp")
+            os.makedirs(temp_dir, exist_ok=True)
+            
+            # Create BLAST database from the fasta file
+            db_name = os.path.join(temp_dir, f"{gene_name}_db")
+            makeblastdb_cmd = [
+                "makeblastdb",
+                "-in", fasta_path,
+                "-dbtype", "prot",
+                "-out", db_name
+            ]
+            
+            result = subprocess.run(
+                makeblastdb_cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # Run BLASTp: query the fasta file against itself
+            blast_output = os.path.join(temp_dir, f"{gene_name}_self_blast.txt")
+            blastp_cmd = [
+                "blastp",
+                "-query", fasta_path,
+                "-db", db_name,
+                "-out", blast_output,
+                "-outfmt", "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore"
+            ]
+            
+            result = subprocess.run(
+                blastp_cmd,
+                capture_output=True,
+                text=True,
+                check=True
+            )
+            
+            # Parse BLAST output - just get the bit score (it's the self-alignment)
+            bit_score = 0
+            if os.path.exists(blast_output) and os.path.getsize(blast_output) > 0:
+                with open(blast_output, 'r') as f:
+                    first_line = f.readline().strip()
+                    if first_line:
+                        fields = first_line.split('\t')
+                        if len(fields) >= 12:
+                            bit_score = float(fields[11])
+            
+            self_alignment_scores[gene_name] = bit_score
+            print(f"✅ Self-alignment for {gene_name}: {bit_score:.2f}")
+            
+            # Clean up temporary files (optional - comment out if you want to keep them for debugging)
+            try:
+                # Remove database files
+                for ext in ['.phr', '.pin', '.psq']:
+                    db_file = db_name + ext
+                    if os.path.exists(db_file):
+                        os.remove(db_file)
+                # Remove blast output
+                if os.path.exists(blast_output):
+                    os.remove(blast_output)
+            except:
+                pass  # Ignore cleanup errors
+                
+        except subprocess.CalledProcessError as e:
+            print(f"Error running BLAST for {gene_name}: {e.stderr}")
+            self_alignment_scores[gene_name] = 0
+        except Exception as e:
+            print(f"Error processing {gene_name}: {str(e)}")
+            self_alignment_scores[gene_name] = 0
+    
+    print(f"✅ Extracted self-alignment scores for {len(self_alignment_scores)} genes")
+    return self_alignment_scores
+
 def compute_anchor_corr_stats(submatrix, anchor_genes=None):
     genes = [g for g in anchor_genes if g in submatrix.index]
     anchor_corrs = []
@@ -193,6 +300,7 @@ def analyze_tree_clades_dynamic(
     
     # Find fasta files in the comparison_csv dir and use them as anchor genes
     anchor_genes = get_anchor_genes_from_comparison_dir(comparison_csv)
+    self_alignment_scores = get_self_alignment_scores_from_comparison_dir(anchor_genes, comparison_csv)
     print(f"Loading tree from {tree_path}")
     tree = Phylo.read(tree_path, "newick")
     terminals = [term.name for term in tree.get_terminals()]
@@ -218,8 +326,8 @@ def analyze_tree_clades_dynamic(
         all_df = pd.DataFrame(all_matched_comparisons)
 
         blast_df_global = load_selected_blast_results(all_df)
-        raw_matrix_global = build_profile_matrix(blast_df_global, anchor_genes, mgc_output_dir)
-        npp_matrix_global = normalize_npp(raw_matrix_global)
+        raw_matrix_global = build_profile_matrix(blast_df_global, anchor_genes, mgc_output_dir, min_coverage=0.2, clade_id="global")
+        npp_matrix_global = normalize_npp(raw_matrix_global, mgc_output_dir, clade_id="global", self_alignment_scores=self_alignment_scores)
 
         global_score = compute_cladepp_global_score(npp_matrix_global, anchor_genes)
         print(f"✅ Global CladePP Score: {global_score}")
@@ -264,7 +372,7 @@ def analyze_tree_clades_dynamic(
     with executor_class(max_workers=max_workers) as executor:
         # Submit all tasks
         future_to_clade = {
-            executor.submit(process_single_clade, clade_data, mgc_output_dir): clade_data[0] 
+            executor.submit(process_single_clade, clade_data, mgc_output_dir, self_alignment_scores): clade_data[0] 
             for clade_data in clade_tasks
         }
         

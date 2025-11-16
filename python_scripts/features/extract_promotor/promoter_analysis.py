@@ -356,7 +356,7 @@ def main():
     """Main function with concurrent processing and group analysis"""
     
     # Configuration
-    promoter_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_promotor_analysis/"
+    promoter_directory = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/random_kegg_mgc_promotor_analysis/"
     
     # Find all promoter files
     fasta_files = glob.glob(os.path.join(promoter_directory, "*_promoters.fasta"))
@@ -552,7 +552,7 @@ def main():
         ]
         
         clean_df = df[[col for col in output_columns if col in df.columns]]
-        clean_df.to_csv('promoter_similarity_results.csv', index=False)
+        clean_df.to_csv('/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/promoter_similarity_results.csv', index=False)
         
         # Save separate files by group
         for group in ['KEGG', 'MiBIG', 'Random']:

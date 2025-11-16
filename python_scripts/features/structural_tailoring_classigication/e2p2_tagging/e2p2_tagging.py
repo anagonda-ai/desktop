@@ -12,9 +12,9 @@ import time
 class E2P2AnalysisManager:
     def __init__(self):
         self.base_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test")
-        self.job_script_dir = self.base_dir / "e2p2_jobs"
+        self.job_script_dir = self.base_dir / "random_kegg_e2p2_jobs"
         self.job_script_dir.mkdir(exist_ok=True)
-        self.output_dir = self.base_dir / "e2p2_results"
+        self.output_dir = self.base_dir / "random_kegg_e2p2_results"
         self.output_dir.mkdir(exist_ok=True)
         
     def get_running_job_count(self):
@@ -277,8 +277,7 @@ echo "E2P2 analysis for {fasta_file.name} finished successfully!"
         """Process all FASTA directories with E2P2 job submission"""
         # Define the FASTA directories to process
         fasta_directories = [
-            self.base_dir / "mgc_candidates_fasta_files",
-            self.base_dir / "random_mgc_candidates_fasta_files"
+            self.base_dir / "kegg_random_mgc_candidates_fasta_files"
         ]
         
         for fasta_dir in fasta_directories:

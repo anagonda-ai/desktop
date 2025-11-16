@@ -28,7 +28,7 @@ FEATURE_DESCRIPTIONS = {
     'mean_score_non_self': 'Mean TM-score from all-vs-all Foldseek structural alignments, excluding self-comparisons. Aggregates pairwise 3D structure similarity across all protein pairs in the cluster. Higher values indicate globally similar protein structures',
     'enrichment_score': 'Fold-enrichment of observed mean structural similarity vs. expected random baseline (computed from cluster size). Values >>1 indicate structural cohesion beyond random chance. Formula: mean_score_non_self / expected_random',
     'z_score': 'Standardized score measuring how many standard deviations the cluster\'s mean structural similarity deviates from a size-matched random distribution. Indicates statistical significance of structural clustering',
-    'effect_size': 'Cohen\'s d-like metric quantifying the magnitude of structural similarity effect. Measures practical significance independent of sample size. High values indicate strong biological signal',
+    'effect_size': 'Cohen\'s d-like metric quantifying the magnitude of structural similarity effect, aggregated across all non-self pair comparisons within a cluster. Measures practical significance independent of sample size; high values indicate a strong biological signal',
     'foldseek_match_coverage': 'Fraction of proteins in the cluster that have strong structural matches (fraction_strong_binders, proxy for proteins with high-confidence structural similarity to at least one other member). Indicates breadth of structural conservation',
     # 'foldseek_core_module_fraction': 'Size of largest structural module',
     # 'foldseek_network_density': 'Structural similarity network density',
@@ -153,7 +153,7 @@ def main():
     print("="*80)
     
     # Load data
-    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/foldseek_cluster_metrics_enhanced.csv"
+    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/foldseek_cluster_metrics_enhanced.csv"
     df = pd.read_csv(metrics_file)
     # Create binary labels: 1 for BGC/MGC_CANDIDATE, 0 for RANDOM
     df['label'] = df['category'].apply(lambda x: 0 if x == 'RANDOM' else 1)

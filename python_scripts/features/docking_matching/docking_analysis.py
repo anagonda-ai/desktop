@@ -14,7 +14,7 @@ import shutil
 class LightDockFullWorkflowManager:
     def __init__(self):
         self.base_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test")
-        self.job_script_dir = self.base_dir / "lightdock_full_jobs"
+        self.job_script_dir = self.base_dir / "kegg_random_mgc_lightdock_full_jobs"
         self.job_script_dir.mkdir(exist_ok=True)
         
     def get_running_job_count(self):
@@ -65,7 +65,7 @@ class LightDockFullWorkflowManager:
 #SBATCH --ntasks=1
 #SBATCH --time=7-00:00:00
 #SBATCH --mem=64G
-#SBATCH --partition=itaym
+#SBATCH --partition=itaym-pool
 #SBATCH --cpus-per-task=2
 
 cd {output_dir}
@@ -169,6 +169,9 @@ if [ -f setup.json ]; then
                     echo "Output files generated in: $(pwd)" >> analysis_summary.txt
                     echo "" >> analysis_summary.txt
                     cat best_score.txt >> analysis_summary.txt
+                    # Remove all files in the output dir except best_score.txt, analysis_summary.txt, analysis_complete.flag
+                    echo "Cleaning up output directory (retaining best_score.txt, analysis_summary.txt, analysis_complete.flag)..."
+                    find . -maxdepth 1 ! -name "best_score.txt" ! -name "analysis_summary.txt" ! -name "analysis_complete.flag" -exec rm -rf {{}} \;
                     
                 else
                     echo "FAILED: Top conformations generation failed"
@@ -252,7 +255,7 @@ echo "Check analysis_summary.txt for details"
         
         print(f"Submitting full workflow jobs for cluster {cluster_name}: {len(pdb_files)} proteins")
         
-        output_base = self.base_dir / "lightdock_results" / cluster_name
+        output_base = self.base_dir / "kegg_random_mgc_lightdock_result" / cluster_name
         submitted_jobs = []
         
         for i, receptor in enumerate(pdb_files):
@@ -342,7 +345,7 @@ echo "Check analysis_summary.txt for details"
         
         print(f"Collecting results for cluster {cluster_name}")
         
-        output_base = self.base_dir / "lightdock_results" / cluster_name
+        output_base = self.base_dir / "kegg_random_mgc_lightdock_results" / cluster_name
         results = []
         
         for i, receptor in enumerate(pdb_files):
@@ -418,7 +421,7 @@ echo "Check analysis_summary.txt for details"
     def process_all_clusters(self, category_prefix):
         """Process all clusters with full workflow job submission"""
         if "RANDOM" in category_prefix:
-            search_dir = self.base_dir / "random_mgc_pdb_files"
+            search_dir = self.base_dir / "kegg_random_mgc_pdb_files"
         else:
             search_dir = self.base_dir / "mgc_pdb_files"
         

@@ -30,7 +30,7 @@ def split_fasta_by_gene(fasta_path, out_dir):
                 # Start new gene
                 header = line
                 gene = line[1:].split('|')[gene_index].strip().replace(' ', '_')  # Use second field as gene name
-                cluster = line[1:].split('|')[cluster_index].strip().replace('>', '')
+                cluster = os.path.basename(fasta_path).replace(".fasta","")
                 seq_lines = []
             else:
                 seq_lines.append(line)
@@ -47,14 +47,12 @@ def split_fasta_by_gene(fasta_path, out_dir):
 
 def main(txt_file):
     txt_file_dir = os.path.dirname(txt_file)
-    out_dir = os.path.join(txt_file_dir, "mgc_candidates_dir_fixed")
+    out_dir = os.path.join(txt_file_dir, "kegg_random_mgc_candidates_dir_fixed")
     with open(txt_file, 'r') as f:
         fasta_files = [line.strip() for line in f if line.strip()]
     for fasta_path in fasta_files:
         split_fasta_by_gene(fasta_path, out_dir)
 
 if __name__ == "__main__":
-    if len(sys.argv) != 2:
-        print(f"Usage: python {sys.argv[0]} <path_to_txt_file>")
-        sys.exit(1)
-    main(sys.argv[1])
+    txt_file = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/kegg_random_mgc_candidates_fasta_files.txt"
+    main(txt_file)

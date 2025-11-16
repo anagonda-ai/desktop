@@ -1,6 +1,7 @@
 #!/bin/bash
 #SBATCH --job-name=colabfold_cpu_%j
-#SBATCH --partition=gpu-itaymay
+#SBATCH --partition=gpu-general-pool
+#SBATCH --qos=public
 #SBATCH --gres=gpu:1
 #SBATCH --cpus-per-task=8
 #SBATCH --mem=16G

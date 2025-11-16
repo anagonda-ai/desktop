@@ -49,7 +49,7 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
         features_to_use = features
     
     # Prepare data
-    data = df[['cluster_name'] + features_to_use + ['label']].dropna()
+    data = df[['name'] + features_to_use + ['label']].dropna()
     X = data[features_to_use].values
     y = data['label'].values
     
@@ -149,10 +149,10 @@ def main():
     print("="*80)
     
     # Load data
-    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/cladepp_cluster_metrics_enhanced.csv"
+    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/cladepp_cluster_metrics_enhanced.csv"
     df = pd.read_csv(metrics_file)
     # Create binary labels: 1 for BGC/MGC_CANDIDATE, 0 for RANDOM
-    df['label'] = df['category'].apply(lambda x: 0 if x == 'RANDOM' else 1)
+    df['label'] = df['name'].apply(lambda x: 0 if 'RANDOM' in x else 1)
     
     print(f"\nLoaded {len(df)} clusters ({df['label'].sum()} MGC, {(df['label']==0).sum()} Random)")
     

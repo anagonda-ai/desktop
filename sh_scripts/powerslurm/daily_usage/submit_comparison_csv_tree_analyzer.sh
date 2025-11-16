@@ -1,7 +1,7 @@
 #!/bin/bash
-#SBATCH --job-name=actual_mgc_cladepp_analysis
-#SBATCH --output=/groups/itay_mayrose/alongonda/desktop/example_jobs/out_actual_mgc_cladepp_analysis.OU
-#SBATCH --error=/groups/itay_mayrose/alongonda/desktop/example_jobs/error_actual_mgc_cladepp_analysis.ER
+#SBATCH --job-name=actual_mgc_cladepp_analysis_%j
+#SBATCH --output=/groups/itay_mayrose/alongonda/desktop/example_jobs/out_actual_mgc_cladepp_analysis_%j.OU
+#SBATCH --error=/groups/itay_mayrose/alongonda/desktop/example_jobs/error_actual_mgc_cladepp_analysis_%j.ER
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=32G

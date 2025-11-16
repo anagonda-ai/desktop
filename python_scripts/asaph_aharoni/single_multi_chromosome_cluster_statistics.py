@@ -179,7 +179,3 @@ if __name__ == "__main__":
     
     
     results = compare_csvs_in_each_dir(best_hits_by_organism, output_file, base_genes)
-    
-    
-    if results:
-        plot_results(results, example_mgc)

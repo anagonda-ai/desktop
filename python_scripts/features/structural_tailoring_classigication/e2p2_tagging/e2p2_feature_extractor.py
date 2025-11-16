@@ -17,8 +17,8 @@ class E2P2FeatureExtractor:
         else:
             self.base_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test")
         
-        self.e2p2_results_dir = self.base_dir / "random_kegg_e2p2_results"
-        self.output_dir = self.base_dir / "random_kegg_e2p2_feature_extraction_results"
+        self.e2p2_results_dir = self.base_dir / "e2p2_results"
+        self.output_dir = self.base_dir / "e2p2_feature_extraction_results"
         self.output_dir.mkdir(exist_ok=True)
     
     def parse_e2p2_default_pf(self, e2p2_file):

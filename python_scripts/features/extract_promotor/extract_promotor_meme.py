@@ -1041,9 +1041,6 @@ class OptimizedPromoterAnalyzer:
             logger.warning(f"No promoters extracted for {organism}")
             return False
         
-        # Complete batch analysis - basic composition
-        basic_results = self.motif_analyzer.analyze_batch_basic_comprehensive(all_promoters)
-        
         # Save results for each cluster with COMPLETE analysis
         successful_clusters = 0
         for cluster_name, promoters in all_promoters.items():
@@ -1056,49 +1053,6 @@ class OptimizedPromoterAnalyzer:
                 with open(output_fasta, "w") as f:
                     for header, seq in promoters.items():
                         f.write(f">{header}\n{seq}\n")
-                
-                # Save basic analysis
-                if cluster_name in basic_results:
-                    basic_df = basic_results[cluster_name]
-                    output_csv = output_dir / f"{cluster_name}_promoters_analysis.csv"
-                    basic_df.to_csv(output_csv, index=False)
-                
-                # COMPLETE ADVANCED ANALYSIS - ALL ORIGINAL FUNCTIONALITY
-                if len(promoters) >= 3:
-                    try:
-                        sequences = list(promoters.values())
-                        seq_ids = list(promoters.keys())
-                        
-                        # Run comprehensive motif analysis
-                        motif_results = self.motif_analyzer.comprehensive_motif_analysis_optimized(
-                            sequences, seq_ids, cluster_name
-                        )
-                        
-                        # Save all analysis results - IDENTICAL TO ORIGINAL FORMAT
-                        if 'kmer_analysis' in motif_results:
-                            kmer_output = output_dir / f"{cluster_name}_kmer_motifs.csv"
-                            motif_results['kmer_analysis'].to_csv(kmer_output, index=False)
-                        
-                        if 'palindromic_motifs' in motif_results:
-                            palindrome_output = output_dir / f"{cluster_name}_palindromic_motifs.csv"
-                            motif_results['palindromic_motifs'].to_csv(palindrome_output, index=False)
-                        
-                        if 'regulatory_motifs' in motif_results:
-                            reg_output = output_dir / f"{cluster_name}_regulatory_motifs.csv"
-                            motif_results['regulatory_motifs'].to_csv(reg_output, index=False)
-                        
-                        if 'consensus_motifs' in motif_results:
-                            consensus_output = output_dir / f"{cluster_name}_consensus_motifs.csv"
-                            motif_results['consensus_motifs'].to_csv(consensus_output, index=False)
-                        
-                        if 'motif_clusters' in motif_results:
-                            cluster_output = output_dir / f"{cluster_name}_motif_clusters.csv"
-                            motif_results['motif_clusters'].to_csv(cluster_output, index=False)
-                        
-                        logger.info(f"✅ Complete analysis saved for {cluster_name}")
-                    
-                    except Exception as e:
-                        logger.warning(f"Advanced analysis failed for {cluster_name}: {e}")
                 
                 successful_clusters += 1
                 
@@ -1118,10 +1072,10 @@ def main():
     """Optimized main function with complete functionality enabled"""
     
     # Configuration
-    cluster_csvs_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_csv_files")
+    cluster_csvs_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/kegg_random_mgc_candidates_csv_files")
 
     
-    output_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_promotor_analysis")
+    output_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/random_kegg_mgc_promotor_analysis")
     mapping_file = "/groups/itay_mayrose/alongonda/datasets/asaph_aharoni/dataset_organism_mapping.csv"
     annotation_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/annotated_genomes_metabolic"
     fasta_dirs = [

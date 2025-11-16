@@ -6,11 +6,12 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configuration
 ROOT_DIR = Path(
-    "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_pdb_files/"
+    "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/"
 )
-OLD_OUTPUT_ROOT = ROOT_DIR.parent / "mibig_kegg_foldseek_predictions"
+OLD_OUTPUT_ROOT = ROOT_DIR / "kegg_random_mgc_pdb_files"
+NEW_OUTPUT_ROOT = ROOT_DIR / "kegg_random_mgc_foldseek_predictions"
 FOLDSEEK = "foldseek"
-MAX_WORKERS = 16
+MAX_WORKERS = 32
 
 def collect_pdbs(mgc_dir: Path):
     """Collect all PDB files from the original MGC directory"""
@@ -26,7 +27,7 @@ def fix_merged_pdb_and_recreate_db(mgc_name: str):
     """Fix the merged PDB file to properly separate proteins, then recreate the database"""
     
     # Get original PDB files from source directory
-    original_mgc_dir = ROOT_DIR / mgc_name
+    original_mgc_dir = OLD_OUTPUT_ROOT / mgc_name
     if not original_mgc_dir.exists():
         return f"[!] Original directory not found: {mgc_name}"
     
@@ -35,7 +36,7 @@ def fix_merged_pdb_and_recreate_db(mgc_name: str):
         return f"[!] No PDB files found for {mgc_name}"
     
     # Work in the existing output directory
-    mgc_output_dir = OLD_OUTPUT_ROOT / mgc_name
+    mgc_output_dir = NEW_OUTPUT_ROOT / mgc_name
     mgc_output_dir.mkdir(parents=True, exist_ok=True)
     
     # Backup the old merged file if it exists
@@ -47,7 +48,7 @@ def fix_merged_pdb_and_recreate_db(mgc_name: str):
     
     # Create properly formatted merged PDB with clear protein separations
     fixed_merged_pdb = mgc_output_dir / f"{mgc_name}_merged_input.pdb"
-    
+    print(f"mgc_name: {mgc_name}")
     try:
         with open(fixed_merged_pdb, 'w') as out_f:
             for i, pdb_file in enumerate(pdb_files, 1):
@@ -170,7 +171,7 @@ def main():
     
     if OLD_OUTPUT_ROOT.exists():
         for d in OLD_OUTPUT_ROOT.iterdir():
-            if d.is_dir() and d.name.startswith("BGC"):
+            if d.is_dir():
                 mgc_dirs_to_fix.append(d.name)
     
     if not mgc_dirs_to_fix:

@@ -146,7 +146,7 @@ def main():
     print("="*80)
     
     # Load data - assumes promoter_similarity_results.csv exists
-    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/promoter_similarity_results.csv"
+    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/promoter_similarity_results.csv"
     df = pd.read_csv(metrics_file)
     
     # Create binary labels: 1 for MGC (KEGG + MiBIG), 0 for RANDOM

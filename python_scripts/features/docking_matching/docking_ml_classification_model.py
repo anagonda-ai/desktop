@@ -145,7 +145,7 @@ def main():
     print("="*80)
     
     # Load data
-    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/lightdock_cluster_metrics.csv"
+    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/actual_random/lightdock_cluster_metrics.csv"
     df = pd.read_csv(metrics_file)
     # Create binary labels: 1 for BGC/MGC_CANDIDATE, 0 for RANDOM
     df['label'] = df['category'].apply(lambda x: 0 if x == 'RANDOM' else 1)

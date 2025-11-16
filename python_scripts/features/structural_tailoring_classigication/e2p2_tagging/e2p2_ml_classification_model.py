@@ -367,7 +367,7 @@ def main():
     print("="*80)
     
     # Load data
-    feature_file = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/random_kegg_e2p2_feature_extraction_results/e2p2_feature_extraction_detailed.csv"
+    feature_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/e2p2_feature_extraction_detailed.csv"
     
     df = load_data(feature_file)
     
@@ -453,7 +453,7 @@ def main():
     })
     
     summary_df = pd.DataFrame(summary_data)
-    output_file = "/groups/itay_mayrose/alongonda/desktop/random_kegg_e2p2_classification_models_summary.csv"
+    output_file = "/groups/itay_mayrose/alongonda/desktop/e2p2_classification_models_summary.csv"
     summary_df.to_csv(output_file, index=False)
     
     print(f"\n💾 Summary results saved to: {output_file}")
