@@ -9,7 +9,7 @@ def fix_categories():
     """Fix category names in Foldseek CSV"""
     
     # Load the Foldseek CSV
-    df = pd.read_csv('/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/actual_random/foldseek_cluster_metrics_enhanced.csv')
+    df = pd.read_csv('/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/foldseek_cluster_metrics_enhanced.csv')
     
     print(f"Loaded {len(df)} clusters")
     print("Current category distribution:")
@@ -26,7 +26,7 @@ def fix_categories():
     print(df['category'].value_counts())
     
     # Save the updated CSV
-    output_file = '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/actual_random/foldseek_cluster_metrics_enhanced.csv'
+    output_file = '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/foldseek_cluster_metrics_enhanced.csv'
     df.to_csv(output_file, index=False)
     
     print(f"✅ Updated Foldseek CSV with corrected category names")

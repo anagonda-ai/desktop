@@ -5,10 +5,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 
 # Configuration
 FOLDSEEK_DB_ROOT = Path(
-    "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mibig_kegg_foldseek_predictions/"
+    "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_foldseek_predictions_fixed/"
 )
-OUTPUT_DIR = FOLDSEEK_DB_ROOT / "foldseek_results"
-FOLDSEEK = "foldseek"
+OUTPUT_DIR = FOLDSEEK_DB_ROOT.parent / "foldseek_results"
+FOLDSEEK = "foldseek"   
 MAX_WORKERS = 16  # Adjust based on your system
 
 def run_foldseek_all_vs_all(mgc_dir: Path):
@@ -74,7 +74,7 @@ def main():
     # Find all MGC directories with Foldseek databases
     mgc_dirs = []
     for d in FOLDSEEK_DB_ROOT.iterdir():
-        if d.is_dir() and d.name.startswith("BGC"):
+        if d.is_dir():
             # Check if the database files exist
             db_prefix = d / f"{d.name}_merged"
             if (db_prefix.with_suffix(".dbtype")).exists():

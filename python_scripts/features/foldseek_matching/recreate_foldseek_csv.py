@@ -13,24 +13,15 @@ def recreate_foldseek_csv():
     print("📊 RECREATING FOLDSEEK CSV FROM EXISTING RESULTS...")
     
     # Define both directories
-    mibig_kegg_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mibig_kegg_foldseek_predictions/foldseek_results")
-    random_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/random_foldseek_predictions/foldseek_results")
+    foldseek_results_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/foldseek_results")
     
     all_metrics = []
     
     # Process MIBiG and KEGG-MGC files
-    tsv_files = list(mibig_kegg_dir.glob("*_all_vs_all.tsv"))
+    tsv_files = list(foldseek_results_dir.glob("*_all_vs_all.tsv"))
     print(f"Found {len(tsv_files)} MIBiG/KEGG-MGC Foldseek result files")
     
-    # Process RANDOM files
-    random_tsv_files = list(random_dir.glob("*_all_vs_all.tsv"))
-    print(f"Found {len(random_tsv_files)} RANDOM Foldseek result files")
-    
-    # Combine all files
-    all_tsv_files = tsv_files + random_tsv_files
-    print(f"Total Foldseek result files: {len(all_tsv_files)}")
-    
-    for tsv_file in all_tsv_files:
+    for tsv_file in tsv_files:
         cluster_name = tsv_file.name.replace("_all_vs_all.tsv", "")
         print(f"Processing {cluster_name}...")
         
@@ -89,7 +80,16 @@ def recreate_foldseek_csv():
             # Z-score and effect size (simplified)
             z_score = (mean_score_all - expected_random) / std_score_non_self if std_score_non_self > 0 else 0
             effect_size = (mean_score_non_self - expected_random) / std_score_non_self if std_score_non_self > 0 else 0
-            
+            category = "RANDOM" if cluster_name.startswith("RANDOM") else "MIBiG" if cluster_name.startswith("BGC") else "MGC"
+            # Calculate foldseek_match_coverage as the fraction of unique proteins in the cluster that have a strong structural match to at least one other member
+            # "Strong" = TM-score > 0.5
+            strong_pairs = df[(df.iloc[:, 0] != df.iloc[:, 1]) & (df.iloc[:, 2].astype(float) > 0.5)]
+            if len(strong_pairs) > 0:
+                proteins_with_strong_match = set(strong_pairs.iloc[:, 0]).union(set(strong_pairs.iloc[:, 1]))
+                all_proteins = set(df.iloc[:, 0]).union(set(df.iloc[:, 1]))
+                foldseek_match_coverage = len(proteins_with_strong_match) / len(all_proteins) if len(all_proteins) > 0 else 0
+            else:
+                foldseek_match_coverage = 0
             metrics = {
                 'name': cluster_name,
                 'n': n,
@@ -116,7 +116,9 @@ def recreate_foldseek_csv():
                 'enrichment_score': enrichment_score,
                 'size_bin': size_bin,
                 'z_score': z_score,
-                'effect_size': effect_size
+                'effect_size': effect_size,
+                'category': category,
+                'foldseek_match_coverage': foldseek_match_coverage
             }
             
             all_metrics.append(metrics)
@@ -128,7 +130,7 @@ def recreate_foldseek_csv():
     
     # Create DataFrame and save
     df_metrics = pd.DataFrame(all_metrics)
-    output_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/actual_random/foldseek_cluster_metrics_enhanced.csv"
+    output_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/foldseek_cluster_metrics_enhanced.csv"
     df_metrics.to_csv(output_file, index=False)
     
     print(f"\n✅ Created Foldseek CSV with {len(df_metrics)} clusters")

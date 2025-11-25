@@ -5,7 +5,7 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=32
 #SBATCH --mem=32G
-#SBATCH --partition=itaym
+#SBATCH --partition=itaym-pool
 #SBATCH --time=7-00:00:00
 
 tree_path=$1

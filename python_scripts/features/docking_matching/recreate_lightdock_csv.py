@@ -131,16 +131,13 @@ def recreate_lightdock_csv():
     cluster_dirs = [d for d in results_dir.iterdir() if d.is_dir()]
     total_clusters = len(cluster_dirs)
     
-    # Determine number of workers (use all available CPUs)
-    n_workers = cpu_count()
     print(f"📊 Found {total_clusters} clusters to process")
-    print(f"🚀 Using {n_workers} CPU cores for parallel processing")
     
     all_metrics = []
     processed = 0
     
     # Process clusters in parallel
-    with ProcessPoolExecutor(max_workers=n_workers) as executor:
+    with ProcessPoolExecutor() as executor:
         # Submit all tasks
         future_to_cluster = {executor.submit(process_cluster, cluster_dir): cluster_dir 
                             for cluster_dir in cluster_dirs}

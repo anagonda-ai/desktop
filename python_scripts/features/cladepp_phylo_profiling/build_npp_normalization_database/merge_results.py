@@ -1,9 +1,68 @@
+#!/usr/bin/env python3
+import os
+import subprocess
+import shlex
+import glob
+
+# Configuration
+BASE_DIR = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/selected_genes/"
+PARTITION = "itaym-pool"  # Update this to your partition name
+
+print("\n===== FINDING DIRECTORIES WITH best_hits =====")
+
+# Find all directories with best_hits subdirectories
+mgc_dirs = []
+for item in sorted(glob.glob(os.path.join(BASE_DIR, "*"))):
+    if os.path.isdir(item):
+        best_hits_dir = os.path.join(item, "best_hits_fixed")
+        if os.path.exists(best_hits_dir) and os.path.isdir(best_hits_dir):
+            mgc_dirs.append(item)
+            print(f"Found: {os.path.basename(item)}")
+
+if not mgc_dirs:
+    print("No directories with best_hits subdirectories found!")
+    exit(1)
+
+print(f"\nTotal directories to process: {len(mgc_dirs)}")
+
+# Process each directory
+for example_mgc in mgc_dirs:
+    mgc_name = os.path.basename(example_mgc)
+    print(f"\n===== SUBMITTING MERGE JOB for {mgc_name} =====")
+
+    blast_results_dir = os.path.join(example_mgc, "best_hits_fixed")
+    
+    merge_sbatch = os.path.join(example_mgc, "merge_best_hits.sbatch")
+    merge_stdout = os.path.join(blast_results_dir, "merge_%j.out")
+    merge_stderr = os.path.join(blast_results_dir, "merge_%j.err")
+
+    # ---- Part 1: SLURM header ----
+    merge_script = f"""#!/bin/bash
+#SBATCH -J merge_{mgc_name}
+#SBATCH -o {shlex.quote(merge_stdout)}
+#SBATCH -e {shlex.quote(merge_stderr)}
+#SBATCH -p {PARTITION}
+#SBATCH --ntasks=1
+#SBATCH --cpus-per-task=32
+#SBATCH --mem=32G
+#SBATCH --time=5:00:00
+
+module purge
+module load python/3.11
+
+python - <<'PYCODE'
+"""
+
+    # ---- Part 2: Python merge code (embedded, no f-string) ----
+    merge_script += f"""
 import os, glob, csv
 import concurrent.futures
+from collections import defaultdict
 
-BLAST_ROOT = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/selected_genes/aans_selected_1000/best_hits/"
+BLAST_ROOT = {repr(blast_results_dir)}
+"""
 
-
+    merge_script += r"""
 def process_result_file(args):
     qbase, fpath = args
     local_best = {}
@@ -65,9 +124,6 @@ with concurrent.futures.ThreadPoolExecutor() as executor:
                 best_per_query[key] = rec
 
 # Create a mapping: organism -> list of records
-from collections import defaultdict
-import re
-
 organism_records = defaultdict(list)
 
 for key, rec in best_per_query.items():
@@ -93,3 +149,26 @@ for organism, records in organism_records.items():
                 rec['evalue'], rec['bitscore'], rec['src']
             ])
     print(f"Wrote per-organism file: {out_path}")
+PYCODE
+"""
+
+    # Write the sbatch script
+    with open(merge_sbatch, "w") as fh:
+        fh.write(merge_script)
+
+    print(f"Created sbatch script: {merge_sbatch}")
+
+    # Submit the job
+    cmd = ["sbatch", merge_sbatch]
+    
+    try:
+        res = subprocess.check_output(cmd).decode().strip()
+        job_id = res.split()[-1]
+        print(f"✓ Merge job submitted successfully: {job_id}")
+    except subprocess.CalledProcessError as e:
+        print(f"✗ Error submitting job: {e}")
+    except Exception as e:
+        print(f"✗ Unexpected error: {e}")
+
+print("\n===== ALL MERGE JOBS SUBMITTED =====")
+

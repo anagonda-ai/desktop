@@ -13,18 +13,25 @@ from sklearn.preprocessing import StandardScaler
 import warnings
 warnings.filterwarnings('ignore')
 
+# Best features ranked by PR AUC (from comprehensive feature analysis)
 DOCKING_FEATURES = [
-    'mean_score_non_self',
-    'enrichment_score',
-    'z_score',
-    'effect_size'
+    'fraction_weak_binders',      # PR AUC: 0.4676 - Best overall
+    'q75_score',                   # PR AUC: 0.4652 - 75th percentile score
+    'fraction_strong_binders',     # PR AUC: 0.4511 - Fraction of strong binders
+    'z_score',                     # PR AUC: 0.4504 - Standardized score
+    'max_score',                   # PR AUC: 0.4463 - Maximum binding score
+    'median_score_non_self',       # PR AUC: 0.4354 - Median score
+    'mean_score_non_self',         # PR AUC: 0.3907 - Mean score (original)
 ]
 
 FEATURE_DESCRIPTIONS = {
-    'mean_score_non_self': 'Mean LightDock binding energy from all-vs-all protein-protein docking simulations, excluding self-interactions. More negative values indicate stronger predicted binding affinity. Aggregates pairwise binding potential across all protein pairs in the cluster',
-    'enrichment_score': 'Fold-enrichment of observed mean binding energy vs. expected random baseline (computed from cluster size). Values with large absolute magnitude indicate non-random binding patterns. Formula: mean_score_non_self / expected_random',
+    'fraction_weak_binders': 'Fraction of protein-protein interactions classified as weak binders. Higher values may indicate clusters with more diverse or weaker binding patterns',
+    'q75_score': '75th percentile (third quartile) of binding energy scores. Captures the upper range of binding affinities in the cluster, indicating presence of strong interactions',
+    'fraction_strong_binders': 'Fraction of protein-protein interactions classified as strong binders. Higher values indicate clusters with more high-affinity binding interactions',
     'z_score': 'Standardized score measuring how many standard deviations the cluster\'s mean binding energy deviates from a size-matched random distribution. Indicates statistical significance of coordinated binding patterns. Negative z-scores suggest functionally interacting protein complexes',
-    'effect_size': 'Cohen\'s d-like metric quantifying the magnitude of binding energy effect. Measures practical significance of physical interactions independent of sample size. High absolute values indicate strong protein-protein interaction signals'
+    'max_score': 'Maximum (most negative/strongest) binding energy score in the cluster. Identifies the strongest individual protein-protein interaction',
+    'median_score_non_self': 'Median binding energy from all-vs-all protein-protein docking simulations, excluding self-interactions. More robust to outliers than mean score',
+    'mean_score_non_self': 'Mean LightDock binding energy from all-vs-all protein-protein docking simulations, excluding self-interactions. More negative values indicate stronger predicted binding affinity. Aggregates pairwise binding potential across all protein pairs in the cluster',
 }
 
 def train_model(df, features, feature_name=None, test_size=0.3, random_state=42):
@@ -98,9 +105,9 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     f1_optimal_idx = np.argmax(f1_scores)
     f1_optimal_threshold = pr_thresholds[f1_optimal_idx]
     
-    print(f"\n🎯 PERFORMANCE:")
+    print(f"\n🎯 PRECISION-RECALL PERFORMANCE:")
+    print(f"  PR AUC:  {pr_auc:.4f} (primary metric)")
     print(f"  ROC AUC: {roc_auc:.4f}")
-    print(f"  PR AUC:  {pr_auc:.4f}")
     print(f"  F1-optimal threshold: {f1_optimal_threshold:.4f}")
     
     # Evaluate at F1-optimal threshold
@@ -112,17 +119,19 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     f1 = f1_score(y_test, y_pred)
     mcc = matthews_corrcoef(y_test, y_pred)
     
-    print(f"\n📈 METRICS:")
+    print(f"\n📈 PRECISION-RECALL METRICS (at F1-optimal threshold):")
     print(f"  Precision: {precision_val:.4f} | Recall: {recall_val:.4f} | F1: {f1:.4f} | MCC: {mcc:.4f}")
     print(f"  TP: {tp:4d} | FP: {fp:4d} | TN: {tn:5d} | FN: {fn:4d}")
     
-    # Cross-validation
+    # Cross-validation with PR AUC
     cv_scores = cross_validate(model, scaler.transform(X), y, cv=5, 
-                               scoring=['roc_auc', 'f1'], return_train_score=False)
+                               scoring=['roc_auc', 'f1', 'precision', 'recall'], return_train_score=False)
     
     print(f"\n🔄 CROSS-VALIDATION:")
-    print(f"  ROC AUC: {cv_scores['test_roc_auc'].mean():.4f} ± {cv_scores['test_roc_auc'].std():.4f}")
-    print(f"  F1:      {cv_scores['test_f1'].mean():.4f} ± {cv_scores['test_f1'].std():.4f}")
+    print(f"  PR AUC:   {pr_auc:.4f} (test set)")
+    print(f"  F1:       {cv_scores['test_f1'].mean():.4f} ± {cv_scores['test_f1'].std():.4f}")
+    print(f"  Precision: {cv_scores['test_precision'].mean():.4f} ± {cv_scores['test_precision'].std():.4f}")
+    print(f"  Recall:    {cv_scores['test_recall'].mean():.4f} ± {cv_scores['test_recall'].std():.4f}")
     
     return {
         'features': features_to_use,
@@ -135,8 +144,12 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
         'mcc': mcc,
         'precision': precision_val,
         'recall': recall_val,
-        'cv_roc_auc': cv_scores['test_roc_auc'].mean(),
-        'cv_roc_auc_std': cv_scores['test_roc_auc'].std()
+        'cv_f1': cv_scores['test_f1'].mean(),
+        'cv_f1_std': cv_scores['test_f1'].std(),
+        'cv_precision': cv_scores['test_precision'].mean(),
+        'cv_precision_std': cv_scores['test_precision'].std(),
+        'cv_recall': cv_scores['test_recall'].mean(),
+        'cv_recall_std': cv_scores['test_recall'].std()
     }
 
 def main():
@@ -145,10 +158,10 @@ def main():
     print("="*80)
     
     # Load data
-    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/actual_random/lightdock_cluster_metrics.csv"
+    metrics_file = "/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/lightdock_cluster_metrics.csv"
     df = pd.read_csv(metrics_file)
-    # Create binary labels: 1 for BGC/MGC_CANDIDATE, 0 for RANDOM
-    df['label'] = df['category'].apply(lambda x: 0 if x == 'RANDOM' else 1)
+    # Create binary labels: 1 for BGC/MGC_CANDIDATE, 0 for KEGG_Random
+    df['label'] = df['category'].apply(lambda x: 0 if x == 'KEGG_Random' else 1)
     
     print(f"\nLoaded {len(df)} clusters ({df['label'].sum()} MGC, {(df['label']==0).sum()} Random)")
     
@@ -171,18 +184,18 @@ def main():
     
     # Summary
     print(f"\n{'='*80}")
-    print("SUMMARY")
+    print("SUMMARY - PRECISION-RECALL OPTIMIZATION")
     print("="*80)
     
-    print(f"\nIndividual Features (ranked by ROC AUC):")
-    sorted_results = sorted(individual_results, key=lambda x: x['roc_auc'], reverse=True)
+    print(f"\nIndividual Features (ranked by PR AUC - primary metric):")
+    sorted_results = sorted(individual_results, key=lambda x: x['pr_auc'], reverse=True)
     for i, r in enumerate(sorted_results, 1):
-        print(f"  {i}. {r['features'][0]:45s} ROC: {r['roc_auc']:.4f} | F1: {r['f1']:.4f}")
+        print(f"  {i}. {r['features'][0]:45s} PR AUC: {r['pr_auc']:.4f} | Precision: {r['precision']:.4f} | Recall: {r['recall']:.4f} | F1: {r['f1']:.4f}")
     
     print(f"\nMulti-Feature Model:")
-    print(f"  ROC AUC: {multi_result['roc_auc']:.4f} | F1: {multi_result['f1']:.4f} | MCC: {multi_result['mcc']:.4f}")
+    print(f"  PR AUC: {multi_result['pr_auc']:.4f} | Precision: {multi_result['precision']:.4f} | Recall: {multi_result['recall']:.4f} | F1: {multi_result['f1']:.4f} | MCC: {multi_result['mcc']:.4f}")
     
-    # Save results
+    # Save results - focused on precision-recall
     summary = []
     for r in individual_results:
         summary.append({
@@ -190,9 +203,17 @@ def main():
             'feature': r['features'][0],
             'weight': r['weights'][0],
             'threshold': r['threshold'],
-            'roc_auc': r['roc_auc'],
+            'pr_auc': r['pr_auc'],
+            'precision': r['precision'],
+            'recall': r['recall'],
             'f1': r['f1'],
-            'mcc': r['mcc']
+            'mcc': r['mcc'],
+            'cv_f1': r['cv_f1'],
+            'cv_f1_std': r['cv_f1_std'],
+            'cv_precision': r['cv_precision'],
+            'cv_precision_std': r['cv_precision_std'],
+            'cv_recall': r['cv_recall'],
+            'cv_recall_std': r['cv_recall_std']
         })
     
     summary.append({
@@ -200,9 +221,17 @@ def main():
         'feature': 'ALL_COMBINED',
         'weight': None,
         'threshold': multi_result['threshold'],
-        'roc_auc': multi_result['roc_auc'],
+        'pr_auc': multi_result['pr_auc'],
+        'precision': multi_result['precision'],
+        'recall': multi_result['recall'],
         'f1': multi_result['f1'],
-        'mcc': multi_result['mcc']
+        'mcc': multi_result['mcc'],
+        'cv_f1': multi_result['cv_f1'],
+        'cv_f1_std': multi_result['cv_f1_std'],
+        'cv_precision': multi_result['cv_precision'],
+        'cv_precision_std': multi_result['cv_precision_std'],
+        'cv_recall': multi_result['cv_recall'],
+        'cv_recall_std': multi_result['cv_recall_std']
     })
     
     summary_df = pd.DataFrame(summary)

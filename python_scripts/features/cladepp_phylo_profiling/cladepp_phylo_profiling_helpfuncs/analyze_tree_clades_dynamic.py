@@ -11,6 +11,7 @@ import threading
 import argparse
 from Bio import Phylo
 import numpy as np
+import shutil
 
 # Add the parent directory to Python path to find the modules
 script_dir = os.path.dirname(os.path.abspath(__file__))
@@ -20,17 +21,17 @@ sys.path.insert(0, parent_dir)
 # Now try to import the modules with different approaches
 try:
     # First try: assume we're running from the parent directory
-    from cladepp_phylo_profiling_helpfuncs.cladepp_core import normalize_npp, build_profile_matrix, compute_gain_loss_coevolution_copap_style
+    from cladepp_phylo_profiling_helpfuncs.cladepp_core import normalize_npp, build_profile_matrix, compute_gain_loss_coevolution_copap_style, get_source_file
     from cladepp_phylo_profiling_helpfuncs.io_utils import load_selected_blast_results, load_mapping_if_exists
 except ModuleNotFoundError:
     try:
         # Second try: import directly from current directory
-        from cladepp_core import normalize_npp, build_profile_matrix, compute_gain_loss_coevolution_copap_style
+        from cladepp_core import normalize_npp, build_profile_matrix, compute_gain_loss_coevolution_copap_style, get_source_file
         from io_utils import load_selected_blast_results, load_mapping_if_exists
     except ModuleNotFoundError:
         # Third try: add current directory to path and import
         sys.path.insert(0, script_dir)
-        from cladepp_core import normalize_npp, build_profile_matrix, compute_gain_loss_coevolution_copap_style
+        from cladepp_core import normalize_npp, build_profile_matrix, compute_gain_loss_coevolution_copap_style, get_source_file
         from io_utils import load_selected_blast_results, load_mapping_if_exists
 
 
@@ -66,7 +67,7 @@ def compute_cladepp_score(npp_matrix, anchor_genes):
 def normalize_name(name):
     return name.strip().lower().replace(" ", "_").replace("-", "_").replace(".", "").replace("(", "").replace(")", "")
 
-def process_single_clade(clade_data, output_dir, self_alignment_scores):
+def process_single_clade(clade_data, output_dir, self_alignment_scores, comparison_csv):
     """
     Process a single clade - designed for concurrent execution.
     """
@@ -86,7 +87,13 @@ def process_single_clade(clade_data, output_dir, self_alignment_scores):
                 "reason": f"only {raw_matrix.shape[1]} organism(s)"
             }
         
-        npp_matrix = normalize_npp(raw_matrix, output_dir, clade_id=clade_id, self_alignment_scores=self_alignment_scores)
+        npp_matrix = normalize_npp(
+            raw_matrix,
+            output_dir,
+            clade_id=clade_id,
+            self_alignment_scores=self_alignment_scores,
+            comparison_csv=comparison_csv
+        )
         corr_stats, anchor_corrs = compute_anchor_corr_stats(npp_matrix, anchor_genes=anchor_genes)
         cladepp_score = compute_cladepp_score(npp_matrix, anchor_genes)
 
@@ -155,7 +162,38 @@ def get_anchor_genes_from_comparison_dir(comparison_csv):
     ]
     return anchor_genes
 
-def get_self_alignment_scores_from_comparison_dir(anchor_genes, comparison_csv):
+def find_blast_executable(cmd_name):
+    """
+    Find BLAST executable in PATH or common module locations.
+    Returns the full path to the executable or raises FileNotFoundError.
+    """
+    # First try shutil.which (checks PATH)
+    exe_path = shutil.which(cmd_name)
+    if exe_path:
+        return exe_path
+    
+    # Try common module paths (for systems using environment modules)
+    common_paths = [
+        "/usr/bin",
+        "/usr/local/bin",
+        "/opt/ncbi-blast/bin",
+        "/groups/itay_mayrose/alongonda/bin",
+    ]
+    
+    for base_path in common_paths:
+        potential_path = os.path.join(base_path, cmd_name)
+        if os.path.exists(potential_path) and os.access(potential_path, os.X_OK):
+            return potential_path
+    
+    # If not found, raise a helpful error
+    raise FileNotFoundError(
+        f"'{cmd_name}' not found in PATH. "
+        f"Please ensure BLAST tools are installed and available. "
+        f"On HPC systems, you may need to run: 'module load ncbi-blast/2.13.0+' "
+        f"before running this script."
+    )
+
+def get_self_alignment_scores_from_comparison_dir(comparison_csv):
     """
     For each fasta file in the directory (all are anchor genes), run BLAST on itself 
     and extract the self-alignment bit score (BS_ii). Returns a dictionary mapping 
@@ -195,8 +233,9 @@ def get_self_alignment_scores_from_comparison_dir(anchor_genes, comparison_csv):
             
             # Create BLAST database from the fasta file
             db_name = os.path.join(temp_dir, f"{gene_name}_db")
+            makeblastdb_exe = find_blast_executable("makeblastdb")
             makeblastdb_cmd = [
-                "makeblastdb",
+                makeblastdb_exe,
                 "-in", fasta_path,
                 "-dbtype", "prot",
                 "-out", db_name
@@ -211,8 +250,9 @@ def get_self_alignment_scores_from_comparison_dir(anchor_genes, comparison_csv):
             
             # Run BLASTp: query the fasta file against itself
             blast_output = os.path.join(temp_dir, f"{gene_name}_self_blast.txt")
+            blastp_exe = find_blast_executable("blastp")
             blastp_cmd = [
-                "blastp",
+                blastp_exe,
                 "-query", fasta_path,
                 "-db", db_name,
                 "-out", blast_output,
@@ -300,7 +340,7 @@ def analyze_tree_clades_dynamic(
     
     # Find fasta files in the comparison_csv dir and use them as anchor genes
     anchor_genes = get_anchor_genes_from_comparison_dir(comparison_csv)
-    self_alignment_scores = get_self_alignment_scores_from_comparison_dir(anchor_genes, comparison_csv)
+    self_alignment_scores = get_self_alignment_scores_from_comparison_dir(comparison_csv)
     print(f"Loading tree from {tree_path}")
     tree = Phylo.read(tree_path, "newick")
     terminals = [term.name for term in tree.get_terminals()]
@@ -326,8 +366,21 @@ def analyze_tree_clades_dynamic(
         all_df = pd.DataFrame(all_matched_comparisons)
 
         blast_df_global = load_selected_blast_results(all_df)
-        raw_matrix_global = build_profile_matrix(blast_df_global, anchor_genes, mgc_output_dir, min_coverage=0.2, clade_id="global")
-        npp_matrix_global = normalize_npp(raw_matrix_global, mgc_output_dir, clade_id="global", self_alignment_scores=self_alignment_scores)
+        raw_matrix_global = build_profile_matrix(
+            blast_df_global,
+            anchor_genes,
+            mgc_output_dir,
+            min_coverage=0.2,
+            clade_id="global",
+        )
+        # Compute global LPP+NPP and capture column statistics (μ_j, σ_j) over all species
+        npp_matrix_global = normalize_npp(
+            raw_matrix_global,
+            mgc_output_dir,
+            clade_id="global",
+            self_alignment_scores=self_alignment_scores,
+            comparison_csv=comparison_csv,
+        )
 
         global_score = compute_cladepp_global_score(npp_matrix_global, anchor_genes)
         print(f"✅ Global CladePP Score: {global_score}")
@@ -372,7 +425,13 @@ def analyze_tree_clades_dynamic(
     with executor_class(max_workers=max_workers) as executor:
         # Submit all tasks
         future_to_clade = {
-            executor.submit(process_single_clade, clade_data, mgc_output_dir, self_alignment_scores): clade_data[0] 
+            executor.submit(
+                process_single_clade,
+                clade_data,
+                mgc_output_dir,
+                self_alignment_scores,
+                comparison_csv,
+            ): clade_data[0]
             for clade_data in clade_tasks
         }
         

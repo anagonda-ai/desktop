@@ -1,247 +1,215 @@
+#!/usr/bin/env python3
 import os
 import glob
 import csv
 import statistics
 import concurrent.futures
-import random
+from collections import defaultdict
 
-try:
-    from scipy import stats
-    SCIPY_AVAILABLE = True
-except ImportError:
-    SCIPY_AVAILABLE = False
-    print("Warning: scipy not available. Statistical significance testing will be skipped.")
+# Base directory containing all dataset folders
+BASE_DIR = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/selected_genes"
 
-# Directory containing the merged CSV files
-MERGED_DIR = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/selected_genes/aans_selected_1000/best_hits/merged"
-
-def calculate_mean_std_for_file(csv_file, sample_size=100):
-    """Calculate mean and standard deviation of bitscore column for a single CSV file.
-    
-    Returns statistics for both full dataset and a random sample.
-    """
-    bitscores = []
-    filename = os.path.basename(csv_file)
+def calculate_lpp_stats_for_file(txt_file):
+    """Calculate mean, std, and count of LPP values from CSV-formatted TXT file."""
+    lpp_values = []
+    filename = os.path.basename(txt_file)
     
     try:
-        with open(csv_file, 'r') as f:
+        with open(txt_file, 'r', encoding='utf-8') as f:
             reader = csv.DictReader(f)
             for row in reader:
                 try:
-                    bitscore = float(row['bitscore'])
-                    bitscores.append(bitscore)
-                except (ValueError, KeyError) as e:
-                    # Skip rows with invalid bitscore values
+                    lpp_str = row.get('LPP', '')
+                    if lpp_str and lpp_str.lower() != 'none':
+                        lpp = float(lpp_str)
+                        lpp_values.append(lpp)
+                except (ValueError, KeyError):
                     continue
         
-        if len(bitscores) == 0:
-            return filename, None, None, 0, None, None, 0, None, None
+        if len(lpp_values) == 0:
+            return filename, None, None, 0
         
-        # Full dataset statistics
-        full_mean = statistics.mean(bitscores)
-        full_std = statistics.stdev(bitscores)  # Sample standard deviation
-        full_count = len(bitscores)
+        mean_lpp = statistics.mean(lpp_values)
+        std_lpp = statistics.stdev(lpp_values) if len(lpp_values) > 1 else 0.0
+        count = len(lpp_values)
         
-        # Sample statistics (if we have enough data)
-        sample_mean = None
-        sample_std = None
-        sample_count = 0
-        sampled_bitscores = None
-        t_statistic = None
-        p_value = None
-        
-        if full_count >= sample_size:
-            # Randomly sample 100 genes
-            sampled_bitscores = random.sample(bitscores, sample_size)
-            sample_mean = statistics.mean(sampled_bitscores)
-            sample_std = statistics.stdev(sampled_bitscores)
-            sample_count = sample_size
-            
-            # Perform statistical significance test (t-test)
-            if SCIPY_AVAILABLE and len(bitscores) > 1 and len(sampled_bitscores) > 1:
-                try:
-                    # Use independent samples t-test
-                    # Note: Since sample is a subset, we could also use one-sample t-test
-                    # comparing sample mean to full mean, but independent t-test is more conservative
-                    t_statistic, p_value = stats.ttest_ind(sampled_bitscores, bitscores, equal_var=False)
-                except Exception as e:
-                    # If test fails, continue without significance values
-                    pass
-        elif full_count > 0:
-            # If we have less than sample_size but more than 0, use all available
-            sample_mean = full_mean
-            sample_std = full_std
-            sample_count = full_count
-        
-        return filename, full_mean, full_std, full_count, sample_mean, sample_std, sample_count, t_statistic, p_value
+        return filename, mean_lpp, std_lpp, count
     
     except Exception as e:
-        print(f"Error processing {csv_file}: {e}")
-        return filename, None, None, 0, None, None, 0, None, None
+        print(f"Error processing {txt_file}: {e}")
+        return filename, None, None, 0
 
-def main():
-    # Set random seed for reproducibility
-    random.seed(42)
+def process_dataset(dataset_dir):
+    """Process all LPP CSV files in a dataset's best_hits_fixed directory."""
+    dataset_name = os.path.basename(dataset_dir)
+    best_hits_dir = os.path.join(dataset_dir, "best_hits_fixed")
     
-    # Get all CSV files in the merged directory
-    csv_files = glob.glob(os.path.join(MERGED_DIR, "*.csv"))
-    csv_files.sort()
+    if not os.path.exists(best_hits_dir):
+        return dataset_name, [], []
     
-    print(f"Processing {len(csv_files)} CSV files with concurrent execution...")
-    print("Calculating statistics for full dataset and 100-gene sample...")
-    print()
+    # Find all LPP_matrix_*.txt files
+    txt_files = glob.glob(os.path.join(best_hits_dir, "LPP_matrix_*.txt"))
+    txt_files.sort()
     
-    # Store results
+    if not txt_files:
+        return dataset_name, [], []
+    
+    print(f"\nProcessing dataset: {dataset_name}")
+    print(f"Found {len(txt_files)} LPP matrix files")
+    
     results = []
+    organism_list = []
     
-    # Process files concurrently using ThreadPoolExecutor (I/O bound operation)
-    with concurrent.futures.ThreadPoolExecutor() as executor:
-        # Submit all tasks
-        futures = {executor.submit(calculate_mean_std_for_file, csv_file): csv_file 
-                   for csv_file in csv_files}
+    # Process files concurrently
+    with concurrent.futures.ThreadPoolExecutor(max_workers=8) as executor:
+        futures = {executor.submit(calculate_lpp_stats_for_file, txt_file): txt_file 
+                   for txt_file in txt_files}
         
-        # Collect results as they complete
         for future in concurrent.futures.as_completed(futures):
-            filename, full_mean, full_std, full_count, sample_mean, sample_std, sample_count, t_statistic, p_value = future.result()
+            filename, mean_lpp, std_lpp, count = future.result()
             
-            if full_mean is not None:
-                # Calculate differences
-                mean_diff = None
-                std_diff = None
-                mean_diff_pct = None
-                std_diff_pct = None
-                is_significant = None
-                significance_level = 0.05
-                
-                if sample_mean is not None:
-                    mean_diff = sample_mean - full_mean
-                    std_diff = sample_std - full_std
-                    mean_diff_pct = (mean_diff / full_mean) * 100 if full_mean != 0 else 0
-                    std_diff_pct = (std_diff / full_std) * 100 if full_std != 0 else 0
-                    
-                    # Determine if difference is statistically significant
-                    if p_value is not None:
-                        is_significant = p_value < significance_level
-                
+            # Extract organism name from filename
+            organism = filename.replace("LPP_matrix_", "").replace(".csv", "")
+            organism_list.append(organism)
+            
+            if mean_lpp is not None:
                 results.append({
+                    'organism': organism,
                     'filename': filename,
-                    'full_mean': full_mean,
-                    'full_std': full_std,
-                    'full_count': full_count,
-                    'sample_mean': sample_mean,
-                    'sample_std': sample_std,
-                    'sample_count': sample_count,
-                    'mean_diff': mean_diff,
-                    'std_diff': std_diff,
-                    'mean_diff_pct': mean_diff_pct,
-                    'std_diff_pct': std_diff_pct,
-                    't_statistic': t_statistic,
-                    'p_value': p_value,
-                    'is_significant': is_significant
+                    'mean_lpp': mean_lpp,
+                    'std_lpp': std_lpp,
+                    'count': count
                 })
-                
-                print(f"{filename}:")
-                print(f"  Full dataset (n={full_count}):")
-                print(f"    Mean bitscore: {full_mean:.2f}")
-                print(f"    Std bitscore:  {full_std:.2f}")
-                
-                if sample_mean is not None:
-                    print(f"  Sample (n={sample_count}):")
-                    print(f"    Mean bitscore: {sample_mean:.2f}")
-                    print(f"    Std bitscore:  {sample_std:.2f}")
-                    print(f"  Comparison:")
-                    print(f"    Mean difference: {mean_diff:+.2f} ({mean_diff_pct:+.2f}%)")
-                    print(f"    Std difference:  {std_diff:+.2f} ({std_diff_pct:+.2f}%)")
-                    
-                    if p_value is not None:
-                        significance_str = "SIGNIFICANT" if is_significant else "NOT SIGNIFICANT"
-                        print(f"  Statistical test (t-test):")
-                        print(f"    t-statistic: {t_statistic:.4f}")
-                        print(f"    p-value: {p_value:.6f}")
-                        print(f"    Significance (α={significance_level}): {significance_str}")
-                    elif not SCIPY_AVAILABLE:
-                        print(f"  Statistical test: scipy not available")
-                else:
-                    print(f"  Sample: Not enough data (need at least 100 genes)")
-                print()
+                print(f"  ✓ {organism}: mean_LPP={mean_lpp:.4f}, std={std_lpp:.4f}, n={count}")
             else:
-                print(f"{filename}: ERROR - Could not calculate statistics")
-                print()
+                print(f"  ✗ {organism}: No valid LPP values found")
     
-    # Sort results by filename for consistent output
-    results.sort(key=lambda x: x['filename'])
+    # Sort results by organism name
+    results.sort(key=lambda x: x['organism'])
     
-    # Save results to summary files
-    summary_file = os.path.join(MERGED_DIR, "bitscore_statistics_summary.csv")
-    with open(summary_file, 'w', newline='') as f:
+    # Save per-dataset summary
+    summary_file = os.path.join(best_hits_dir, "LPP_statistics_summary.csv")
+    with open(summary_file, 'w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
-        writer.writerow([
-            'filename', 'full_mean_bitscore', 'full_std_bitscore', 'full_num_rows',
-            'sample_mean_bitscore', 'sample_std_bitscore', 'sample_num_rows',
-            'mean_diff', 'std_diff', 'mean_diff_pct', 'std_diff_pct',
-            't_statistic', 'p_value', 'is_significant'
-        ])
+        writer.writerow(['organism', 'filename', 'mean_lpp', 'std_lpp', 'num_records'])
         for res in results:
             writer.writerow([
+                res['organism'],
                 res['filename'],
-                f"{res['full_mean']:.4f}" if res['full_mean'] else '',
-                f"{res['full_std']:.4f}" if res['full_std'] else '',
-                res['full_count'],
-                f"{res['sample_mean']:.4f}" if res['sample_mean'] else '',
-                f"{res['sample_std']:.4f}" if res['sample_std'] else '',
-                res['sample_count'],
-                f"{res['mean_diff']:.4f}" if res['mean_diff'] is not None else '',
-                f"{res['std_diff']:.4f}" if res['std_diff'] is not None else '',
-                f"{res['mean_diff_pct']:.4f}" if res['mean_diff_pct'] is not None else '',
-                f"{res['std_diff_pct']:.4f}" if res['std_diff_pct'] is not None else '',
-                f"{res['t_statistic']:.6f}" if res['t_statistic'] is not None else '',
-                f"{res['p_value']:.6f}" if res['p_value'] is not None else '',
-                'TRUE' if res['is_significant'] is True else ('FALSE' if res['is_significant'] is False else '')
+                f"{res['mean_lpp']:.6f}",
+                f"{res['std_lpp']:.6f}",
+                res['count']
             ])
     
-    print(f"Summary saved to: {summary_file}")
+    print(f"  Summary saved to: {summary_file}")
     
-    # Print overall comparison statistics
+    return dataset_name, results, organism_list
+
+def main():
+    # Get all dataset directories
+    dataset_dirs = []
+    for item in sorted(os.listdir(BASE_DIR)):
+        item_path = os.path.join(BASE_DIR, item)
+        if os.path.isdir(item_path):
+            best_hits_dir = os.path.join(item_path, "best_hits_fixed")
+            if os.path.exists(best_hits_dir):
+                # Check for LPP matrix files
+                lpp_files = glob.glob(os.path.join(best_hits_dir, "LPP_matrix_*.txt"))
+                if lpp_files:
+                    dataset_dirs.append(item_path)
+    
+    print("="*80)
+    print("LPP STATISTICS CALCULATION FOR ALL DATASETS")
+    print("="*80)
+    print(f"Found {len(dataset_dirs)} datasets with LPP matrices\n")
+    
+    if len(dataset_dirs) == 0:
+        print("ERROR: No datasets with LPP matrices found!")
+        print("Make sure Step 2 (create LPP matrices) has completed successfully.")
+        return
+    
+    # Store all results
+    all_results = {}
+    
+    # Process each dataset
+    for dataset_dir in dataset_dirs:
+        dataset_name, results, organisms = process_dataset(dataset_dir)
+        all_results[dataset_name] = results
+    
+    # Create comprehensive summary across all datasets
     print("\n" + "="*80)
-    print("OVERALL COMPARISON SUMMARY")
+    print("OVERALL SUMMARY ACROSS ALL DATASETS")
     print("="*80)
     
-    valid_comparisons = [r for r in results if r['sample_mean'] is not None]
-    if valid_comparisons:
-        mean_diffs = [r['mean_diff_pct'] for r in valid_comparisons]
-        std_diffs = [r['std_diff_pct'] for r in valid_comparisons]
+    # Collect statistics per dataset
+    dataset_stats = []
+    total_genes_all = 0
+    total_organisms_all = 0
+    
+    for dataset_name in sorted(all_results.keys()):
+        results = all_results[dataset_name]
+        if results:
+            all_means = [r['mean_lpp'] for r in results]
+            all_stds = [r['std_lpp'] for r in results]
+            all_counts = [r['count'] for r in results]
+            
+            total_genes = sum(all_counts)
+            total_genes_all += total_genes
+            total_organisms_all += len(results)
+            
+            dataset_stats.append({
+                'dataset': os.path.basename(dataset_name),
+                'num_organisms': len(results),
+                'avg_mean_lpp': statistics.mean(all_means),
+                'avg_std_lpp': statistics.mean(all_stds),
+                'avg_records': statistics.mean(all_counts),
+                'total_genes': total_genes,
+                'min_mean_lpp': min(all_means),
+                'max_mean_lpp': max(all_means)
+            })
+    
+    if dataset_stats:
+        # Sort by dataset name
+        dataset_stats.sort(key=lambda x: x['dataset'])
         
-        # Statistical significance summary
-        significant_tests = [r for r in valid_comparisons if r['is_significant'] is True]
-        non_significant_tests = [r for r in valid_comparisons if r['is_significant'] is False]
-        tests_with_pvalues = [r for r in valid_comparisons if r['p_value'] is not None]
+        print(f"\n{'Dataset':<35} {'Org':<6} {'Mean LPP':<12} {'Std Dev':<12} {'Total Genes':<12}")
+        print("-" * 80)
+        for ds in dataset_stats:
+            print(f"{ds['dataset']:<35} {ds['num_organisms']:<6} "
+                  f"{ds['avg_mean_lpp']:<12.4f} {ds['avg_std_lpp']:<12.4f} {ds['total_genes']:<12}")
         
-        print(f"Files with valid comparisons: {len(valid_comparisons)}")
-        print(f"\nMean bitscore difference (sample - full):")
-        print(f"  Average: {statistics.mean(mean_diffs):.2f}%")
-        print(f"  Std:     {statistics.stdev(mean_diffs):.2f}%")
-        print(f"  Min:     {min(mean_diffs):.2f}%")
-        print(f"  Max:     {max(mean_diffs):.2f}%")
+        # Grand totals
+        print("-" * 80)
+        grand_mean_lpp = statistics.mean([ds['avg_mean_lpp'] for ds in dataset_stats])
+        grand_std_lpp = statistics.mean([ds['avg_std_lpp'] for ds in dataset_stats])
+        print(f"{'TOTAL':<35} {total_organisms_all:<6} {grand_mean_lpp:<12.4f} "
+              f"{grand_std_lpp:<12.4f} {total_genes_all:<12}")
         
-        print(f"\nStd bitscore difference (sample - full):")
-        print(f"  Average: {statistics.mean(std_diffs):.2f}%")
-        print(f"  Std:     {statistics.stdev(std_diffs):.2f}%")
-        print(f"  Min:     {min(std_diffs):.2f}%")
-        print(f"  Max:     {max(std_diffs):.2f}%")
+        # Save comprehensive summary
+        comprehensive_summary = os.path.join(BASE_DIR, "LPP_all_datasets_statistics_summary.csv")
+        with open(comprehensive_summary, 'w', newline='', encoding='utf-8') as f:
+            writer = csv.writer(f)
+            writer.writerow(['dataset', 'num_organisms', 'avg_mean_lpp', 'avg_std_lpp', 
+                           'avg_records_per_organism', 'total_genes', 'min_mean_lpp', 'max_mean_lpp'])
+            for ds in dataset_stats:
+                writer.writerow([
+                    ds['dataset'],
+                    ds['num_organisms'],
+                    f"{ds['avg_mean_lpp']:.6f}",
+                    f"{ds['avg_std_lpp']:.6f}",
+                    f"{ds['avg_records']:.2f}",
+                    ds['total_genes'],
+                    f"{ds['min_mean_lpp']:.6f}",
+                    f"{ds['max_mean_lpp']:.6f}"
+                ])
         
-        if tests_with_pvalues:
-            p_values = [r['p_value'] for r in tests_with_pvalues]
-            print(f"\nStatistical significance (t-test, α=0.05):")
-            print(f"  Tests performed: {len(tests_with_pvalues)}")
-            print(f"  Significant differences: {len(significant_tests)} ({len(significant_tests)/len(tests_with_pvalues)*100:.1f}%)")
-            print(f"  Non-significant differences: {len(non_significant_tests)} ({len(non_significant_tests)/len(tests_with_pvalues)*100:.1f}%)")
-            print(f"  Average p-value: {statistics.mean(p_values):.6f}")
-            print(f"  Median p-value: {statistics.median(p_values):.6f}")
-            print(f"  Min p-value: {min(p_values):.6f}")
-            print(f"  Max p-value: {max(p_values):.6f}")
+        print(f"\nComprehensive summary saved to: {comprehensive_summary}")
     else:
-        print("No valid comparisons available.")
+        print("No valid results to summarize.")
+    
+    print("\n" + "="*80)
+    print("PROCESSING COMPLETE")
+    print("="*80)
 
 if __name__ == "__main__":
     main()
-

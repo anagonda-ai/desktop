@@ -8,8 +8,8 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 ROOT_DIR = Path(
     "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/"
 )
-OLD_OUTPUT_ROOT = ROOT_DIR / "kegg_random_mgc_pdb_files"
-NEW_OUTPUT_ROOT = ROOT_DIR / "kegg_random_mgc_foldseek_predictions"
+OLD_OUTPUT_ROOT = ROOT_DIR / "mgc_pdb_files"
+NEW_OUTPUT_ROOT = ROOT_DIR / "mgc_foldseek_predictions_fixed"
 FOLDSEEK = "foldseek"
 MAX_WORKERS = 32
 

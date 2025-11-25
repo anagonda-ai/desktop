@@ -1,11 +1,9 @@
 import os
 import subprocess
 import time
-from concurrent.futures import ThreadPoolExecutor, as_completed
-import glob
 
 # Config paths
-root_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/kegg_random_mgc_candidates_dir_fixed"
+root_dir = "/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_dir_final/"
 submit_find_homolog_genes_in_dir_array = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_find_homolog_genes_in_dir_array.sh"
 submit_find_clusters_in_chromosome_array = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_find_clusters_in_chromosome_array.sh"
 submit_multichromosome_statistics_array = "/groups/itay_mayrose/alongonda/desktop/sh_scripts/powerslurm/daily_usage/submit_multichromosome_statistics_array.sh"
@@ -28,33 +26,63 @@ print(f"Found {total_mgcs} total MGC directories")
 def get_job_limits():
     """Get current job limits and usage"""
     try:
-        # Check submitted jobs (including pending)
-        result = subprocess.run(["squeue", "-u", "alongonda", "-t", "PENDING,RUNNING"], 
-                              capture_output=True, text=True)
-        if result.returncode == 0:
+        # FIXED: Use shell=True to allow pipe operator to work
+        result = subprocess.run(
+            "squeue -u alongonda | grep itaym-pool",
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        # If grep finds matches, returncode is 0; if no matches, returncode is 1
+        if result.returncode == 0 and result.stdout.strip():
             lines = result.stdout.strip().split('\n')
-            submitted_jobs = max(0, len(lines) - 1) if len(lines) > 1 else 0
+            submitted_jobs = len(lines)
+            print(f"[DEBUG] Found {submitted_jobs} submitted jobs")
         else:
             submitted_jobs = 0
+            print(f"[DEBUG] No jobs found (returncode: {result.returncode})")
         
-        # Be much more conservative - assume lower limits based on your error
-        max_submit_limit = 100  # Much more conservative based on your actual limits
+        max_submit_limit = 50
         
         return submitted_jobs, max_submit_limit
+    except subprocess.TimeoutExpired:
+        print("Warning: squeue command timed out")
+        return 0, 50
     except Exception as e:
         print(f"Warning: Could not determine job limits: {e}")
-        return 0, 50  # Very conservative fallback
+        import traceback
+        traceback.print_exc()
+        return 0, 50
 
 def check_active_jobs():
     """Check how many jobs are currently active for the user"""
-    result = subprocess.run(["squeue", "-u", "alongonda"], capture_output=True, text=True)
-    if result.returncode != 0:
+    try:
+        # FIXED: Use shell=True to allow pipe operator to work
+        result = subprocess.run(
+            "squeue -u alongonda | grep itaym-pool",
+            shell=True,
+            capture_output=True,
+            text=True,
+            timeout=10
+        )
+        
+        if result.returncode != 0 or not result.stdout.strip():
+            return 0
+        
+        lines = result.stdout.strip().split('\n')
+        active_count = len(lines)
+        print(f"[DEBUG] Active jobs: {active_count}")
+        return active_count
+    except subprocess.TimeoutExpired:
+        print("Warning: squeue check timed out")
         return 0
-    # Count lines minus header
-    lines = result.stdout.strip().split('\n')
-    return max(0, len(lines) - 1)
+    except Exception as e:
+        print(f"Warning: Could not check active jobs: {e}")
+        return 0
 
-def wait_for_job_slots(max_active_jobs=500, max_submitted_jobs=None):
+def wait_for_job_slots(max_active_jobs=50, max_submitted_jobs=None):
     """Wait until active job count drops below threshold and check submission limits"""
     if max_submitted_jobs is None:
         submitted_jobs, max_submit_limit = get_job_limits()
@@ -74,7 +102,7 @@ def submit_array_job_rolling(job_name, script_path, mgc_list_file, num_tasks, de
     """Submit chunks with rolling submission - new chunk starts when any previous chunk finishes"""
     
     submitted_jobs, max_submit_limit = get_job_limits()
-    max_array_index = 500
+    max_array_index = 100
     max_concurrent_chunks = 10  # Maximum chunks running simultaneously
     
     chunks = (num_tasks + max_array_index - 1) // max_array_index
@@ -117,10 +145,14 @@ def submit_array_job_rolling(job_name, script_path, mgc_list_file, num_tasks, de
     chunks_submitted = 0
     chunks_completed = 0
     
-    # Submit initial batch up to concurrent limit
+    # Submit initial batch up to concurrent limit - WITH PROPER WAITING
     initial_submissions = min(max_concurrent_chunks, chunks)
     
     for i in range(initial_submissions):
+        # CRITICAL FIX: Wait for available slots BEFORE each submission
+        print(f"Checking job slots before submitting chunk {i+1}/{initial_submissions}...")
+        wait_for_job_slots(max_active_jobs=50, max_submitted_jobs=max_submit_limit - 30)
+        
         job_id = submit_single_chunk(chunk_data[i], script_path, dependency_jobs if i == 0 else None)
         if job_id:
             chunk_data[i]['submitted'] = True
@@ -128,9 +160,13 @@ def submit_array_job_rolling(job_name, script_path, mgc_list_file, num_tasks, de
             job_ids.append(job_id)
             chunks_submitted += 1
             print(f"Initial submission {i+1}/{initial_submissions}: {chunk_data[i]['chunk_name']} -> {job_id}")
-        time.sleep(30)  # Pace initial submissions
+        else:
+            print(f"Failed to submit initial chunk {i+1}")
+        
+        # Increased wait time between submissions
+        time.sleep(60)
     
-    # Rolling submission loop
+    # Rolling submission loop - only if there are more chunks to submit
     while chunks_completed < chunks:
         # Check which jobs have completed
         newly_completed = []
@@ -144,7 +180,7 @@ def submit_array_job_rolling(job_name, script_path, mgc_list_file, num_tasks, de
                     newly_completed.append(chunk)
                     print(f"Chunk completed: {chunk['chunk_name']} (job {chunk['job_id']})")
         
-        # Submit new chunks for each completed one
+        # Submit new chunks for each completed one (maintain max_concurrent_chunks)
         for _ in newly_completed:
             # Find next unsubmitted chunk
             next_chunk = None
@@ -154,8 +190,9 @@ def submit_array_job_rolling(job_name, script_path, mgc_list_file, num_tasks, de
                     break
             
             if next_chunk:
-                # Wait for submission slot
-                wait_for_job_slots(max_active_jobs=30, max_submitted_jobs=max_submit_limit - 30)
+                # CRITICAL FIX: Wait for submission slot with tighter limits
+                print(f"Waiting for slot to submit {next_chunk['chunk_name']}...")
+                wait_for_job_slots(max_active_jobs=40, max_submitted_jobs=max_submit_limit - 30)
                 
                 # Submit next chunk
                 job_id = submit_single_chunk(next_chunk, script_path, dependency_jobs=None)
@@ -171,6 +208,10 @@ def submit_array_job_rolling(job_name, script_path, mgc_list_file, num_tasks, de
         # Progress update
         active_chunks = sum(1 for c in chunk_data if c['submitted'] and not c['completed'])
         print(f"Progress: {chunks_completed}/{chunks} completed, {active_chunks} active, {chunks_submitted}/{chunks} submitted")
+        
+        # Break if all chunks are submitted and completed
+        if chunks_submitted >= chunks and chunks_completed >= chunks:
+            break
         
         # Wait before checking again
         time.sleep(120)  # Check every 2 minutes
@@ -292,19 +333,19 @@ print("Checking current job load...")
 wait_for_job_slots(max_active_jobs=50, max_submitted_jobs=max_submit_limit - 20)
 
 # Step 1: Submit homolog array job
-print("\n=== STAGE 1: HOMOLOG PROCESSING ===")
-job_ids1 = submit_array_job_for_stage('homolog', submit_find_homolog_genes_in_dir_array, 
-                                       all_subdirs, dependency_jobs=None)
-if job_ids1:
-    wait_for_array_job(job_ids1)
-elif all_subdirs:  # Only fail if there were jobs that should have been submitted
-    print("Failed to submit homolog jobs. Exiting.")
-    exit(1)
+# print("\n=== STAGE 1: HOMOLOG PROCESSING ===")
+# job_ids1 = submit_array_job_for_stage('homolog', submit_find_homolog_genes_in_dir_array, 
+#                                        all_subdirs, dependency_jobs=None)
+# if job_ids1:
+#     wait_for_array_job(job_ids1)
+# elif all_subdirs:  # Only fail if there were jobs that should have been submitted
+#     print("Failed to submit homolog jobs. Exiting.")
+#     exit(1)
 
 # Step 2: Submit cluster array job (depends on homolog completion)  
 print("\n=== STAGE 2: CLUSTER PROCESSING ===")
 job_ids2 = submit_array_job_for_stage('cluster', submit_find_clusters_in_chromosome_array,
-                                       all_subdirs, dependency_jobs=job_ids1 if job_ids1 else None)
+                                       all_subdirs, dependency_jobs=None)
 if job_ids2:
     wait_for_array_job(job_ids2)
 elif all_subdirs:  # Only fail if there were jobs that should have been submitted

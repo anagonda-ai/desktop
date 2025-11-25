@@ -36,7 +36,7 @@ REFERENCE_DOC = "/mnt/data/Highlits for the Toolkit.txt"
 parser = argparse.ArgumentParser()
 parser.add_argument("--cpus", type=int, default=32)
 parser.add_argument("--mem", default="32G")
-parser.add_argument("--array_time", default="2-00:00:00")
+parser.add_argument("--array_time", default="6-24:00:00")
 parser.add_argument("--array_concurrency", type=int, default=100)
 parser.add_argument("--blast_module", default="ncbi-blast/2.13.0+")
 parser.add_argument("--partition", default="itaym-pool")
@@ -207,6 +207,11 @@ mkdir -p "$OUTDIR"
 while read -r DB; do
   DBNAME=$(basename "$DB")
   OUTFILE="$OUTDIR/${{QBASE}}_${{DBNAME}}_results.txt"
+  # Skip if OUTFILE already exists
+  if [ -f "$OUTFILE" ]; then
+    echo "OUTFILE $OUTFILE exists, skipping."
+    continue
+  fi
   blastp -query "$QUERY" -db "$DB" \\
     -evalue 1e-5 \\
     -outfmt "6 qseqid sseqid pident length mismatch gapopen qstart qend sstart send evalue bitscore" \\
@@ -232,152 +237,3 @@ done < {shlex.quote(blastdb_list_file)}
 
     print(f"Submitted array for {example_mgc}: {array_jobid}")
 
-# ----------------------------------------------------------------------
-# Stage 2: PARALLEL MERGES (each depends only on its own array)
-# ----------------------------------------------------------------------
-for example_mgc in mgc_dirs:
-    print(f"\n===== STAGE 2: MERGE for {example_mgc} =====")
-
-    blast_results_dir = os.path.join(example_mgc, "best_hits")
-
-    merge_sbatch = os.path.join(example_mgc, "merge_best_hits.sbatch")
-    merge_stdout = os.path.join(blast_results_dir, "merge_%j.out")
-    merge_stderr = os.path.join(blast_results_dir, "merge_%j.err")
-
-    array_jobid = array_jobids.get(example_mgc)
-    if not array_jobid:
-        print(f"Skipping merge for {example_mgc} — no array job.")
-        continue
-
-    # ---- Part 1: SLURM header ----
-    merge_script = f"""#!/bin/bash
-#SBATCH -J merge_best_hits
-#SBATCH -o {shlex.quote(merge_stdout)}
-#SBATCH -e {shlex.quote(merge_stderr)}
-#SBATCH -p {args.partition}
-#SBATCH --ntasks=1
-#SBATCH --cpus-per-task=2
-#SBATCH --mem=8G
-#SBATCH --time=5:00:00
-
-module purge
-module load python/3.11
-
-python - <<'PYCODE'
-"""
-
-    # ---- Part 2: Python merge (no f-string) ----
-    merge_script += f"""
-import os, glob, csv, re
-from collections import defaultdict
-
-BLAST_ROOT = {repr(blast_results_dir)}
-"""
-
-    merge_script += r"""
-def process_result_file(args):
-    qbase, fpath = args
-    local_best = {}
-    try:
-        with open(fpath, "r") as fh:
-            for ln in fh:
-                cols = ln.rstrip().split("\t")
-                if len(cols) < 12:
-                    continue
-
-                qid    = cols[0]
-                sid    = cols[1]
-                pident = cols[2]
-                length = cols[3]
-                mismatch = cols[4]
-                gapopen  = cols[5]
-                qstart   = cols[6]
-                qend     = cols[7]
-                sstart   = cols[8]
-                send     = cols[9]
-                evalue   = float(cols[10])
-                bitscore = float(cols[11])
-
-                key = (qbase, qid, fpath)
-                rec = dict(
-                    query_dir=qbase, query_gene=qid, subject_gene=sid,
-                    pident=pident, length=length, mismatch=mismatch, gapopen=gapopen,
-                    qstart=qstart, qend=qend, sstart=sstart, send=send,
-                    evalue=evalue, bitscore=bitscore, src=fpath
-                )
-
-                if key not in local_best or \
-                   bitscore > local_best[key]['bitscore'] or \
-                   (bitscore == local_best[key]['bitscore'] and evalue < local_best[key]['evalue']):
-                    local_best[key] = rec
-    except Exception as e:
-        print("WARN reading", fpath, e)
-    return local_best
-
-# Gather all (qbase, fpath) pairs for BLAST result files
-file_args = []
-for qdir in sorted(glob.glob(os.path.join(BLAST_ROOT, "*"))):
-    if not os.path.isdir(qdir):
-        continue
-    qbase = os.path.basename(qdir)
-    for fpath in sorted(glob.glob(os.path.join(qdir, "*_results.txt"))):
-        file_args.append((qbase, fpath))
-
-# Use ThreadPoolExecutor for concurrency (since this is I/O bound)
-best_per_query = {}
-with concurrent.futures.ThreadPoolExecutor() as executor:
-    futures = [executor.submit(process_result_file, arg) for arg in file_args]
-    for fut in concurrent.futures.as_completed(futures):
-        local_best = fut.result()
-        for key, rec in local_best.items():
-            if key not in best_per_query or \
-               rec['bitscore'] > best_per_query[key]['bitscore'] or \
-               (rec['bitscore'] == best_per_query[key]['bitscore'] and rec['evalue'] < best_per_query[key]['evalue']):
-                best_per_query[key] = rec
-
-# Create a mapping: organism -> list of records
-
-organism_records = defaultdict(list)
-
-for key, rec in best_per_query.items():
-    source_file = os.path.basename(rec["src"])
-    organism = "_".join(source_file.split("_")[2:])
-    organism_records[organism].append(rec)
-
-# Write separate output file for each organism
-for organism, records in organism_records.items():
-    out_path = os.path.join(BLAST_ROOT, f"best_hits_{organism}.csv")
-    with open(out_path, "w", newline='', encoding="utf-8") as outcsv:
-        writer = csv.writer(outcsv)
-        writer.writerow([
-            "query_dir","query_gene","subject_gene","pident","length",
-            "mismatch","gapopen","qstart","qend","sstart","send",
-            "evalue","bitscore","source_file"
-        ])
-        for rec in records:
-            writer.writerow([
-                rec['query_dir'], rec['query_gene'], rec['subject_gene'],
-                rec['pident'], rec['length'], rec['mismatch'], rec['gapopen'],
-                rec['qstart'], rec['qend'], rec['sstart'], rec['send'],
-                rec['evalue'], rec['bitscore'], rec['src']
-            ])
-    print(f"Wrote per-organism file: {out_path}")
-PYCODE
-"""
-
-    with open(merge_sbatch, "w") as fh:
-        fh.write(merge_script)
-
-    # Submit merge, depends only on its MGC's array job
-    res = subprocess.check_output([
-        "sbatch", f"--dependency=afterok:{array_jobid}", merge_sbatch
-    ]).decode().strip()
-
-    print(f"Submitted merge for {example_mgc}: {res.split()[-1]}")
-
-# ----------------------------------------------------------------------
-# Done
-# ----------------------------------------------------------------------
-print("\n===== ALL JOBS SUBMITTED =====")
-print("Stage 1 (arrays) ran serially.")
-print("Stage 2 (merges) submitted in parallel with dependencies.")
