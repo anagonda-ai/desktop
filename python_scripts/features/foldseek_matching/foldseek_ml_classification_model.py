@@ -6,7 +6,7 @@ Foldseek Feature ML Classification Model - Individual & Multi-feature
 import numpy as np
 import pandas as pd
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (precision_recall_curve, confusion_matrix, 
+from sklearn.metrics import (roc_curve, auc, precision_recall_curve, confusion_matrix, 
                             classification_report, matthews_corrcoef, f1_score)
 from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.preprocessing import StandardScaler
@@ -89,8 +89,13 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     # Predictions
     y_pred_proba = model.predict_proba(X_test_scaled)[:, 1]
     
-    # Precision-Recall curve for threshold selection
+    # ROC curve
+    fpr, tpr, roc_thresholds = roc_curve(y_test, y_pred_proba)
+    roc_auc = auc(fpr, tpr)
+    
+    # Precision-Recall curve
     precision, recall, pr_thresholds = precision_recall_curve(y_test, y_pred_proba)
+    pr_auc = auc(recall, precision)
     
     # Find F1-optimal threshold
     f1_scores = 2 * (precision[:-1] * recall[:-1]) / (precision[:-1] + recall[:-1] + 1e-10)
@@ -98,6 +103,8 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     f1_optimal_threshold = pr_thresholds[f1_optimal_idx]
     
     print(f"\n🎯 PERFORMANCE:")
+    print(f"  ROC AUC: {roc_auc:.4f}")
+    print(f"  PR AUC:  {pr_auc:.4f}")
     print(f"  F1-optimal threshold: {f1_optimal_threshold:.4f}")
     
     # Evaluate at F1-optimal threshold
@@ -115,26 +122,28 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     
     # Cross-validation
     cv_scores = cross_validate(model, scaler.transform(X), y, cv=5, 
-                               scoring=['precision', 'recall', 'f1'], return_train_score=False)
+                               scoring=['roc_auc', 'average_precision', 'f1'], return_train_score=False)
     
     print(f"\n🔄 CROSS-VALIDATION:")
-    print(f"  Precision: {cv_scores['test_precision'].mean():.4f} ± {cv_scores['test_precision'].std():.4f}")
-    print(f"  Recall:    {cv_scores['test_recall'].mean():.4f} ± {cv_scores['test_recall'].std():.4f}")
-    print(f"  F1:        {cv_scores['test_f1'].mean():.4f} ± {cv_scores['test_f1'].std():.4f}")
+    print(f"  ROC AUC: {cv_scores['test_roc_auc'].mean():.4f} ± {cv_scores['test_roc_auc'].std():.4f}")
+    print(f"  PR AUC:  {cv_scores['test_average_precision'].mean():.4f} ± {cv_scores['test_average_precision'].std():.4f}")
+    print(f"  F1:      {cv_scores['test_f1'].mean():.4f} ± {cv_scores['test_f1'].std():.4f}")
     
     return {
         'features': features_to_use,
         'weights': weights,
         'intercept': intercept,
         'threshold': f1_optimal_threshold,
+        'roc_auc': roc_auc,
+        'pr_auc': pr_auc,
         'f1': f1,
         'mcc': mcc,
         'precision': precision_val,
         'recall': recall_val,
-        'cv_precision': cv_scores['test_precision'].mean(),
-        'cv_precision_std': cv_scores['test_precision'].std(),
-        'cv_recall': cv_scores['test_recall'].mean(),
-        'cv_recall_std': cv_scores['test_recall'].std(),
+        'cv_roc_auc': cv_scores['test_roc_auc'].mean(),
+        'cv_roc_auc_std': cv_scores['test_roc_auc'].std(),
+        'cv_pr_auc': cv_scores['test_average_precision'].mean(),
+        'cv_pr_auc_std': cv_scores['test_average_precision'].std(),
         'cv_f1': cv_scores['test_f1'].mean(),
         'cv_f1_std': cv_scores['test_f1'].std()
     }
@@ -174,13 +183,13 @@ def main():
     print("SUMMARY")
     print("="*80)
     
-    print(f"\nIndividual Features (ranked by Precision):")
-    sorted_results = sorted(individual_results, key=lambda x: x['precision'], reverse=True)
+    print(f"\nIndividual Features (ranked by PR AUC):")
+    sorted_results = sorted(individual_results, key=lambda x: x['pr_auc'], reverse=True)
     for i, r in enumerate(sorted_results, 1):
-        print(f"  {i}. {r['features'][0]:45s} Precision: {r['precision']:.4f} | Recall: {r['recall']:.4f} | F1: {r['f1']:.4f}")
+        print(f"  {i}. {r['features'][0]:45s} ROC: {r['roc_auc']:.4f} | PR: {r['pr_auc']:.4f} | F1: {r['f1']:.4f}")
     
     print(f"\nMulti-Feature Model:")
-    print(f"  Precision: {multi_result['precision']:.4f} | Recall: {multi_result['recall']:.4f} | F1: {multi_result['f1']:.4f} | MCC: {multi_result['mcc']:.4f}")
+    print(f"  ROC AUC: {multi_result['roc_auc']:.4f} | PR AUC: {multi_result['pr_auc']:.4f} | F1: {multi_result['f1']:.4f} | MCC: {multi_result['mcc']:.4f}")
     
     # Save results
     summary = []
@@ -190,6 +199,8 @@ def main():
             'feature': r['features'][0],
             'weight': r['weights'][0],
             'threshold': r['threshold'],
+            'roc_auc': r['roc_auc'],
+            'pr_auc': r['pr_auc'],
             'precision': r['precision'],
             'recall': r['recall'],
             'f1': r['f1'],
@@ -201,6 +212,8 @@ def main():
         'feature': 'ALL_COMBINED',
         'weight': None,
         'threshold': multi_result['threshold'],
+        'roc_auc': multi_result['roc_auc'],
+        'pr_auc': multi_result['pr_auc'],
         'precision': multi_result['precision'],
         'recall': multi_result['recall'],
         'f1': multi_result['f1'],

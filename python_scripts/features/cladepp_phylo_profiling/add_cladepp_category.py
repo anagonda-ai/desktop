@@ -10,7 +10,7 @@ def add_category_to_cladepp():
     print("📊 Adding category column to Cladepp CSV...")
     
     # Load the CSV file
-    df = pd.read_csv('/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/actual_random/cladepp_cluster_metrics_enhanced.csv')
+    df = pd.read_csv('/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/cladepp_cluster_metrics_enhanced.csv')
     
     print(f"Loaded {len(df)} rows")
     
@@ -32,7 +32,7 @@ def add_category_to_cladepp():
     print(df['category'].value_counts())
     
     # Save the updated CSV
-    output_file = '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/actual_random/cladepp_cluster_metrics_enhanced.csv'
+    output_file = '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/final_data/kegg_random/cladepp_cluster_metrics_enhanced.csv'
     df.to_csv(output_file, index=False)
     
     print(f"\n✅ Updated Cladepp CSV saved to: {output_file}")

@@ -16,4 +16,4 @@ compute_gain_loss_coevolution=$5
 max_workers=$6
 use_processes=$7
 
-python /groups/itay_mayrose/alongonda/desktop/python_scripts/features/cladepp_phylo_profiling/cladepp_phylo_profiling_helpfuncs/analyze_tree_clades_dynamic.py --tree_path "$tree_path" --comparison_csv "$comparison_csv" --mgc_output_dir "$mgc_output_dir" --mapping_file "$mapping_file" --compute_gain_loss_coevolution "$compute_gain_loss_coevolution" --max_workers "$max_workers" --use_processes "$use_processes"
+conda run -n base python /groups/itay_mayrose/alongonda/desktop/python_scripts/features/cladepp_phylo_profiling/cladepp_phylo_profiling_helpfuncs/analyze_tree_clades_dynamic.py --tree_path "$tree_path" --comparison_csv "$comparison_csv" --mgc_output_dir "$mgc_output_dir" --mapping_file "$mapping_file" --compute_gain_loss_coevolution "$compute_gain_loss_coevolution" --max_workers "$max_workers" --use_processes "$use_processes"

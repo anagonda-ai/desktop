@@ -14,19 +14,26 @@ import warnings
 warnings.filterwarnings('ignore')
 
 PROMOTER_FEATURES = [
-    'similarity_score',
-    'normalized_similarity',
-    'mean_proximal_similarity',
-    'mean_distal_similarity',
-    'num_tfbs_types_found'
+    # Jaccard similarity features (shared TFBS types)
+    'similarity_score',                    # Raw Jaccard similarity (0-100)
+    'mean_proximal_similarity',            # Mean Jaccard similarity in proximal region
+    'mean_distal_similarity',              # Mean Jaccard similarity in distal region
+    # Pearson correlation features (TFBS density profiles)
+    'correlation_score',                   # Raw Pearson correlation (0-100)
+    'mean_proximal_correlation',           # Mean Pearson correlation in proximal region
+    'mean_distal_correlation',             # Mean Pearson correlation in distal region
+    # Other features
+    'num_tfbs_types_found'                 # Count of distinct TFBS types
 ]
 
 FEATURE_DESCRIPTIONS = {
-    'similarity_score': 'Raw pairwise TFBS pattern similarity averaged across all gene pairs in cluster. Combines Jaccard similarity of shared TFBS types (60% weight) and Pearson correlation of TFBS density profiles (40% weight). Weighted average: 70% proximal region + 30% distal region. Range: 0-100',
-    'normalized_similarity': 'Size and variance-adjusted promoter similarity score. Applies three corrections: (1) size penalty for non-optimal cluster sizes (optimal~5 genes, 30% weight), (2) statistical reliability weight based on pairwise comparisons (50% weight), (3) variance penalty for inconsistent patterns (20% weight). Accounts for cluster heterogeneity and sample size biases',
-    'mean_proximal_similarity': 'Mean TFBS pattern similarity in proximal promoter regions (-200bp to TSS). Focuses on core regulatory elements near transcription start site including TATA box, CAAT box, and initiator elements. Higher values indicate co-regulated genes. Range: 0-1',
-    'mean_distal_similarity': 'Mean TFBS pattern similarity in distal promoter regions (-800bp to -200bp). Captures upstream enhancers and distal regulatory elements including hormone response elements, stress response elements, and tissue-specific TF binding sites. Range: 0-1',
-    'num_tfbs_types_found': 'Count of distinct transcription factor binding site (TFBS) types identified across all promoters using plant-specific pattern databases (PlantCARE, PLACE, JASPAR). Includes 30+ TFBS families: MYB, bZIP, WRKY, AP2/ERF, bHLH, NAC, GATA, DOF, TCP, HSF, hormone response elements, stress response elements. High diversity suggests complex multi-TF regulation typical of metabolic gene clusters'
+    'similarity_score': 'Raw pairwise Jaccard similarity of shared TFBS types averaged across all gene pairs in cluster. Jaccard similarity = shared TFBS types / total TFBS types. Measures the fraction of TFBS types that are present in both promoters. Weighted average: 70% proximal region + 30% distal region. Range: 0-100. Represents raw regulatory sequence conservation based on shared TFBS type presence.',
+    'mean_proximal_similarity': 'Mean Jaccard similarity of shared TFBS types in proximal promoter regions (-200bp to TSS). Focuses on core regulatory elements near transcription start site including TATA box, CAAT box, and initiator elements. Higher values indicate co-regulated genes with shared TFBS types, capturing core regulatory element conservation. Range: 0-1.',
+    'mean_distal_similarity': 'Mean Jaccard similarity of shared TFBS types in distal promoter regions (-800bp to -200bp). Captures upstream enhancers and distal regulatory elements including hormone response elements, stress response elements, and tissue-specific TF binding sites. Reflects upstream enhancer and long-range regulatory element conservation based on shared TFBS types. Range: 0-1.',
+    'correlation_score': 'Raw pairwise Pearson correlation of TFBS density profiles averaged across all gene pairs in cluster. Measures correlation of normalized TFBS counts across all TFBS types. Captures coordinated TFBS density patterns regardless of absolute counts. Weighted average: 70% proximal region + 30% distal region. Range: 0-100. Represents raw regulatory sequence conservation based on TFBS density profile correlation.',
+    'mean_proximal_correlation': 'Mean Pearson correlation of TFBS density profiles in proximal promoter regions (-200bp to TSS). Measures how well TFBS density patterns correlate between genes in the core promoter region. Higher values indicate coordinated TFBS density patterns, capturing core regulatory element density conservation. Range: 0-1.',
+    'mean_distal_correlation': 'Mean Pearson correlation of TFBS density profiles in distal promoter regions (-800bp to -200bp). Measures correlation of TFBS density patterns in upstream regulatory regions. Reflects upstream enhancer and long-range regulatory element density conservation. Range: 0-1.',
+    'num_tfbs_types_found': 'Count of distinct transcription factor binding site (TFBS) types identified across all promoters using plant-specific pattern databases (PlantCARE, PLACE, JASPAR). Includes 30+ TFBS families: MYB, bZIP, WRKY, AP2/ERF, bHLH, NAC, GATA, DOF, TCP, HSF, hormone response elements, stress response elements. High diversity suggests complex multi-TF regulation typical of metabolic gene clusters. Quantifies regulatory motif diversity.'
 }
 
 def train_model(df, features, feature_name=None, test_size=0.3, random_state=42):
@@ -99,9 +106,9 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     f1_optimal_idx = np.argmax(f1_scores)
     f1_optimal_threshold = pr_thresholds[f1_optimal_idx]
     
-    print(f"\n🎯 PERFORMANCE:")
+    print(f"\n🎯 PRECISION-RECALL PERFORMANCE:")
+    print(f"  PR AUC:  {pr_auc:.4f} (primary metric)")
     print(f"  ROC AUC: {roc_auc:.4f}")
-    print(f"  PR AUC:  {pr_auc:.4f}")
     print(f"  F1-optimal threshold: {f1_optimal_threshold:.4f}")
     
     # Evaluate at F1-optimal threshold
@@ -113,17 +120,19 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     f1 = f1_score(y_test, y_pred)
     mcc = matthews_corrcoef(y_test, y_pred)
     
-    print(f"\n📈 METRICS:")
+    print(f"\n📈 PRECISION-RECALL METRICS (at F1-optimal threshold):")
     print(f"  Precision: {precision_val:.4f} | Recall: {recall_val:.4f} | F1: {f1:.4f} | MCC: {mcc:.4f}")
     print(f"  TP: {tp:4d} | FP: {fp:4d} | TN: {tn:5d} | FN: {fn:4d}")
     
-    # Cross-validation
+    # Cross-validation with precision and recall
     cv_scores = cross_validate(model, scaler.transform(X), y, cv=5, 
-                               scoring=['roc_auc', 'f1'], return_train_score=False)
+                               scoring=['roc_auc', 'average_precision', 'precision', 'recall', 'f1'], return_train_score=False)
     
     print(f"\n🔄 CROSS-VALIDATION:")
-    print(f"  ROC AUC: {cv_scores['test_roc_auc'].mean():.4f} ± {cv_scores['test_roc_auc'].std():.4f}")
-    print(f"  F1:      {cv_scores['test_f1'].mean():.4f} ± {cv_scores['test_f1'].std():.4f}")
+    print(f"  PR AUC:    {pr_auc:.4f} (test set)")
+    print(f"  Precision: {cv_scores['test_precision'].mean():.4f} ± {cv_scores['test_precision'].std():.4f}")
+    print(f"  Recall:    {cv_scores['test_recall'].mean():.4f} ± {cv_scores['test_recall'].std():.4f}")
+    print(f"  F1:        {cv_scores['test_f1'].mean():.4f} ± {cv_scores['test_f1'].std():.4f}")
     
     return {
         'features': features_to_use,
@@ -136,8 +145,14 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
         'mcc': mcc,
         'precision': precision_val,
         'recall': recall_val,
-        'cv_roc_auc': cv_scores['test_roc_auc'].mean(),
-        'cv_roc_auc_std': cv_scores['test_roc_auc'].std()
+        'cv_pr_auc': cv_scores['test_average_precision'].mean(),
+        'cv_pr_auc_std': cv_scores['test_average_precision'].std(),
+        'cv_precision': cv_scores['test_precision'].mean(),
+        'cv_precision_std': cv_scores['test_precision'].std(),
+        'cv_recall': cv_scores['test_recall'].mean(),
+        'cv_recall_std': cv_scores['test_recall'].std(),
+        'cv_f1': cv_scores['test_f1'].mean(),
+        'cv_f1_std': cv_scores['test_f1'].std()
     }
 
 def main():
@@ -189,14 +204,22 @@ def main():
     print("="*80)
     
     if individual_results:
-        print(f"\nIndividual Features (ranked by ROC AUC):")
-        sorted_results = sorted(individual_results, key=lambda x: x['roc_auc'], reverse=True)
+        print(f"\nIndividual Features (ranked by PR AUC - primary metric):")
+        sorted_results = sorted(individual_results, key=lambda x: x.get('pr_auc', 0) if pd.notna(x.get('pr_auc')) else 0, reverse=True)
         for i, r in enumerate(sorted_results, 1):
-            print(f"  {i}. {r['features'][0]:45s} ROC: {r['roc_auc']:.4f} | F1: {r['f1']:.4f}")
+            pr_auc_val = r.get('pr_auc', np.nan)
+            precision_val = r.get('precision', np.nan)
+            recall_val = r.get('recall', np.nan)
+            pr_auc_str = f"PR AUC: {pr_auc_val:.4f}" if pd.notna(pr_auc_val) else "PR AUC: N/A"
+            print(f"  {i}. {r['features'][0]:45s} {pr_auc_str} | Precision: {precision_val:.4f} | Recall: {recall_val:.4f} | F1: {r['f1']:.4f}")
     
     if multi_result:
+        pr_auc_val = multi_result.get('pr_auc', np.nan)
+        precision_val = multi_result.get('precision', np.nan)
+        recall_val = multi_result.get('recall', np.nan)
+        pr_auc_str = f"PR AUC: {pr_auc_val:.4f}" if pd.notna(pr_auc_val) else "PR AUC: N/A"
         print(f"\nMulti-Feature Model:")
-        print(f"  ROC AUC: {multi_result['roc_auc']:.4f} | F1: {multi_result['f1']:.4f} | MCC: {multi_result['mcc']:.4f}")
+        print(f"  {pr_auc_str} | Precision: {precision_val:.4f} | Recall: {recall_val:.4f} | F1: {multi_result['f1']:.4f} | MCC: {multi_result['mcc']:.4f}")
     
     # Save results
     if individual_results:
@@ -208,6 +231,9 @@ def main():
                 'weight': r['weights'][0],
                 'threshold': r['threshold'],
                 'roc_auc': r['roc_auc'],
+                'pr_auc': r.get('pr_auc', np.nan),
+                'precision': r.get('precision', np.nan),
+                'recall': r.get('recall', np.nan),
                 'f1': r['f1'],
                 'mcc': r['mcc']
             })
@@ -219,6 +245,9 @@ def main():
                 'weight': None,
                 'threshold': multi_result['threshold'],
                 'roc_auc': multi_result['roc_auc'],
+                'pr_auc': multi_result.get('pr_auc', np.nan),
+                'precision': multi_result.get('precision', np.nan),
+                'recall': multi_result.get('recall', np.nan),
                 'f1': multi_result['f1'],
                 'mcc': multi_result['mcc']
             })
