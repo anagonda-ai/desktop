@@ -15,11 +15,9 @@ warnings.filterwarnings('ignore')
 
 PROMOTER_FEATURES = [
     # Jaccard similarity features (shared TFBS types)
-    'similarity_score',                    # Raw Jaccard similarity (0-100)
     'mean_proximal_similarity',            # Mean Jaccard similarity in proximal region
     'mean_distal_similarity',              # Mean Jaccard similarity in distal region
     # Pearson correlation features (TFBS density profiles)
-    'correlation_score',                   # Raw Pearson correlation (0-100)
     'mean_proximal_correlation',           # Mean Pearson correlation in proximal region
     'mean_distal_correlation',             # Mean Pearson correlation in distal region
     # Other features
@@ -27,10 +25,8 @@ PROMOTER_FEATURES = [
 ]
 
 FEATURE_DESCRIPTIONS = {
-    'similarity_score': 'Raw pairwise Jaccard similarity of shared TFBS types averaged across all gene pairs in cluster. Jaccard similarity = shared TFBS types / total TFBS types. Measures the fraction of TFBS types that are present in both promoters. Weighted average: 70% proximal region + 30% distal region. Range: 0-100. Represents raw regulatory sequence conservation based on shared TFBS type presence.',
     'mean_proximal_similarity': 'Mean Jaccard similarity of shared TFBS types in proximal promoter regions (-200bp to TSS). Focuses on core regulatory elements near transcription start site including TATA box, CAAT box, and initiator elements. Higher values indicate co-regulated genes with shared TFBS types, capturing core regulatory element conservation. Range: 0-1.',
     'mean_distal_similarity': 'Mean Jaccard similarity of shared TFBS types in distal promoter regions (-800bp to -200bp). Captures upstream enhancers and distal regulatory elements including hormone response elements, stress response elements, and tissue-specific TF binding sites. Reflects upstream enhancer and long-range regulatory element conservation based on shared TFBS types. Range: 0-1.',
-    'correlation_score': 'Raw pairwise Pearson correlation of TFBS density profiles averaged across all gene pairs in cluster. Measures correlation of normalized TFBS counts across all TFBS types. Captures coordinated TFBS density patterns regardless of absolute counts. Weighted average: 70% proximal region + 30% distal region. Range: 0-100. Represents raw regulatory sequence conservation based on TFBS density profile correlation.',
     'mean_proximal_correlation': 'Mean Pearson correlation of TFBS density profiles in proximal promoter regions (-200bp to TSS). Measures how well TFBS density patterns correlate between genes in the core promoter region. Higher values indicate coordinated TFBS density patterns, capturing core regulatory element density conservation. Range: 0-1.',
     'mean_distal_correlation': 'Mean Pearson correlation of TFBS density profiles in distal promoter regions (-800bp to -200bp). Measures correlation of TFBS density patterns in upstream regulatory regions. Reflects upstream enhancer and long-range regulatory element density conservation. Range: 0-1.',
     'num_tfbs_types_found': 'Count of distinct transcription factor binding site (TFBS) types identified across all promoters using plant-specific pattern databases (PlantCARE, PLACE, JASPAR). Includes 30+ TFBS families: MYB, bZIP, WRKY, AP2/ERF, bHLH, NAC, GATA, DOF, TCP, HSF, hormone response elements, stress response elements. High diversity suggests complex multi-TF regulation typical of metabolic gene clusters. Quantifies regulatory motif diversity.'
