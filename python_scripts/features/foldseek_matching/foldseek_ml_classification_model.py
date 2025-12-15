@@ -10,6 +10,7 @@ from sklearn.metrics import (roc_curve, auc, precision_recall_curve, confusion_m
                             classification_report, matthews_corrcoef, f1_score)
 from sklearn.model_selection import train_test_split, cross_validate
 from sklearn.preprocessing import StandardScaler
+import os
 import warnings
 warnings.filterwarnings('ignore')
 
@@ -48,20 +49,34 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     # Use 'name' if 'cluster_name' doesn't exist
     cluster_col = 'cluster_name' if 'cluster_name' in df.columns else 'name'
     data = df[[cluster_col] + features_to_use + ['label']].dropna()
-    X = data[features_to_use].values
-    y = data['label'].values
-    
-    print(f"\nData: {len(data)} samples ({y.sum()} MGC, {(y==0).sum()} Random)")
-    
-    # Train/Test split
+
+    # Separate BGC clusters (validated MGCs) from training data
+    bgc_mask = data[cluster_col].str.contains('BGC', case=False, na=False)
+    bgc_data = data[bgc_mask].copy()
+    train_data = data[~bgc_mask].copy()
+
+    print(f"\nData: {len(data)} total samples")
+    print(f"  Training set: {len(train_data)} samples ({train_data['label'].sum()} MGC, {(train_data['label']==0).sum()} Random)")
+    print(f"  Validation set (BGC): {len(bgc_data)} samples ({bgc_data['label'].sum()} MGC, {(bgc_data['label']==0).sum()} Random)")
+
+    # Prepare training/test split from non-BGC data
+    X_train_full = train_data[features_to_use].values
+    y_train_full = train_data['label'].values
+
+    # Train/Test split (only on non-BGC data)
     X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, stratify=y, random_state=random_state
+        X_train_full, y_train_full, test_size=test_size, stratify=y_train_full, random_state=random_state
     )
+
+    # Prepare validation set (BGC clusters)
+    X_val = bgc_data[features_to_use].values
+    y_val = bgc_data['label'].values
     
     # Scale features
     scaler = StandardScaler()
     X_train_scaled = scaler.fit_transform(X_train)
     X_test_scaled = scaler.transform(X_test)
+    X_val_scaled = scaler.transform(X_val)
     
     # Train model
     model = LogisticRegression(random_state=random_state, max_iter=1000)
@@ -86,15 +101,15 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
         for rank, (feat, importance) in enumerate(feature_importance, 1):
             print(f"  {rank}. {feat:45s}: {importance:.6f}")
     
-    # Predictions
-    y_pred_proba = model.predict_proba(X_test_scaled)[:, 1]
+    # Predictions on test set
+    y_pred_proba_test = model.predict_proba(X_test_scaled)[:, 1]
     
-    # ROC curve
-    fpr, tpr, roc_thresholds = roc_curve(y_test, y_pred_proba)
+    # ROC curve (test set)
+    fpr, tpr, roc_thresholds = roc_curve(y_test, y_pred_proba_test)
     roc_auc = auc(fpr, tpr)
     
-    # Precision-Recall curve
-    precision, recall, pr_thresholds = precision_recall_curve(y_test, y_pred_proba)
+    # Precision-Recall curve (test set)
+    precision, recall, pr_thresholds = precision_recall_curve(y_test, y_pred_proba_test)
     pr_auc = auc(recall, precision)
     
     # Find F1-optimal threshold
@@ -102,29 +117,68 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
     f1_optimal_idx = np.argmax(f1_scores)
     f1_optimal_threshold = pr_thresholds[f1_optimal_idx]
     
-    print(f"\n🎯 PERFORMANCE:")
+    print(f"\n🎯 TEST SET PERFORMANCE:")
     print(f"  ROC AUC: {roc_auc:.4f}")
     print(f"  PR AUC:  {pr_auc:.4f}")
     print(f"  F1-optimal threshold: {f1_optimal_threshold:.4f}")
     
-    # Evaluate at F1-optimal threshold
-    y_pred = (y_pred_proba >= f1_optimal_threshold).astype(int)
-    tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
+    # Evaluate test set at F1-optimal threshold
+    y_pred_test = (y_pred_proba_test >= f1_optimal_threshold).astype(int)
+    tn, fp, fn, tp = confusion_matrix(y_test, y_pred_test).ravel()
     
     precision_val = tp / (tp + fp) if (tp + fp) > 0 else 0
     recall_val = tp / (tp + fn) if (tp + fn) > 0 else 0
-    f1 = f1_score(y_test, y_pred)
-    mcc = matthews_corrcoef(y_test, y_pred)
+    f1 = f1_score(y_test, y_pred_test)
+    mcc = matthews_corrcoef(y_test, y_pred_test)
     
-    print(f"\n📈 METRICS:")
+    print(f"\n📈 TEST SET METRICS (at F1-optimal threshold):")
     print(f"  Precision: {precision_val:.4f} | Recall: {recall_val:.4f} | F1: {f1:.4f} | MCC: {mcc:.4f}")
     print(f"  TP: {tp:4d} | FP: {fp:4d} | TN: {tn:5d} | FN: {fn:4d}")
+
+    # Evaluate on validation set (BGC clusters)
+    if len(X_val) > 0:
+        y_pred_proba_val = model.predict_proba(X_val_scaled)[:, 1]
+
+        # ROC & PR on validation set
+        fpr_val, tpr_val, _ = roc_curve(y_val, y_pred_proba_val)
+        roc_auc_val = auc(fpr_val, tpr_val)
+        precision_val_curve, recall_val_curve, _ = precision_recall_curve(y_val, y_pred_proba_val)
+        pr_auc_val = auc(recall_val_curve, precision_val_curve)
+
+        # Evaluate validation set at F1-optimal threshold
+        y_pred_val = (y_pred_proba_val >= f1_optimal_threshold).astype(int)
+        tn_val, fp_val, fn_val, tp_val = confusion_matrix(y_val, y_pred_val).ravel()
+
+        precision_val_metric = tp_val / (tp_val + fp_val) if (tp_val + fp_val) > 0 else 0
+        recall_val_metric = tp_val / (tp_val + fn_val) if (tp_val + fn_val) > 0 else 0
+        f1_val = f1_score(y_val, y_pred_val)
+        mcc_val = matthews_corrcoef(y_val, y_pred_val)
+
+        print(f"\n✅ VALIDATION SET (BGC) PERFORMANCE:")
+        print(f"  PR AUC:  {pr_auc_val:.4f} (primary metric)")
+        print(f"  ROC AUC: {roc_auc_val:.4f}")
+        print(f"  📈 VALIDATION SET METRICS (at F1-optimal threshold):")
+        print(f"  Precision: {precision_val_metric:.4f} | Recall: {recall_val_metric:.4f} | F1: {f1_val:.4f} | MCC: {mcc_val:.4f}")
+        print(f"  TP: {tp_val:4d} | FP: {fp_val:4d} | TN: {tn_val:5d} | FN: {fn_val:4d}")
+    else:
+        roc_auc_val = np.nan
+        pr_auc_val = np.nan
+        precision_val_metric = np.nan
+        recall_val_metric = np.nan
+        f1_val = np.nan
+        mcc_val = np.nan
     
-    # Cross-validation
-    cv_scores = cross_validate(model, scaler.transform(X), y, cv=5, 
-                               scoring=['roc_auc', 'average_precision', 'f1'], return_train_score=False)
+    # Cross-validation (on training data, excluding BGC)
+    cv_scores = cross_validate(
+        model,
+        scaler.transform(X_train_full),
+        y_train_full,
+        cv=5,
+        scoring=['roc_auc', 'average_precision', 'f1'],
+        return_train_score=False
+    )
     
-    print(f"\n🔄 CROSS-VALIDATION:")
+    print(f"\n🔄 CROSS-VALIDATION (on training data):")
     print(f"  ROC AUC: {cv_scores['test_roc_auc'].mean():.4f} ± {cv_scores['test_roc_auc'].std():.4f}")
     print(f"  PR AUC:  {cv_scores['test_average_precision'].mean():.4f} ± {cv_scores['test_average_precision'].std():.4f}")
     print(f"  F1:      {cv_scores['test_f1'].mean():.4f} ± {cv_scores['test_f1'].std():.4f}")
@@ -140,6 +194,12 @@ def train_model(df, features, feature_name=None, test_size=0.3, random_state=42)
         'mcc': mcc,
         'precision': precision_val,
         'recall': recall_val,
+        'val_roc_auc': roc_auc_val if len(X_val) > 0 else np.nan,
+        'val_pr_auc': pr_auc_val if len(X_val) > 0 else np.nan,
+        'val_precision': precision_val_metric if len(X_val) > 0 else np.nan,
+        'val_recall': recall_val_metric if len(X_val) > 0 else np.nan,
+        'val_f1': f1_val if len(X_val) > 0 else np.nan,
+        'val_mcc': mcc_val if len(X_val) > 0 else np.nan,
         'cv_roc_auc': cv_scores['test_roc_auc'].mean(),
         'cv_roc_auc_std': cv_scores['test_roc_auc'].std(),
         'cv_pr_auc': cv_scores['test_average_precision'].mean(),
@@ -204,7 +264,13 @@ def main():
             'precision': r['precision'],
             'recall': r['recall'],
             'f1': r['f1'],
-            'mcc': r['mcc']
+            'mcc': r['mcc'],
+            'val_roc_auc': r.get('val_roc_auc', np.nan),
+            'val_pr_auc': r.get('val_pr_auc', np.nan),
+            'val_precision': r.get('val_precision', np.nan),
+            'val_recall': r.get('val_recall', np.nan),
+            'val_f1': r.get('val_f1', np.nan),
+            'val_mcc': r.get('val_mcc', np.nan)
         })
     
     summary.append({
@@ -217,11 +283,19 @@ def main():
         'precision': multi_result['precision'],
         'recall': multi_result['recall'],
         'f1': multi_result['f1'],
-        'mcc': multi_result['mcc']
+        'mcc': multi_result['mcc'],
+        'val_roc_auc': multi_result.get('val_roc_auc', np.nan),
+        'val_pr_auc': multi_result.get('val_pr_auc', np.nan),
+        'val_precision': multi_result.get('val_precision', np.nan),
+        'val_recall': multi_result.get('val_recall', np.nan),
+        'val_f1': multi_result.get('val_f1', np.nan),
+        'val_mcc': multi_result.get('val_mcc', np.nan)
     })
     
     summary_df = pd.DataFrame(summary)
-    output_file = "/groups/itay_mayrose/alongonda/desktop/foldseek_ml_classification_summary.csv"
+    output_dir = "/groups/itay_mayrose/alongonda/desktop/mibig_validate/foldseek"
+    os.makedirs(output_dir, exist_ok=True)
+    output_file = os.path.join(output_dir, "foldseek_ml_classification_summary.csv")
     summary_df.to_csv(output_file, index=False)
     print(f"\n💾 Saved: {output_file}")
     
@@ -232,7 +306,7 @@ def main():
         'abs_importance': np.abs(multi_result['weights'])
     }).sort_values('abs_importance', ascending=False)
     
-    weights_file = "/groups/itay_mayrose/alongonda/desktop/foldseek_multi_feature_weights.csv"
+    weights_file = os.path.join(output_dir, "foldseek_multi_feature_weights.csv")
     weights_df.to_csv(weights_file, index=False)
     print(f"💾 Saved: {weights_file}")
 

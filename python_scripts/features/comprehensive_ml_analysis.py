@@ -6,6 +6,7 @@ Runs all ML classification models and creates comprehensive analysis
 
 import subprocess
 import sys
+import os
 import pandas as pd
 import numpy as np
 from pathlib import Path
@@ -227,7 +228,7 @@ def load_and_merge_all_data():
             if data_config['label_col'] == 'name':
                 df['label'] = df[data_config['label_col']].apply(lambda x: 0 if 'RANDOM' in str(x) else 1)
             elif data_config['label_col'] == 'category':
-                df['label'] = df[data_config['label_col']].apply(lambda x: 0 if x == 'KEGG_Random' else 1)
+                df['label'] = df[data_config['label_col']].apply(lambda x: 0 if x == 'KEGG_Random' or 'RANDOM' in str(x) else 1)
             elif data_config['label_col'] == 'dataset_group':
                 df['label'] = df[data_config['label_col']].apply(lambda x: 0 if x == 'Random' else 1)
             elif data_config['label_col'] == 'classification_label':
@@ -389,17 +390,25 @@ def train_combined_model(df):
     
     # Prepare DataFrame with all features and labels
     data = df[['cluster_name'] + all_features + ['label']].dropna()
+
+    # Separate BGC clusters (validation-only) based on cluster_name containing 'BGC'
+    bgc_mask = data['cluster_name'].str.contains('BGC', case=False, na=False)
+    bgc_data = data[bgc_mask].copy()
+    train_data = data[~bgc_mask].copy()
     
-    print(f"  ✓ Loaded {len(data)} samples")
-    print(f"    - MGC (positive): {data['label'].sum()} ({100*data['label'].sum()/len(data):.1f}%)")
-    print(f"    - Random (negative): {(data['label']==0).sum()} ({100*(data['label']==0).sum()/len(data):.1f}%)")
-    print(f"    - Feature matrix shape: ({len(data)}, {len(all_features)})")
-    print(f"    - Missing values: {data[all_features].isna().sum().sum()} (should be 0)")
+    print(f"  ✓ Loaded {len(data)} total samples")
+    print(f"    - Training pool (non-BGC): {len(train_data)} samples")
+    print(f"        * MGC (positive): {train_data['label'].sum()} ({100*train_data['label'].sum()/len(train_data):.1f}%)")
+    print(f"        * Random (negative): {(train_data['label']==0).sum()} ({100*(train_data['label']==0).sum()/len(train_data):.1f}%)")
+    print(f"    - Validation set (BGC only): {len(bgc_data)} samples")
+    print(f"        * MGC (positive): {bgc_data['label'].sum()} ({100*bgc_data['label'].sum()/max(len(bgc_data),1):.1f}%)")
+    print(f"    - Feature matrix (training) shape: ({len(train_data)}, {len(all_features)})")
+    print(f"    - Missing values (training): {train_data[all_features].isna().sum().sum()} (should be 0)")
     
     # Convert to Ray Dataset immediately
-    print(f"\n  📦 Converting to Ray Dataset...")
-    dataset = from_pandas(data)
-    print(f"    ✓ Ray Dataset created: {dataset.count()} samples")
+    print(f"\n  📦 Converting training data to Ray Dataset...")
+    dataset = from_pandas(train_data)
+    print(f"    ✓ Ray Dataset created: {dataset.count()} samples (training only, non-BGC)")
     
     # Stratified train/test split using Ray Data
     print(f"\n  Splitting data (70% train, 30% test) with stratification...")
@@ -557,9 +566,9 @@ def train_combined_model(df):
         from sklearn.model_selection import cross_val_score
         
         # Get data from Ray Dataset (convert to pandas for sklearn)
-        train_data = train_dataset_scaled.to_pandas()
-        X_train_ray = train_data[all_features].values
-        y_train_ray = train_data['label'].values
+        train_data_local = train_dataset_scaled.to_pandas()
+        X_train_ray = train_data_local[all_features].values
+        y_train_ray = train_data_local['label'].values
         
         # Handle solver-penalty compatibility
         solver = config["solver"]
@@ -671,7 +680,9 @@ def train_combined_model(df):
     tuning_results_df = pd.DataFrame([
         {**r.config, **r.metrics} for r in results
     ])
-    tuning_file = "/groups/itay_mayrose/alongonda/desktop/combined_model_ray_tune_results.csv"
+    combined_output_dir = "/groups/itay_mayrose/alongonda/desktop/mibig_validate/combined"
+    os.makedirs(combined_output_dir, exist_ok=True)
+    tuning_file = os.path.join(combined_output_dir, "combined_model_ray_tune_results.csv")
     tuning_results_df.to_csv(tuning_file, index=False)
     print(f"  💾 Ray Tune results saved to: {tuning_file}")
     
@@ -740,11 +751,11 @@ def train_combined_model(df):
     print("STEP 4: MODEL EVALUATION")
     print(f"{'='*100}")
     
-    print(f"  Making predictions on test set...")
+    print(f"  Making predictions on test set (non-BGC)...")
     y_pred_proba = best_model.predict_proba(X_test_scaled)[:, 1]
     print(f"    ✓ Predictions completed")
-    print(f"    Probability range: [{y_pred_proba.min():.4f}, {y_pred_proba.max():.4f}]")
-    print(f"    Mean probability: {y_pred_proba.mean():.4f}")
+    print(f"    Probability range (test): [{y_pred_proba.min():.4f}, {y_pred_proba.max():.4f}]")
+    print(f"    Mean probability (test): {y_pred_proba.mean():.4f}")
     
     # ROC curve
     fpr, tpr, roc_thresholds = roc_curve(y_test, y_pred_proba)
@@ -773,7 +784,7 @@ def train_combined_model(df):
     f1 = f1_score(y_test, y_pred)
     mcc = matthews_corrcoef(y_test, y_pred)
     
-    print(f"\n  🎯 Performance at F1-optimal threshold:")
+    print(f"\n  🎯 Performance at F1-optimal threshold (TEST SET, non-BGC):")
     print(f"    Precision: {precision_val:.6f}")
     print(f"    Recall:    {recall_val:.6f}")
     print(f"    F1 Score:  {f1:.6f}")
@@ -783,6 +794,70 @@ def train_combined_model(df):
     print(f"    False Positives (FP): {fp:4d}")
     print(f"    True Negatives (TN):  {tn:5d}")
     print(f"    False Negatives (FN): {fn:4d}")
+
+    # Evaluate on validation set (BGC-only) using same threshold
+    print(f"\n  ✅ Evaluating on BGC VALIDATION SET (held-out, all BGC clusters)...")
+    if len(bgc_data) > 0:
+        # Scale BGC features using training statistics
+        bgc_scaled = bgc_data.copy()
+        for feat in all_features:
+            if feat in bgc_scaled.columns:
+                mean_val = mean_dict.get(feat, 0)
+                std_val = std_dict.get(feat, 1.0)
+                if std_val > 0:
+                    bgc_scaled[feat] = (bgc_scaled[feat] - mean_val) / std_val
+                else:
+                    bgc_scaled[feat] = bgc_scaled[feat] - mean_val
+
+        X_val_scaled = bgc_scaled[all_features].values
+        y_val = bgc_scaled['label'].values
+
+        y_pred_proba_val = best_model.predict_proba(X_val_scaled)[:, 1]
+        print(f"    ✓ Predictions completed on BGC validation set")
+        print(f"    Probability range (BGC): [{y_pred_proba_val.min():.4f}, {y_pred_proba_val.max():.4f}]")
+        print(f"    Mean probability (BGC): {y_pred_proba_val.mean():.4f}")
+
+        # ROC & PR on validation set
+        try:
+            fpr_val, tpr_val, _ = roc_curve(y_val, y_pred_proba_val)
+            roc_auc_val = auc(fpr_val, tpr_val)
+        except ValueError:
+            roc_auc_val = np.nan
+
+        precision_val_curve, recall_val_curve, _ = precision_recall_curve(y_val, y_pred_proba_val)
+        pr_auc_val = auc(recall_val_curve, precision_val_curve)
+
+        # Evaluate validation set at F1-optimal threshold from test set
+        y_pred_val = (y_pred_proba_val >= f1_optimal_threshold).astype(int)
+        tn_val, fp_val, fn_val, tp_val = confusion_matrix(y_val, y_pred_val).ravel()
+
+        val_precision = tp_val / (tp_val + fp_val) if (tp_val + fp_val) > 0 else 0
+        val_recall = tp_val / (tp_val + fn_val) if (tp_val + fn_val) > 0 else 0
+        f1_val = f1_score(y_val, y_pred_val)
+        mcc_val = matthews_corrcoef(y_val, y_pred_val) if (tp_val + fp_val + tn_val + fn_val) > 0 else 0
+
+        print(f"\n  📊 BGC VALIDATION PERFORMANCE (at test-set F1-optimal threshold):")
+        print(f"    BGC count: {len(y_val)}")
+        print(f"    ROC AUC: {roc_auc_val:.6f}" if not np.isnan(roc_auc_val) else "    ROC AUC: NaN (only positive class present)")
+        print(f"    PR AUC:  {pr_auc_val:.6f}")
+        print(f"    Precision: {val_precision:.6f}")
+        print(f"    Recall:    {val_recall:.6f}  ({tp_val}/{len(y_val)} BGC correctly detected, {fn_val}/{len(y_val)} missed)")
+        print(f"    F1 Score:  {f1_val:.6f}")
+        print(f"    MCC:       {mcc_val:.6f}")
+        print(f"\n  📋 BGC Confusion Matrix:")
+        print(f"    True Positives (TP):  {tp_val:4d}")
+        print(f"    False Positives (FP): {fp_val:4d}")
+        print(f"    True Negatives (TN):  {tn_val:5d}")
+        print(f"    False Negatives (FN): {fn_val:4d}")
+    else:
+        roc_auc_val = np.nan
+        pr_auc_val = np.nan
+        val_precision = np.nan
+        val_recall = np.nan
+        f1_val = np.nan
+        mcc_val = np.nan
+        tp_val = 0
+        fn_val = 0
     
     # Cross-validation on full dataset (combine train and test)
     print(f"\n  🔄 Running 5-fold cross-validation on full dataset...")
@@ -827,7 +902,9 @@ def train_combined_model(df):
         'abs_importance': np.abs(weights)
     }).sort_values('abs_importance', ascending=False)
     
-    weights_file = "/groups/itay_mayrose/alongonda/desktop/combined_all_features_weights.csv"
+    combined_output_dir = "/groups/itay_mayrose/alongonda/desktop/mibig_validate/combined"
+    os.makedirs(combined_output_dir, exist_ok=True)
+    weights_file = os.path.join(combined_output_dir, "combined_all_features_weights.csv")
     weights_df.to_csv(weights_file, index=False)
     print(f"\n  💾 Combined model weights saved to: {weights_file}")
     
@@ -844,6 +921,15 @@ def train_combined_model(df):
         'pr_auc': pr_auc,
         'precision': precision_val,
         'recall': recall_val,
+        'val_roc_auc': roc_auc_val,
+        'val_pr_auc': pr_auc_val,
+        'val_precision': val_precision,
+        'val_recall': val_recall,
+        'val_f1': f1_val,
+        'val_mcc': mcc_val,
+        'val_tp': tp_val,
+        'val_fn': fn_val,
+        'val_size': int(len(bgc_data)),
         'f1': f1,
         'mcc': mcc,
         'best_params': best_params,
@@ -1081,7 +1167,9 @@ def create_comprehensive_analysis():
     
     # Save combined model summary
     if combined_result:
-        combined_summary_file = "/groups/itay_mayrose/alongonda/desktop/combined_all_features_summary.csv"
+        combined_output_dir = "/groups/itay_mayrose/alongonda/desktop/mibig_validate/combined"
+        os.makedirs(combined_output_dir, exist_ok=True)
+        combined_summary_file = os.path.join(combined_output_dir, "combined_all_features_summary.csv")
         combined_summary_df = pd.DataFrame([combined_result])
         combined_summary_df.to_csv(combined_summary_file, index=False)
         print(f"💾 Combined model summary saved to: {combined_summary_file}")
