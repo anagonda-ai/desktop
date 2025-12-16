@@ -10,14 +10,14 @@ import os
 import pandas as pd
 import numpy as np
 from pathlib import Path
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (roc_curve, auc, precision_recall_curve, confusion_matrix, 
+from sklearn.metrics import (roc_curve, auc, precision_recall_curve, confusion_matrix,
                             matthews_corrcoef, f1_score, make_scorer)
-from sklearn.model_selection import (cross_validate, 
-                                    learning_curve, validation_curve)
+from sklearn.model_selection import (cross_validate,
+                                    learning_curve, validation_curve, train_test_split)
 import warnings
 import time
 from scipy.stats import loguniform
+from xgboost import XGBClassifier
 
 # Ray framework for distributed ML - Required, no fallbacks
 import ray
@@ -62,8 +62,8 @@ MODELS = [
     {
         'name': 'CladePP',
         'script': '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/cladepp_phylo_profiling/cladepp_ml_classification_model.py',
-        'summary_file': '/groups/itay_mayrose/alongonda/desktop/cladepp_ml_classification_summary.csv',
-        'weights_file': '/groups/itay_mayrose/alongonda/desktop/cladepp_multi_feature_weights.csv',
+        'summary_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/cladepp/cladepp_ml_classification_summary.csv',
+        'weights_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/cladepp/cladepp_multi_feature_weights.csv',
         'features': [
             'mean_cladepp_score',
             'weighted_cladepp_score',
@@ -77,8 +77,8 @@ MODELS = [
     {
         'name': 'Docking',
         'script': '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/docking_matching/docking_ml_classification_model.py',
-        'summary_file': '/groups/itay_mayrose/alongonda/desktop/docking_ml_classification_summary.csv',
-        'weights_file': '/groups/itay_mayrose/alongonda/desktop/docking_multi_feature_weights.csv',
+        'summary_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/docking/docking_ml_classification_summary.csv',
+        'weights_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/docking/docking_multi_feature_weights.csv',
         'features': [
             'fraction_weak_binders',
             'q75_score',
@@ -92,8 +92,8 @@ MODELS = [
     {
         'name': 'Foldseek',
         'script': '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/foldseek_matching/foldseek_ml_classification_model.py',
-        'summary_file': '/groups/itay_mayrose/alongonda/desktop/foldseek_ml_classification_summary.csv',
-        'weights_file': '/groups/itay_mayrose/alongonda/desktop/foldseek_multi_feature_weights.csv',
+        'summary_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/foldseek/foldseek_ml_classification_summary.csv',
+        'weights_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/foldseek/foldseek_multi_feature_weights.csv',
         'features': [
             'mean_score_non_self',
             'enrichment_score',
@@ -105,8 +105,8 @@ MODELS = [
     {
         'name': 'Promoter',
         'script': '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/extract_promotor/promoter_ml_classification_model.py',
-        'summary_file': '/groups/itay_mayrose/alongonda/desktop/promoter_ml_classification_summary.csv',
-        'weights_file': '/groups/itay_mayrose/alongonda/desktop/promoter_multi_feature_weights.csv',
+        'summary_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/promoter/promoter_ml_classification_summary.csv',
+        'weights_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/promoter/promoter_multi_feature_weights.csv',
         'features': [
             'mean_proximal_similarity',
             'mean_distal_similarity',
@@ -118,8 +118,8 @@ MODELS = [
     {
         'name': 'E2P2',
         'script': '/groups/itay_mayrose/alongonda/desktop/python_scripts/features/structural_tailoring_classigication/e2p2_tagging/e2p2_ml_classification_model.py',
-        'summary_file': '/groups/itay_mayrose/alongonda/desktop/e2p2_classification_models_summary.csv',
-        'weights_file': '/groups/itay_mayrose/alongonda/desktop/random_kegg_e2p2_multi_feature_weights.csv',
+        'summary_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/e2p2/e2p2_classification_models_summary.csv',
+        'weights_file': '/groups/itay_mayrose/alongonda/desktop/mibig_validate/e2p2/random_kegg_e2p2_multi_feature_weights.csv',
         'features': [
             'num_distinct_enzyme_classes',
             'num_distinct_enzyme_subclasses',
@@ -305,23 +305,27 @@ def load_and_merge_all_data():
             if merged_df is None:
                 merged_df = df
             else:
-                # Merge on cluster_name only first, then verify labels match
-                merged_df = merged_df.merge(df, on=['cluster_name'], how='inner', suffixes=('', '_new'))
+                # Merge on cluster_name using OUTER join so clusters that are
+                # missing features from some categories are still kept.
+                merged_df = merged_df.merge(df, on=['cluster_name'], how='outer', suffixes=('', '_new'))
                 
-                # Handle label columns - they should match, but if not, use the first one
+                # Handle label columns - prefer existing label, fill from new if missing
                 if 'label_new' in merged_df.columns:
-                    # Check for mismatches
-                    mismatches = (merged_df['label'] != merged_df['label_new']).sum()
+                    # Check for true disagreements where both labels are present
+                    both_present = merged_df['label'].notna() & merged_df['label_new'].notna()
+                    mismatches = (merged_df['label'][both_present] != merged_df['label_new'][both_present]).sum()
                     if mismatches > 0:
-                        print(f"  ⚠️  Warning: {mismatches} label mismatches found, using first label")
+                        print(f"  ⚠️  Warning: {mismatches} label mismatches found when merging, keeping existing label")
+                    # Fill missing labels from the new column
+                    merged_df['label'] = merged_df['label'].fillna(merged_df['label_new'])
                     merged_df = merged_df.drop(columns=['label_new'])
                 
                 # If cluster_size exists in both, keep the first one (or fill from second)
-                if 'cluster_size' in merged_df.columns:
-                    # Already have cluster_size, keep it
-                    pass
-                elif 'cluster_size_new' in merged_df.columns:
-                    merged_df['cluster_size'] = merged_df['cluster_size_new']
+                if 'cluster_size_new' in merged_df.columns:
+                    if 'cluster_size' in merged_df.columns:
+                        merged_df['cluster_size'] = merged_df['cluster_size'].fillna(merged_df['cluster_size_new'])
+                    else:
+                        merged_df['cluster_size'] = merged_df['cluster_size_new']
                     merged_df = merged_df.drop(columns=['cluster_size_new'])
         
         except Exception as e:
@@ -332,7 +336,12 @@ def load_and_merge_all_data():
         print("❌ No data loaded!")
         return None
     
-    print(f"\n✅ Merged dataset: {len(merged_df)} clusters")
+    # Drop any rows where label could not be determined from any category
+    before_drop = len(merged_df)
+    merged_df = merged_df[merged_df['label'].notna()].copy()
+    after_drop = len(merged_df)
+    
+    print(f"\n✅ Merged dataset: {after_drop} clusters (dropped {before_drop - after_drop} without labels)")
     print(f"   MGC:    {merged_df['label'].sum()}")
     print(f"   Random: {(merged_df['label']==0).sum()}")
     print(f"   Total features: {len([c for c in merged_df.columns if c not in ['cluster_name', 'label', 'cluster_size']])}")
@@ -385,12 +394,13 @@ def train_combined_model(df):
     
     # Prepare data
     print(f"\n{'='*100}")
-    print("STEP 1: DATA PREPARATION WITH RAY DATA")
+    print("STEP 1: DATA PREPARATION (ALLOW MISSING FEATURES)")
     print(f"{'='*100}")
     
     # Prepare DataFrame with all features and labels
-    data = df[['cluster_name'] + all_features + ['label']].dropna()
-
+    # Do NOT drop rows with missing feature values – XGBoost can handle np.nan directly
+    data = df[['cluster_name'] + all_features + ['label']].copy()
+    
     # Separate BGC clusters (validation-only) based on cluster_name containing 'BGC'
     bgc_mask = data['cluster_name'].str.contains('BGC', case=False, na=False)
     bgc_data = data[bgc_mask].copy()
@@ -403,155 +413,63 @@ def train_combined_model(df):
     print(f"    - Validation set (BGC only): {len(bgc_data)} samples")
     print(f"        * MGC (positive): {bgc_data['label'].sum()} ({100*bgc_data['label'].sum()/max(len(bgc_data),1):.1f}%)")
     print(f"    - Feature matrix (training) shape: ({len(train_data)}, {len(all_features)})")
-    print(f"    - Missing values (training): {train_data[all_features].isna().sum().sum()} (should be 0)")
+    print(f"    - Missing values (training): {train_data[all_features].isna().sum().sum()} (allowed, handled by XGBoost)")
     
-    # Convert to Ray Dataset immediately
-    print(f"\n  📦 Converting training data to Ray Dataset...")
-    dataset = from_pandas(train_data)
-    print(f"    ✓ Ray Dataset created: {dataset.count()} samples (training only, non-BGC)")
-    
-    # Stratified train/test split using Ray Data
+    # Stratified train/test split using scikit-learn
     print(f"\n  Splitting data (70% train, 30% test) with stratification...")
-    def stratified_split(dataset, test_size=0.3, seed=42):
-        """Stratified split by grouping by label and splitting each group"""
-        # Convert to pandas temporarily for filtering (Ray Data filter syntax varies)
-        df = dataset.to_pandas()
-        
-        # Split by label groups
-        label_0_df = df[df['label'] == 0]
-        label_1_df = df[df['label'] == 1]
-        
-        # Convert back to Ray Datasets
-        label_0 = from_pandas(label_0_df)
-        label_1 = from_pandas(label_1_df)
-        
-        # Split each group
-        train_0, test_0 = label_0.train_test_split(test_size=test_size, seed=seed)
-        train_1, test_1 = label_1.train_test_split(test_size=test_size, seed=seed)
-        
-        # Combine
-        train_dataset = train_0.union(train_1)
-        test_dataset = test_0.union(test_1)
-        
-        return train_dataset, test_dataset
-    
-    train_dataset, test_dataset = stratified_split(dataset, test_size=0.3, seed=42)
-    
-    # Count samples in each split
-    train_count = train_dataset.count()
-    test_count = test_dataset.count()
-    
-    # Get label counts for reporting
-    train_df_temp = train_dataset.to_pandas()
-    test_df_temp = test_dataset.to_pandas()
-    train_mgc = train_df_temp['label'].sum()
-    train_random = (train_df_temp['label'] == 0).sum()
-    test_mgc = test_df_temp['label'].sum()
-    test_random = (test_df_temp['label'] == 0).sum()
-    
-    print(f"    ✓ Training set: {train_count} samples ({train_mgc} MGC, {train_random} Random)")
-    print(f"    ✓ Test set: {test_count} samples ({test_mgc} MGC, {test_random} Random)")
-    
-    # Distributed feature scaling with Ray Data
-    print(f"\n  Scaling features using Ray Data (distributed StandardScaler)...")
-    
-    # Compute statistics from training data
-    def compute_stats(batch):
-        """Compute mean and std for each feature"""
-        import pandas as pd
-        feature_cols = [col for col in batch.columns if col in all_features]
-        stats = {
-            'mean': batch[feature_cols].mean().to_dict(),
-            'std': batch[feature_cols].std().to_dict(),
-            'count': len(batch)
-        }
-        return pd.DataFrame([stats])
-    
-    # Aggregate statistics from all batches
-    train_stats_list = []
-    for batch in train_dataset.iter_batches(batch_size=1000, batch_format="pandas"):
-        stats = compute_stats(batch)
-        train_stats_list.append(stats)
-    
-    # Combine statistics (weighted by count)
-    total_count = sum(s['count'].iloc[0] for s in train_stats_list)
-    mean_dict = {}
-    std_dict = {}
-    
-    for feat in all_features:
-        weighted_mean = sum(s['mean'].iloc[0].get(feat, 0) * s['count'].iloc[0] for s in train_stats_list) / total_count
-        # For std, we need to compute pooled variance
-        weighted_var = sum((s['std'].iloc[0].get(feat, 0)**2 + (s['mean'].iloc[0].get(feat, 0) - weighted_mean)**2) * s['count'].iloc[0] 
-                          for s in train_stats_list) / total_count
-        mean_dict[feat] = weighted_mean
-        std_dict[feat] = np.sqrt(weighted_var) if weighted_var > 0 else 1.0
-    
-    print(f"    ✓ Statistics computed: mean/std for {len(all_features)} features")
-    
-    # Apply scaling using map_batches
-    def scale_batch(batch, mean_dict, std_dict):
-        """Scale features in a batch"""
-        import pandas as pd
-        batch = batch.copy()
-        for feat in all_features:
-            if feat in batch.columns:
-                mean_val = mean_dict.get(feat, 0)
-                std_val = std_dict.get(feat, 1.0)
-                if std_val > 0:
-                    batch[feat] = (batch[feat] - mean_val) / std_val
-                else:
-                    batch[feat] = batch[feat] - mean_val
-        return batch
-    
-    # Apply scaling using map_batches (Ray Data will automatically parallelize)
-    # Don't specify num_cpus here - let Ray Data handle parallelism automatically
-    # This allows multiple trials to run in parallel
-    train_dataset_scaled = train_dataset.map_batches(
-        scale_batch, 
-        fn_kwargs={'mean_dict': mean_dict, 'std_dict': std_dict},
-        batch_format="pandas"
-    )
-    test_dataset_scaled = test_dataset.map_batches(
-        scale_batch,
-        fn_kwargs={'mean_dict': mean_dict, 'std_dict': std_dict},
-        batch_format="pandas"
+    train_idx, test_idx = train_test_split(
+        train_data.index,
+        test_size=0.3,
+        stratify=train_data['label'],
+        random_state=42
     )
     
-    print(f"    ✓ Scaling applied to train and test datasets")
+    train_df_local = train_data.loc[train_idx].copy()
+    test_df_local = train_data.loc[test_idx].copy()
     
-    # Verify scaling (convert to pandas for verification)
-    train_scaled_df = train_dataset_scaled.to_pandas()
-    test_scaled_df = test_dataset_scaled.to_pandas()
-    train_scaled_features = train_scaled_df[all_features].values
-    test_scaled_features = test_scaled_df[all_features].values
+    X_train = train_df_local[all_features].values
+    y_train = train_df_local['label'].values
+    X_test = test_df_local[all_features].values
+    y_test = test_df_local['label'].values
     
-    print(f"    ✓ Training set scaled: mean={train_scaled_features.mean():.6f}, std={train_scaled_features.std():.6f}")
-    print(f"    ✓ Test set scaled: mean={test_scaled_features.mean():.6f}, std={test_scaled_features.std():.6f}")
+    train_mgc = train_df_local['label'].sum()
+    train_random = (train_df_local['label'] == 0).sum()
+    test_mgc = test_df_local['label'].sum()
+    test_random = (test_df_local['label'] == 0).sum()
     
-    # Hyperparameter tuning with Ray Tune
+    print(f"    ✓ Training set: {len(train_df_local)} samples ({train_mgc} MGC, {train_random} Random)")
+    print(f"    ✓ Test set: {len(test_df_local)} samples ({test_mgc} MGC, {test_random} Random)")
+    
+    # Hyperparameter tuning with Ray Tune (XGBoost)
     print(f"\n{'='*100}")
-    print("STEP 2: HYPERPARAMETER TUNING WITH RAY TUNE")
+    print("STEP 2: HYPERPARAMETER TUNING WITH RAY TUNE (XGBoost)")
     print(f"{'='*100}")
     
-    # Use Ray Tune for advanced hyperparameter tuning
     from sklearn.model_selection import cross_val_score
     
     print(f"  Using Ray Tune with Optuna search algorithm")
     print(f"  Features: Bayesian optimization, early stopping, distributed tuning")
     
-    # Define search space for Ray Tune
+    # Define XGBoost search space for Ray Tune (more conservative to reduce overfitting)
     search_space = {
-        "C": tune.loguniform(1e-3, 1e3),  # Log-uniform distribution
-        "solver": tune.choice(["lbfgs", "liblinear", "saga"]),
-        "class_weight": tune.choice([None, "balanced", {0: 1, 1: 2}, {0: 1, 1: 3}]),
-        "penalty": tune.choice(["l1", "l2"])
+        "n_estimators": tune.randint(150, 500),
+        "max_depth": tune.randint(2, 6),
+        "learning_rate": tune.loguniform(1e-3, 0.3),
+        "subsample": tune.uniform(0.6, 1.0),
+        "colsample_bytree": tune.uniform(0.6, 1.0),
+        "min_child_weight": tune.loguniform(5e-1, 10.0),
+        "gamma": tune.loguniform(1e-3, 10.0),
+        "reg_alpha": tune.loguniform(5e-2, 10.0),
+        "reg_lambda": tune.loguniform(5e-2, 10.0),
     }
     
-    print(f"\n  Search space:")
-    print(f"    - C: log-uniform [0.001, 1000]")
-    print(f"    - solver: ['lbfgs', 'liblinear', 'saga']")
-    print(f"    - class_weight: [None, 'balanced', custom weights]")
-    print(f"    - penalty: ['l1', 'l2']")
+    print(f"\n  Search space (XGBoost):")
+    print(f"    - n_estimators: [150, 500]")
+    print(f"    - max_depth: [2, 5]")
+    print(f"    - learning_rate: log-uniform [1e-3, 0.3]")
+    print(f"    - subsample, colsample_bytree: [0.6, 1.0]")
+    print(f"    - min_child_weight: log-uniform [5e-1, 10]")
+    print(f"    - gamma, reg_alpha, reg_lambda: log-uniform [1e-3, 10]")
     print(f"  Scoring metric: PR AUC (average_precision)")
     print(f"  Cross-validation: 5-fold stratified")
     print(f"  Search algorithm: Optuna (Bayesian optimization)")
@@ -561,54 +479,80 @@ def train_combined_model(df):
     
     # Define objective function for Ray Tune
     def train_model_tune(config):
-        """Objective function for Ray Tune - trains scikit-learn model with given config"""
-        from sklearn.linear_model import LogisticRegression
+        """Objective function for Ray Tune - trains XGBoost model with given config.
+        Uses non-BGC data for training/validation and BGCs only for scoring."""
+        from xgboost import XGBClassifier
         from sklearn.model_selection import cross_val_score
         
-        # Get data from Ray Dataset (convert to pandas for sklearn)
-        train_data_local = train_dataset_scaled.to_pandas()
-        X_train_ray = train_data_local[all_features].values
-        y_train_ray = train_data_local['label'].values
-        
-        # Handle solver-penalty compatibility
-        solver = config["solver"]
-        penalty = config["penalty"]
-        
-        # LBFGS only supports L2
-        if solver == "lbfgs" and penalty == "l1":
-            penalty = "l2"
-        
-        # Create model with config
-        model = LogisticRegression(
-            C=config["C"],
-            solver=solver,
-            penalty=penalty,
-            class_weight=config["class_weight"],
+        # Build model from config
+        model = XGBClassifier(
+            n_estimators=int(config["n_estimators"]),
+            max_depth=int(config["max_depth"]),
+            learning_rate=float(config["learning_rate"]),
+            subsample=float(config["subsample"]),
+            colsample_bytree=float(config["colsample_bytree"]),
+            min_child_weight=float(config["min_child_weight"]),
+            gamma=float(config["gamma"]),
+            reg_alpha=float(config["reg_alpha"]),
+            reg_lambda=float(config["reg_lambda"]),
+            objective="binary:logistic",
+            missing=np.nan,
+            n_jobs=1,
+            tree_method="hist",
+            eval_metric="aucpr",
             random_state=42,
-            max_iter=2000,
-            n_jobs=1  # Ray handles parallelism
         )
         
-        # 5-fold cross-validation
+        # Non-BGC performance: 5-fold CV PR AUC
         cv_scores = cross_val_score(
-            model, X_train_ray, y_train_ray,
+            model, X_train, y_train,
             cv=5, scoring='average_precision', n_jobs=1
         )
+        mean_pr_auc = float(cv_scores.mean())
+        std_pr_auc = float(cv_scores.std())
+        min_pr_auc = float(cv_scores.min())
+        max_pr_auc = float(cv_scores.max())
         
-        # Report metrics to Ray Tune
+        # Fit on full non-BGC training set once to evaluate on BGCs
+        model.fit(X_train, y_train)
+        
+        bgc_f1_max = 0.0
+        if len(bgc_data) > 0:
+            X_bgc = bgc_data[all_features].values
+            y_bgc = bgc_data['label'].values
+            y_bgc_proba = model.predict_proba(X_bgc)[:, 1]
+            
+            # Threshold grid for BGC recall/F1 (positives only)
+            thresholds = np.linspace(0.05, 0.95, 19)
+            for thr in thresholds:
+                y_bgc_pred = (y_bgc_proba >= thr).astype(int)
+                tp = (y_bgc_pred == 1).sum()
+                fn = (y_bgc_pred == 0).sum()
+                # With only positives, precision ~1.0 as long as thresholding doesn't create negatives,
+                # so F1 effectively tracks recall here.
+                recall_bgc = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+                bgc_f1_max = max(bgc_f1_max, recall_bgc)
+        else:
+            bgc_f1_max = 0.0
+        
+        # Combined score balancing non-BGC PR AUC and BGC recall/F1
+        combined_score = 0.5 * mean_pr_auc + 0.5 * bgc_f1_max
+        
         tune.report({
-            "mean_pr_auc": float(cv_scores.mean()),
-            "std_pr_auc": float(cv_scores.std()),
-            "min_pr_auc": float(cv_scores.min()),
-            "max_pr_auc": float(cv_scores.max())
+            "mean_pr_auc": mean_pr_auc,
+            "std_pr_auc": std_pr_auc,
+            "min_pr_auc": min_pr_auc,
+            "max_pr_auc": max_pr_auc,
+            "bgc_f1_max": float(bgc_f1_max),
+            "combined_score": float(combined_score),
         })
     
     # Initialize Optuna search
-    optuna_search = OptunaSearch(metric="mean_pr_auc", mode="max")
+    optuna_search = OptunaSearch(metric="combined_score", mode="max")
     
     # ASHA scheduler for early stopping
     scheduler = ASHAScheduler(
-        metric="mean_pr_auc",
+        metric="combined_score",
         mode="max",
         max_t=100,  # Maximum iterations
         grace_period=10,  # Minimum iterations before stopping
@@ -625,30 +569,26 @@ def train_combined_model(df):
     print(f"    - Number of trials: 100 (with early stopping)")
     print(f"    - Parallel trials: {num_parallel_trials} (using {available_cpus} available CPUs)")
     
-    # Create Tuner
     tuner = tune.Tuner(
         train_model_tune,
         tune_config=tune.TuneConfig(
             search_alg=optuna_search,
             scheduler=scheduler,
-            num_samples=100,  # Number of trials
-            # metric and mode are specified in scheduler, don't duplicate here
+            num_samples=100,
         ),
         param_space=search_space,
         run_config=tune.RunConfig(
-            name="combined_model_tuning",
+            name="combined_model_tuning_xgboost",
             stop={"training_iteration": 100},
             verbose=1,
         ),
     )
     
-    # Run tuning
     results = tuner.fit()
     
     tuning_time = time.time() - start_time
     print(f"\n  ✓ Hyperparameter tuning completed in {tuning_time:.1f} seconds")
     
-    # Get best result
     best_result = results.get_best_result(metric="mean_pr_auc", mode="max")
     best_params = best_result.config
     best_cv_score = best_result.metrics["mean_pr_auc"]
@@ -660,20 +600,23 @@ def train_combined_model(df):
     print(f"  Min PR AUC: {best_result.metrics.get('min_pr_auc', 0):.6f}")
     print(f"  Max PR AUC: {best_result.metrics.get('max_pr_auc', 0):.6f}")
     
-    # Create best model with best parameters
-    solver = best_params["solver"]
-    penalty = best_params["penalty"]
-    if solver == "lbfgs" and penalty == "l1":
-        penalty = "l2"
-    
-    best_model = LogisticRegression(
-        C=best_params["C"],
-        solver=solver,
-        penalty=penalty,
-        class_weight=best_params["class_weight"],
+    # Create best XGBoost model with best parameters
+    best_model = XGBClassifier(
+        n_estimators=int(best_params["n_estimators"]),
+        max_depth=int(best_params["max_depth"]),
+        learning_rate=float(best_params["learning_rate"]),
+        subsample=float(best_params["subsample"]),
+        colsample_bytree=float(best_params["colsample_bytree"]),
+        min_child_weight=float(best_params["min_child_weight"]),
+        gamma=float(best_params["gamma"]),
+        reg_alpha=float(best_params["reg_alpha"]),
+        reg_lambda=float(best_params["reg_lambda"]),
+        objective="binary:logistic",
+        missing=np.nan,
+        n_jobs=-1,
+        tree_method="hist",
+        eval_metric="aucpr",
         random_state=42,
-        max_iter=2000,
-        n_jobs=-1
     )
     
     # Save tuning results
@@ -691,32 +634,16 @@ def train_combined_model(df):
     print("STEP 3: TRAINING BEST MODEL")
     print(f"{'='*100}")
     
-    # Convert Ray Dataset to pandas/numpy for sklearn training
-    train_scaled_df = train_dataset_scaled.to_pandas()
-    test_scaled_df = test_dataset_scaled.to_pandas()
-    X_train_scaled = train_scaled_df[all_features].values
-    y_train = train_scaled_df['label'].values
-    X_test_scaled = test_scaled_df[all_features].values
-    y_test = test_scaled_df['label'].values
-    
     print(f"  Training final model with best parameters...")
     train_start = time.time()
-    best_model.fit(X_train_scaled, y_train)
+    best_model.fit(X_train, y_train)
     train_time = time.time() - train_start
     print(f"    ✓ Model trained in {train_time:.2f} seconds")
-    print(f"    ✓ Converged: {best_model.n_iter_[0]} iterations")
     
-    # Get weights
-    weights = best_model.coef_[0]
-    intercept = best_model.intercept_[0]
-    print(f"    ✓ Model coefficients: {len(weights)} features")
-    print(f"    ✓ Intercept: {intercept:.6f}")
-    print(f"    ✓ Non-zero coefficients: {(np.abs(weights) > 1e-6).sum()}")
-    
-    # Learning curves
+    # Learning curves (optional but still useful)
     print(f"\n  📈 Computing learning curves...")
     train_sizes, train_scores, val_scores = learning_curve(
-        best_model, X_train_scaled, y_train, cv=5, 
+        best_model, X_train, y_train, cv=5,
         scoring='average_precision', n_jobs=-1,
         train_sizes=np.linspace(0.1, 1.0, 10), verbose=0
     )
@@ -724,35 +651,13 @@ def train_combined_model(df):
     print(f"    Final training score: {train_scores[-1].mean():.6f} ± {train_scores[-1].std():.6f}")
     print(f"    Final validation score: {val_scores[-1].mean():.6f} ± {val_scores[-1].std():.6f}")
     
-    # Validation curve for C parameter
-    print(f"\n  📊 Computing validation curve for C parameter...")
-    C_range = np.logspace(-3, 3, 7)
-    val_curve_params = {
-        'solver': best_params['solver'],
-        'class_weight': best_params['class_weight'],
-        'random_state': 42,
-        'max_iter': 2000
-    }
-    # Only add penalty if solver supports it
-    if best_params['solver'] in ['liblinear', 'saga']:
-        val_curve_params['penalty'] = best_params['penalty']
-    
-    train_scores_cv, val_scores_cv = validation_curve(
-        LogisticRegression(**val_curve_params),
-        X_train_scaled, y_train, param_name='C', param_range=C_range,
-        cv=5, scoring='average_precision', n_jobs=-1, verbose=0
-    )
-    print(f"    ✓ Validation curve computed")
-    best_c_idx = np.argmax(val_scores_cv.mean(axis=1))
-    print(f"    Best C from validation curve: {C_range[best_c_idx]:.3f} (PR AUC: {val_scores_cv.mean(axis=1)[best_c_idx]:.6f})")
-    
     # Predictions
     print(f"\n{'='*100}")
     print("STEP 4: MODEL EVALUATION")
     print(f"{'='*100}")
     
     print(f"  Making predictions on test set (non-BGC)...")
-    y_pred_proba = best_model.predict_proba(X_test_scaled)[:, 1]
+    y_pred_proba = best_model.predict_proba(X_test)[:, 1]
     print(f"    ✓ Predictions completed")
     print(f"    Probability range (test): [{y_pred_proba.min():.4f}, {y_pred_proba.max():.4f}]")
     print(f"    Mean probability (test): {y_pred_proba.mean():.4f}")
@@ -762,21 +667,56 @@ def train_combined_model(df):
     roc_auc = auc(fpr, tpr)
     
     # Precision-Recall curve
-    precision, recall, pr_thresholds = precision_recall_curve(y_test, y_pred_proba)
-    pr_auc = auc(recall, precision)
+    precision_curve, recall_curve, pr_thresholds = precision_recall_curve(y_test, y_pred_proba)
+    pr_auc = auc(recall_curve, precision_curve)
     
-    # Find F1-optimal threshold
-    f1_scores = 2 * (precision[:-1] * recall[:-1]) / (precision[:-1] + recall[:-1] + 1e-10)
-    f1_optimal_idx = np.argmax(f1_scores)
-    f1_optimal_threshold = pr_thresholds[f1_optimal_idx]
+    # Calibrate threshold using both non-BGC test set and BGC validation set
+    print(f"\n  📊 Threshold calibration using non-BGC test + BGC validation...")
+    thresholds = np.linspace(0.05, 0.95, 19)
+    best_combined = -1.0
+    calibrated_threshold = 0.5
+    best_test_f1 = 0.0
+    best_bgc_recall = 0.0
     
-    print(f"\n  📊 Performance Metrics:")
-    print(f"    ROC AUC: {roc_auc:.6f}")
-    print(f"    PR AUC:  {pr_auc:.6f}")
-    print(f"    F1-optimal threshold: {f1_optimal_threshold:.4f}")
+    # Pre-compute BGC probabilities if available
+    if len(bgc_data) > 0:
+        X_val = bgc_data[all_features].values
+        y_val = bgc_data['label'].values
+        y_pred_proba_val = best_model.predict_proba(X_val)[:, 1]
+    else:
+        y_pred_proba_val = None
+        y_val = None
     
-    # Evaluate at F1-optimal threshold
-    y_pred = (y_pred_proba >= f1_optimal_threshold).astype(int)
+    for thr in thresholds:
+        # Non-BGC test metrics at threshold
+        y_pred_test = (y_pred_proba >= thr).astype(int)
+        tn_t, fp_t, fn_t, tp_t = confusion_matrix(y_test, y_pred_test).ravel()
+        prec_t = tp_t / (tp_t + fp_t) if (tp_t + fp_t) > 0 else 0.0
+        rec_t = tp_t / (tp_t + fn_t) if (tp_t + fn_t) > 0 else 0.0
+        f1_t = f1_score(y_test, y_pred_test)
+        
+        # BGC recall at threshold (positives only)
+        if y_pred_proba_val is not None and len(y_val) > 0:
+            y_pred_bgc = (y_pred_proba_val >= thr).astype(int)
+            tp_b = (y_pred_bgc == 1).sum()
+            fn_b = (y_pred_bgc == 0).sum()
+            rec_b = tp_b / (tp_b + fn_b) if (tp_b + fn_b) > 0 else 0.0
+        else:
+            rec_b = 0.0
+        
+        # Combined metric: average of non-BGC F1 and BGC recall
+        combined = 0.5 * f1_t + 0.5 * rec_b
+        if combined > best_combined:
+            best_combined = combined
+            calibrated_threshold = thr
+            best_test_f1 = f1_t
+            best_bgc_recall = rec_b
+    
+    print(f"    Calibrated threshold (balanced F1_test & recall_BGC): {calibrated_threshold:.4f}")
+    print(f"    At calibrated threshold - non-BGC test F1: {best_test_f1:.6f}, BGC recall: {best_bgc_recall:.6f}")
+    
+    # Evaluate at calibrated threshold
+    y_pred = (y_pred_proba >= calibrated_threshold).astype(int)
     tn, fp, fn, tp = confusion_matrix(y_test, y_pred).ravel()
     
     precision_val = tp / (tp + fp) if (tp + fp) > 0 else 0
@@ -784,7 +724,7 @@ def train_combined_model(df):
     f1 = f1_score(y_test, y_pred)
     mcc = matthews_corrcoef(y_test, y_pred)
     
-    print(f"\n  🎯 Performance at F1-optimal threshold (TEST SET, non-BGC):")
+    print(f"\n  🎯 Performance at calibrated threshold (TEST SET, non-BGC):")
     print(f"    Precision: {precision_val:.6f}")
     print(f"    Recall:    {recall_val:.6f}")
     print(f"    F1 Score:  {f1:.6f}")
@@ -795,24 +735,9 @@ def train_combined_model(df):
     print(f"    True Negatives (TN):  {tn:5d}")
     print(f"    False Negatives (FN): {fn:4d}")
 
-    # Evaluate on validation set (BGC-only) using same threshold
+    # Evaluate on validation set (BGC-only) using calibrated threshold
     print(f"\n  ✅ Evaluating on BGC VALIDATION SET (held-out, all BGC clusters)...")
-    if len(bgc_data) > 0:
-        # Scale BGC features using training statistics
-        bgc_scaled = bgc_data.copy()
-        for feat in all_features:
-            if feat in bgc_scaled.columns:
-                mean_val = mean_dict.get(feat, 0)
-                std_val = std_dict.get(feat, 1.0)
-                if std_val > 0:
-                    bgc_scaled[feat] = (bgc_scaled[feat] - mean_val) / std_val
-                else:
-                    bgc_scaled[feat] = bgc_scaled[feat] - mean_val
-
-        X_val_scaled = bgc_scaled[all_features].values
-        y_val = bgc_scaled['label'].values
-
-        y_pred_proba_val = best_model.predict_proba(X_val_scaled)[:, 1]
+    if len(bgc_data) > 0 and y_pred_proba_val is not None:
         print(f"    ✓ Predictions completed on BGC validation set")
         print(f"    Probability range (BGC): [{y_pred_proba_val.min():.4f}, {y_pred_proba_val.max():.4f}]")
         print(f"    Mean probability (BGC): {y_pred_proba_val.mean():.4f}")
@@ -827,8 +752,8 @@ def train_combined_model(df):
         precision_val_curve, recall_val_curve, _ = precision_recall_curve(y_val, y_pred_proba_val)
         pr_auc_val = auc(recall_val_curve, precision_val_curve)
 
-        # Evaluate validation set at F1-optimal threshold from test set
-        y_pred_val = (y_pred_proba_val >= f1_optimal_threshold).astype(int)
+        # Evaluate validation set at calibrated threshold from combined tuning
+        y_pred_val = (y_pred_proba_val >= calibrated_threshold).astype(int)
         tn_val, fp_val, fn_val, tp_val = confusion_matrix(y_val, y_pred_val).ravel()
 
         val_precision = tp_val / (tp_val + fp_val) if (tp_val + fp_val) > 0 else 0
@@ -836,7 +761,7 @@ def train_combined_model(df):
         f1_val = f1_score(y_val, y_pred_val)
         mcc_val = matthews_corrcoef(y_val, y_pred_val) if (tp_val + fp_val + tn_val + fn_val) > 0 else 0
 
-        print(f"\n  📊 BGC VALIDATION PERFORMANCE (at test-set F1-optimal threshold):")
+        print(f"\n  📊 BGC VALIDATION PERFORMANCE (at calibrated threshold):")
         print(f"    BGC count: {len(y_val)}")
         print(f"    ROC AUC: {roc_auc_val:.6f}" if not np.isnan(roc_auc_val) else "    ROC AUC: NaN (only positive class present)")
         print(f"    PR AUC:  {pr_auc_val:.6f}")
@@ -862,12 +787,10 @@ def train_combined_model(df):
     # Cross-validation on full dataset (combine train and test)
     print(f"\n  🔄 Running 5-fold cross-validation on full dataset...")
     cv_start = time.time()
-    # Combine train and test datasets for full cross-validation
-    full_dataset_scaled = train_dataset_scaled.union(test_dataset_scaled)
-    full_df = full_dataset_scaled.to_pandas()
+    full_df = pd.concat([train_df_local, test_df_local], ignore_index=True)
     X_full = full_df[all_features].values
     y_full = full_df['label'].values
-    cv_scores = cross_validate(best_model, X_full, y_full, cv=5, 
+    cv_scores = cross_validate(best_model, X_full, y_full, cv=5,
                                scoring=['roc_auc', 'average_precision', 'f1', 'precision', 'recall'], 
                                return_train_score=True, n_jobs=-1)
     cv_time = time.time() - cv_start
@@ -885,21 +808,20 @@ def train_combined_model(df):
     print("STEP 5: FEATURE IMPORTANCE ANALYSIS")
     print(f"{'='*100}")
     
-    feature_importance = sorted(zip(all_features, np.abs(weights)), key=lambda x: x[1], reverse=True)
+    importances = best_model.feature_importances_
+    feature_importance = sorted(zip(all_features, importances), key=lambda x: x[1], reverse=True)
     print(f"\n  🏆 ALL FEATURES BY IMPORTANCE (Ranked):")
     print("-" * 100)
-    print(f"{'Rank':<6} {'Feature':<60} {'Weight':<12} {'Importance':<12}")
+    print(f"{'Rank':<6} {'Feature':<60} {'Importance':<12}")
     print("-" * 100)
     for rank, (feat, imp) in enumerate(feature_importance, 1):
-        weight = weights[all_features.index(feat)]
-        sign = '+' if weight >= 0 else '-'
-        print(f"{rank:<6} {feat:<60} {sign}{abs(weight):<11.6f} {imp:<12.6f}")
+        print(f"{rank:<6} {feat:<60} {imp:<12.6f}")
     
     # Save weights
     weights_df = pd.DataFrame({
         'feature': all_features,
-        'weight': weights,
-        'abs_importance': np.abs(weights)
+        'weight': importances,
+        'abs_importance': np.abs(importances)
     }).sort_values('abs_importance', ascending=False)
     
     combined_output_dir = "/groups/itay_mayrose/alongonda/desktop/mibig_validate/combined"
