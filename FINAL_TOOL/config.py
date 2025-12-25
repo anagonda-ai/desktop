@@ -2,15 +2,21 @@
 Configuration file for MGC Prediction Tool
 """
 
+import os
+from pathlib import Path
+
+# Get FINAL_TOOL directory (parent of this config.py file)
+FINAL_TOOL_DIR = Path(__file__).parent
+
 # Paths
-KEGG_DB = "/groups/itay_mayrose/alongonda/datasets/KEGG_annotations_modules_metabolic/fasta/merged_metabolic_pathways.fasta"
-MODEL_WEIGHTS_DIR = "/groups/itay_mayrose/alongonda/desktop/mibig_validate"
+KEGG_DB = str(FINAL_TOOL_DIR / "data" / "merged_metabolic_pathways.fasta")
+MODEL_WEIGHTS_DIR = str(FINAL_TOOL_DIR / "models")
 
 # Combined model files (relative to MODEL_WEIGHTS_DIR)
 # This is the final trained XGBoost model with all features combined
-COMBINED_MODEL = "combined/combined_model.pkl"  # Full XGBoost model
-COMBINED_WEIGHTS = "combined/combined_all_features_weights.csv"  # Feature importances (for reference)
-COMBINED_FEATURE_ORDER = "combined/combined_model_feature_order.txt"  # Feature order for prediction
+COMBINED_MODEL = "combined_model.pkl"  # Full XGBoost model
+COMBINED_WEIGHTS = "combined_all_features_weights.csv"  # Feature importances (for reference)
+COMBINED_FEATURE_ORDER = "combined_model_feature_order.txt"  # Feature order for prediction
 
 # Sliding window parameters
 WINDOW_SIZE = 10
