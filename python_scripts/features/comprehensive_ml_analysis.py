@@ -803,6 +803,212 @@ def train_combined_model(df):
     print(f"    Precision: {cv_scores['test_precision'].mean():.6f} ± {cv_scores['test_precision'].std():.6f}")
     print(f"    Recall:    {cv_scores['test_recall'].mean():.6f} ± {cv_scores['test_recall'].std():.6f}")
     
+    # Threshold effect analysis
+    print(f"\n{'='*100}")
+    print("STEP 4.5: THRESHOLD EFFECT ANALYSIS")
+    print(f"{'='*100}")
+    
+    # Get predictions for train set
+    y_train_proba = best_model.predict_proba(X_train)[:, 1]
+    
+    # Store probabilities in dataframes for easier access
+    train_df_local['pred_proba'] = y_train_proba
+    test_df_local['pred_proba'] = y_pred_proba
+    if len(bgc_data) > 0 and y_pred_proba_val is not None:
+        bgc_data['pred_proba'] = y_pred_proba_val
+    
+    # Identify dataset types from cluster names
+    def get_dataset_type(cluster_name):
+        """Identify dataset type from cluster name"""
+        name_str = str(cluster_name)
+        if name_str.startswith('BGC') or 'BGC' in name_str:
+            return 'mibig'
+        elif name_str.startswith('MGC_CANDIDATE') or 'MGC_CANDIDATE' in name_str:
+            return 'kegg-verified'
+        elif name_str.startswith('RANDOM') or 'RANDOM' in name_str:
+            return 'random'
+        else:
+            return 'unknown'
+    
+    # Add dataset type to dataframes
+    train_df_local['dataset_type'] = train_df_local['cluster_name'].apply(get_dataset_type)
+    test_df_local['dataset_type'] = test_df_local['cluster_name'].apply(get_dataset_type)
+    if len(bgc_data) > 0:
+        bgc_data['dataset_type'] = bgc_data['cluster_name'].apply(get_dataset_type)
+    
+    # Generate threshold range
+    threshold_range = np.linspace(0.01, 0.99, 99)
+    
+    # Function to compute metrics at a threshold
+    def compute_metrics_at_threshold(y_true, y_proba, threshold):
+        """Compute precision, recall, F1, and confusion matrix at a threshold"""
+        y_pred = (y_proba >= threshold).astype(int)
+        
+        # Count confusion matrix values manually to handle all edge cases
+        tp = int(((y_true == 1) & (y_pred == 1)).sum())
+        fp = int(((y_true == 0) & (y_pred == 1)).sum())
+        tn = int(((y_true == 0) & (y_pred == 0)).sum())
+        fn = int(((y_true == 1) & (y_pred == 0)).sum())
+        
+        precision = tp / (tp + fp) if (tp + fp) > 0 else 0.0
+        recall = tp / (tp + fn) if (tp + fn) > 0 else 0.0
+        f1 = f1_score(y_true, y_pred, zero_division=0)
+        return {
+            'threshold': threshold,
+            'precision': precision,
+            'recall': recall,
+            'f1': f1,
+            'tp': tp,
+            'fp': fp,
+            'tn': tn,
+            'fn': fn
+        }
+    
+    # Collect threshold results for train/test/verify
+    threshold_results = []
+    
+    print(f"  Computing threshold effects on train/test/verify sets...")
+    for thr in threshold_range:
+        # Train set
+        train_metrics = compute_metrics_at_threshold(y_train, y_train_proba, thr)
+        train_metrics['dataset'] = 'train'
+        train_metrics['dataset_type'] = 'all'
+        threshold_results.append(train_metrics)
+        
+        # Test set
+        test_metrics = compute_metrics_at_threshold(y_test, y_pred_proba, thr)
+        test_metrics['dataset'] = 'test'
+        test_metrics['dataset_type'] = 'all'
+        threshold_results.append(test_metrics)
+        
+        # Verify set (BGC validation)
+        if y_pred_proba_val is not None and len(y_val) > 0:
+            verify_metrics = compute_metrics_at_threshold(y_val, y_pred_proba_val, thr)
+            verify_metrics['dataset'] = 'verify'
+            verify_metrics['dataset_type'] = 'all'
+            threshold_results.append(verify_metrics)
+    
+    # Now compute for each dataset type separately (mibig, kegg-verified, random)
+    print(f"  Computing threshold effects on mibig/kegg-verified/random datasets...")
+    
+    for dataset_type in ['mibig', 'kegg-verified', 'random']:
+        # Train set by dataset type
+        train_mask = train_df_local['dataset_type'] == dataset_type
+        if train_mask.sum() > 0:
+            train_type_df = train_df_local[train_mask].copy()
+            y_train_type = train_type_df['label'].values
+            train_type_proba = train_type_df['pred_proba'].values
+            
+            for thr in threshold_range:
+                metrics = compute_metrics_at_threshold(y_train_type, train_type_proba, thr)
+                metrics['dataset'] = 'train'
+                metrics['dataset_type'] = dataset_type
+                threshold_results.append(metrics)
+        
+        # Test set by dataset type
+        test_mask = test_df_local['dataset_type'] == dataset_type
+        if test_mask.sum() > 0:
+            test_type_df = test_df_local[test_mask].copy()
+            y_test_type = test_type_df['label'].values
+            test_type_proba = test_type_df['pred_proba'].values
+            
+            for thr in threshold_range:
+                metrics = compute_metrics_at_threshold(y_test_type, test_type_proba, thr)
+                metrics['dataset'] = 'test'
+                metrics['dataset_type'] = dataset_type
+                threshold_results.append(metrics)
+        
+        # Verify set by dataset type (BGC validation)
+        if len(bgc_data) > 0 and 'pred_proba' in bgc_data.columns:
+            verify_mask = bgc_data['dataset_type'] == dataset_type
+            if verify_mask.sum() > 0:
+                verify_type_df = bgc_data[verify_mask].copy()
+                y_verify_type = verify_type_df['label'].values
+                verify_type_proba = verify_type_df['pred_proba'].values
+                
+                for thr in threshold_range:
+                    metrics = compute_metrics_at_threshold(y_verify_type, verify_type_proba, thr)
+                    metrics['dataset'] = 'verify'
+                    metrics['dataset_type'] = dataset_type
+                    threshold_results.append(metrics)
+    
+    # Convert to DataFrame
+    threshold_df = pd.DataFrame(threshold_results)
+    
+    # Save threshold results
+    combined_output_dir = "/groups/itay_mayrose/alongonda/desktop/mibig_validate/combined"
+    os.makedirs(combined_output_dir, exist_ok=True)
+    threshold_file = os.path.join(combined_output_dir, "threshold_effects_precision_recall.csv")
+    threshold_df.to_csv(threshold_file, index=False)
+    print(f"    ✓ Threshold effects saved to: {threshold_file}")
+    
+    # Print summary statistics
+    print(f"\n  📊 Threshold Effect Summary:")
+    print(f"    Total threshold evaluations: {len(threshold_df)}")
+    print(f"    Threshold range: [{threshold_range.min():.2f}, {threshold_range.max():.2f}]")
+    print(f"    Number of thresholds: {len(threshold_range)}")
+    
+    # Show best F1 scores for each dataset/type combination
+    print(f"\n  🏆 Best F1 Scores by Dataset and Type:")
+    print("-" * 100)
+    print(f"{'Dataset':<12} {'Type':<15} {'Threshold':<12} {'Precision':<12} {'Recall':<12} {'F1':<12}")
+    print("-" * 100)
+    
+    for dataset in ['train', 'test', 'verify']:
+        for dtype in ['all', 'mibig', 'kegg-verified', 'random']:
+            subset = threshold_df[(threshold_df['dataset'] == dataset) & 
+                                  (threshold_df['dataset_type'] == dtype)]
+            if len(subset) > 0:
+                best_idx = subset['f1'].idxmax()
+                best_row = subset.loc[best_idx]
+                print(f"{dataset:<12} {dtype:<15} {best_row['threshold']:<12.4f} "
+                      f"{best_row['precision']:<12.4f} {best_row['recall']:<12.4f} {best_row['f1']:<12.4f}")
+    
+    # Show sample of results at key thresholds
+    key_thresholds = [0.3, 0.4, 0.5, 0.6, 0.7]
+    print(f"\n  📈 Sample Results at Key Thresholds (test set, all types):")
+    print("-" * 100)
+    print(f"{'Threshold':<12} {'Precision':<12} {'Recall':<12} {'F1':<12} {'TP':<8} {'FP':<8} {'FN':<8} {'TN':<8}")
+    print("-" * 100)
+    
+    test_all = threshold_df[(threshold_df['dataset'] == 'test') & 
+                            (threshold_df['dataset_type'] == 'all')]
+    for thr in key_thresholds:
+        closest_idx = (test_all['threshold'] - thr).abs().idxmin()
+        row = test_all.loc[closest_idx]
+        print(f"{row['threshold']:<12.4f} {row['precision']:<12.4f} {row['recall']:<12.4f} "
+              f"{row['f1']:<12.4f} {int(row['tp']):<8} {int(row['fp']):<8} {int(row['fn']):<8} {int(row['tn']):<8}")
+    
+    # Show precision/recall for each dataset type at key thresholds
+    print(f"\n  📊 Precision/Recall by Dataset Type at Key Thresholds (test set):")
+    for dtype in ['mibig', 'kegg-verified', 'random']:
+        test_type = threshold_df[(threshold_df['dataset'] == 'test') & 
+                                 (threshold_df['dataset_type'] == dtype)]
+        if len(test_type) > 0:
+            print(f"\n    {dtype.upper()}:")
+            print(f"    {'Threshold':<12} {'Precision':<12} {'Recall':<12} {'F1':<12} {'TP':<8} {'FP':<8} {'FN':<8} {'TN':<8}")
+            print(f"    {'-'*100}")
+            for thr in key_thresholds:
+                closest_idx = (test_type['threshold'] - thr).abs().idxmin()
+                row = test_type.loc[closest_idx]
+                print(f"    {row['threshold']:<12.4f} {row['precision']:<12.4f} {row['recall']:<12.4f} "
+                      f"{row['f1']:<12.4f} {int(row['tp']):<8} {int(row['fp']):<8} {int(row['fn']):<8} {int(row['tn']):<8}")
+    
+    # Show precision/recall for verify set by dataset type
+    print(f"\n  📊 Precision/Recall by Dataset Type at Key Thresholds (verify set):")
+    for dtype in ['mibig', 'kegg-verified', 'random']:
+        verify_type = threshold_df[(threshold_df['dataset'] == 'verify') & 
+                                  (threshold_df['dataset_type'] == dtype)]
+        if len(verify_type) > 0:
+            print(f"\n    {dtype.upper()}:")
+            print(f"    {'Threshold':<12} {'Precision':<12} {'Recall':<12} {'F1':<12} {'TP':<8} {'FP':<8} {'FN':<8} {'TN':<8}")
+            print(f"    {'-'*100}")
+            for thr in key_thresholds:
+                closest_idx = (verify_type['threshold'] - thr).abs().idxmin()
+                row = verify_type.loc[closest_idx]
+                print(f"    {row['threshold']:<12.4f} {row['precision']:<12.4f} {row['recall']:<12.4f} "
+                      f"{row['f1']:<12.4f} {int(row['tp']):<8} {int(row['fp']):<8} {int(row['fn']):<8} {int(row['tn']):<8}")
+    
     # Feature importance
     print(f"\n{'='*100}")
     print("STEP 5: FEATURE IMPORTANCE ANALYSIS")

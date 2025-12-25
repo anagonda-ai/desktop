@@ -815,7 +815,8 @@ class OptimizedPromoterAnalyzer:
     
     def get_hit(self, gene_df, current_id):
         if isinstance(gene_df, pd.DataFrame):
-            hit_row = gene_df[gene_df["sequence"]==current_id["sequence"].iloc[0]]
+            sequence_col = "sequence" if "sequence" in current_id.columns else "Translation"
+            hit_row = gene_df[gene_df["sequence"]==current_id[sequence_col].iloc[0]]
             chrom = str(hit_row["chromosome"].iloc[0])
             strand = str(hit_row["strand"].iloc[0])
             start = int(hit_row["start"].iloc[0])
@@ -935,7 +936,8 @@ class OptimizedPromoterAnalyzer:
             try:
                 cluster_df = pd.read_csv(cluster_file)
                 if "BGC00" in str(cluster_file):
-                    gene_seq = cluster_df["sequence"].astype(str).str.strip()
+                    sequence_col = "sequence" if "sequence" in cluster_df.columns else "Translation"
+                    gene_seq = cluster_df[sequence_col].astype(str).str.strip()
                     alignment_results = self.align_sequences_with_blast(gene_seq, ann_df)
                     valid_genes = ann_df[ann_df["sequence"].isin(alignment_results["matching_ann_sequence"])].index.to_list()
                 else:
@@ -950,7 +952,8 @@ class OptimizedPromoterAnalyzer:
                         # if "BGC00" in str(cluster_file):
                         #     chrom, strand, start, end = gene_id["chrom"], gene_id["strand"], gene_id["start"], gene_id["end"]
                         # else:
-                        current_id = cluster_df[cluster_df["gene_id"]==gene_id]
+                        gene_id_col = "gene_id" if "gene_id" in cluster_df.columns else "Locus_Tag"
+                        current_id = cluster_df[cluster_df[gene_id_col]==gene_id]
                         chrom, strand, start, end = self.get_hit(ann_df.loc[gene_id], current_id)
 
                         # Try multiple chromosome name variations (Ensembl-specific handling)  
@@ -1072,7 +1075,7 @@ def main():
     """Optimized main function with complete functionality enabled"""
     
     # Configuration
-    cluster_csvs_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/kegg_random_mgc_candidates_csv_files")
+    cluster_csvs_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/mgc_candidates_csv_files")
 
     
     output_dir = Path("/groups/itay_mayrose/alongonda/Plant_MGC/fixed_kegg_verified_scanner_min_genes_3_overlap_merge/kegg_scanner_min_genes_based_metabolic/min_genes_3/mgc_candidates_fasta_files_without_e2p2_filtered_test/random_kegg_mgc_promotor_analysis")
