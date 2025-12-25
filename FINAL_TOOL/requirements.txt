@@ -1,0 +1,15 @@
+# Core dependencies for MGC Predictor Tool
+pandas>=1.5.0
+numpy>=1.23.0
+scipy>=1.9.0
+biopython>=1.79
+xgboost>=1.7.0
+scikit-learn>=1.1.0
+joblib>=1.2.0
+
+# Note: BLAST+ (NCBI BLAST) must be installed separately as it's a command-line tool
+# Install via:
+# - Conda: conda install -c bioconda blast
+# - System package manager: apt-get install ncbi-blast+ (Debian/Ubuntu) or brew install blast (macOS)
+# - Or download from: https://blast.ncbi.nlm.nih.gov/Blast.cgi?CMD=Web&PAGE_TYPE=BlastDocs&DOC_TYPE=Download
+

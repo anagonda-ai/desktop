@@ -16,6 +16,7 @@ from sklearn.model_selection import (cross_validate,
                                     learning_curve, validation_curve, train_test_split)
 import warnings
 import time
+import joblib
 from scipy.stats import loguniform
 from xgboost import XGBClassifier
 
@@ -1035,6 +1036,17 @@ def train_combined_model(df):
     weights_file = os.path.join(combined_output_dir, "combined_all_features_weights.csv")
     weights_df.to_csv(weights_file, index=False)
     print(f"\n  💾 Combined model weights saved to: {weights_file}")
+    
+    # Save the full trained XGBoost model
+    model_file = os.path.join(combined_output_dir, "combined_model.pkl")
+    joblib.dump(best_model, model_file)
+    print(f"  💾 Full XGBoost model saved to: {model_file}")
+    
+    # Save feature order for prediction
+    feature_order_file = os.path.join(combined_output_dir, "combined_model_feature_order.txt")
+    with open(feature_order_file, 'w') as f:
+        f.write('\n'.join(all_features))
+    print(f"  💾 Feature order saved to: {feature_order_file}")
     
     # Save hyperparameter tuning results (if not already saved by Ray Tune)
     # Ray Tune results are saved above
