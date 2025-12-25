@@ -31,10 +31,21 @@ This tool processes GFF3 annotation files and corresponding genome FASTA files t
 
 ### Setup
 
-1. Ensure all dependencies are installed
-2. Configure paths in `config.py`:
-   - `KEGG_DB`: Path to KEGG metabolic pathways FASTA database
-   - `MODEL_WEIGHTS_DIR`: Path to directory containing model weight files
+1. **Run the setup script** to verify and prepare all required data:
+   ```bash
+   python FINAL_TOOL/setup.py
+   ```
+   This will check:
+   - BLAST+ installation
+   - KEGG FASTA database (in `FINAL_TOOL/data/`)
+   - Model files (in `FINAL_TOOL/models/`)
+   
+   All required data files are already included in the package.
+
+2. **Alternative manual setup**:
+   - Install dependencies: `conda env create -f environment.yml` or `pip install -r requirements.txt`
+   - Install BLAST+: `conda install -c bioconda blast`
+   - All data files should be in `FINAL_TOOL/data/` and `FINAL_TOOL/models/`
 
 ## Usage
 
