@@ -31,3 +31,23 @@ node_modules/
 
 # Ignore mibig_validate directory
 mibig_validate/
+
+# FINAL_TOOL large data files - should be obtained separately
+FINAL_TOOL/data/*.fasta
+FINAL_TOOL/data/*.phr
+FINAL_TOOL/data/*.pin
+FINAL_TOOL/data/*.psq
+FINAL_TOOL/data/*.pdb
+FINAL_TOOL/data/*.pjs
+FINAL_TOOL/data/*.pot
+FINAL_TOOL/data/*.ptf
+FINAL_TOOL/data/*.pto
+
+# FINAL_TOOL model files - should be obtained separately or built
+FINAL_TOOL/models/*.pkl
+FINAL_TOOL/models/*.csv
+FINAL_TOOL/models/*.txt
+
+# But include README files in data and models directories
+!FINAL_TOOL/data/README.md
+!FINAL_TOOL/models/README.md
